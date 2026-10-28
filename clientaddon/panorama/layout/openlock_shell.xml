@@ -42,8 +42,6 @@
             </Panel>
         </Panel>
 
-        <Label id="PointerProbe" class="PointerProbe" text="pointer probe" />
-
         <Panel id="DropGrid" class="DropGrid" />
 
         <Panel id="ToastStack" class="ToastStack" />

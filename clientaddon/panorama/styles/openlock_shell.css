@@ -246,7 +246,9 @@
 }
 
 .WindowTitleLabel {
-    margin-left: 9px;
+    /* 22 dp northeast/northwest grips sit on the two title corners; keep the text clear of the
+       northwest one. The close button carries the matching right margin below. */
+    margin-left: 28px;
     vertical-align: center;
     color: #f4e6c8;
     font-size: 13px;
@@ -283,6 +285,13 @@
 .WindowButton.PinOn {
     background-color: #5a4218;
     border: 1px solid #e0b56a;
+}
+
+/* The northeast grip is 22 dp wide on the frame corner. A 30 dp right margin on the last button
+   moves the whole button row clear of it, so the grip is hit-testable instead of sitting under
+   the close button. */
+.WindowClose {
+    margin-right: 30px;
 }
 
 .WindowCost {
@@ -585,20 +594,6 @@
     margin: 1px 0px;
 }
 
-.PointerProbe {
-    position: absolute;
-    horizontal-align: left;
-    vertical-align: top;
-    margin-left: 12px;
-    margin-top: 74px;
-    padding: 2px 5px;
-    max-width: 900px;
-    background-color: #000000d9;
-    color: #7dff8a;
-    font-size: 10px;
-    z-index: 9000;
-}
-
 .DragCapture {
     position: absolute;
     horizontal-align: left;
@@ -691,9 +686,13 @@
 }
 
 .ResizeGrip {
-    position: absolute;
+    /* Panorama has no `position: absolute`; a corner overlay is taken out of the frame's
+       down-flow with ignore-parent-flow and aligned inside the same box. The z-index keeps the
+       grip above the body and title it overlaps, so all four corners receive the press. */
+    ignore-parent-flow: true;
     horizontal-align: right;
     vertical-align: bottom;
+    z-index: 60;
     width: 18px;
     height: 18px;
     background-color: #8a6f42e6;
@@ -733,8 +732,8 @@
 }
 
 /* --- drop grid ----------------------------------------------------------- */
-/* Panorama has no pointer position, so a title or grip drag reveals a grid of targets and the
-   drop cell is where the window lands. This is the engine's own drag system. */
+/* Retained for the pinned-placement tools. Window dragging no longer uses it: drags follow the
+   engine cursor (MousePosition) instead of snapping to a cell. */
 
 .DropGrid {
     position: absolute;

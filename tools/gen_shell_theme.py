@@ -595,11 +595,18 @@ def _vpk_theme_texts(archive: Path) -> list[tuple[str, str]]:
         if blob is None and entry["archive_index"] != vpk_read.INLINE:
             part = archive.parent / f"pak01_{entry['archive_index']:03d}.vpk"
             try:
-                with part.open("rb") as handle:
-                    handle.seek(entry["off"])
-                    blob = handle.read(entry["length"])
-            except OSError:
+                part.resolve().relative_to(archive.parent.resolve())
+            except (OSError, ValueError):
+                # A numbered part that resolves through a symlink outside the archive directory
+                # is not a payload this addon may read.
                 blob = None
+            else:
+                try:
+                    with part.open("rb") as handle:
+                        handle.seek(entry["off"])
+                        blob = handle.read(entry["length"])
+                except OSError:
+                    blob = None
         if blob is not None:
             found.append((path, blob.decode("utf-8", "replace")))
     return found
@@ -640,6 +647,12 @@ def mounted_themes(search_paths: list[dict] | None, gameinfo: Path) -> list[tupl
         themes.append((theme, source, load_order))
 
     def add_archive(archive: Path, mount: str, load_order: int) -> None:
+        try:
+            archive.resolve().relative_to(gameinfo.parent.parent.resolve())
+        except (OSError, ValueError):
+            # `root.glob('*.vpk')` follows a symlinked archive; one that leaves the install is
+            # not a mounted theme source, matching the loose-file and child-directory checks.
+            return
         key = str(archive.resolve()).lower()
         if key in seen:
             return
