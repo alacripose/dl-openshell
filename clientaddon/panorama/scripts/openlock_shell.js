@@ -34,6 +34,10 @@
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
     var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
     var currentScheme = "";
+    var savedProfiles = {};
+    var layoutPayload = "";
+    var layoutRequest = "";
+    var layoutNoticesSeen = {};
 
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
@@ -313,7 +317,9 @@
     }
 
     globalThis.OpenlockScheme = function (id) {
-        return applyScheme(String(id || "").toLowerCase(), true);
+        var applied = applyScheme(String(id || "").toLowerCase(), true);
+        if (applied) applySavedLayoutFor(applied, true);
+        return applied;
     };
 
     globalThis.OpenlockCycleScheme = function () {
@@ -326,7 +332,9 @@
             if (themes.schemes[i].id === currentScheme) { at = i; break; }
         }
         var next = themes.schemes[(at + 1) % themes.schemes.length];
-        return applyScheme(next.id, true);
+        var applied = applyScheme(next.id, true);
+        if (applied) applySavedLayoutFor(applied, true);
+        return applied;
     };
 
     // --- toast / update ------------------------------------------------------
@@ -1680,8 +1688,7 @@
             if (f.maxButton.glyph) f.maxButton.glyph.text = maximized[id] ? "▣" : "□";
         }
         applyWindow(win);
-        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
+        sendLayout();
     }
 
 
@@ -2045,29 +2052,186 @@
         renderBar();
     }
 
-    // Restore is local and deterministic: every window returns to the geometry the active package
-    // declares (or to the live panel's own rect), maximized and minimized state clears, and the
-    // current scheme is re-applied. It does not silently reopen windows the player closed.
-    function restoreUiLayout() {
+    function layoutScheme() {
+        return String(currentScheme || themes.default || "default").toLowerCase();
+    }
+
+    // The server receives one complete snapshot so a save replaces the previous profile rather
+    // than leaving a stale row for a window that was closed. Only known windows are sent; the
+    // profile loader ignores ids that no longer exist in the build and says so.
+    //
+    // Rows are joined with '@', not ';': the payload travels through CitadelConCommand, and a
+    // semicolon there starts a second console command, truncating the snapshot at the scheme.
+    function layoutEntries() {
+        var parts = [];
+        for (var id in geometry) {
+            if (!geometry.hasOwnProperty(id) || !index[id]) continue;
+            var g = geometry[id];
+            if (!g) continue;
+            var x = Math.round(num(g.x));
+            var y = Math.round(num(g.y));
+            var w = Math.round(num(g.w));
+            var h = Math.round(num(g.h));
+            if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)) continue;
+            if (String(id).indexOf(",") >= 0 || String(id).indexOf("@") >= 0) continue;
+            parts.push(id + "," + x + "," + y + "," + w + "," + h);
+        }
+        return parts.join("@");
+    }
+
+    function sendLayout() {
+        var entries = layoutEntries();
+        if (!entries) return false;
+        sendArgs("layout", layoutScheme() + "@" + entries);
+        return true;
+    }
+
+    function saveUiLayout() {
+        if (sendLayout()) {
+            globalThis.OpenlockToast("Layout save", "sent · " + layoutScheme(), "", false);
+            return true;
+        }
+
+        globalThis.OpenlockToast("Layout not saved", "no open window geometry to write", "", true);
+        return false;
+    }
+
+    function loadUiLayout() {
+        sendArgs("layout-load", layoutScheme());
+        $.Schedule(0.5, function () { syncLayoutProfiles(true); });
+    }
+
+    function resetKnownGeometry() {
         pointerDrag = null;
-        for (var gid in geometry) if (geometry.hasOwnProperty(gid)) delete geometry[gid];
+        for (var gid in index) if (index.hasOwnProperty(gid)) delete geometry[gid];
         for (var mid in maximized) if (maximized.hasOwnProperty(mid)) delete maximized[mid];
         for (var nid in minimized) if (minimized.hasOwnProperty(nid)) delete minimized[nid];
+    }
 
+    function drawGeometry() {
         for (var id in frames) {
             if (!frames.hasOwnProperty(id)) continue;
             var f = frames[id];
             if (!f || !f.win) continue;
-            setFrameVisible(f, true);
             applyWindow(f.win);
             if (pinned[id]) enforcePinnedVisibility(id);
-        }            applyScheme(currentScheme || themes.default, false);
+        }
         renderBar();
-        globalThis.OpenlockToast("Layout restored",
-            "geometry reset to the active scheme · " + currentScheme, "", false);
     }
 
-    globalThis.OpenlockRestoreLayout = restoreUiLayout;
+    function showPackageDefaults() {
+        resetKnownGeometry();
+        drawGeometry();
+    }
+
+    // Restore is local and deterministic: every window returns to the geometry the active package
+    // declares (or to the live panel's own rect), maximized and minimized state clears, and the
+    // current scheme is re-applied. It does not silently reopen windows the player closed.
+    function restoreUiLayout() {
+        resetKnownGeometry();
+        for (var id in frames) {
+            if (!frames.hasOwnProperty(id)) continue;
+            var f = frames[id];
+            if (f) setFrameVisible(f, true);
+        }
+        applyScheme(currentScheme || themes.default, false);
+        drawGeometry();
+        globalThis.OpenlockToast("Layout restored",
+            "geometry reset to the active scheme · " + layoutScheme(), "", false);
+    }
+
+    // Reset-to-defaults is a local reset plus a request to remove the saved profile. Otherwise
+    // the next boot would load the profile the player just asked to discard.
+    function resetUiLayout() {
+        restoreUiLayout();
+        sendArgs("layout-reset", layoutScheme());
+    }
+
+    function applySavedLayoutFor(scheme, announce) {
+        var key = String(scheme || "").toLowerCase();
+        var profile = savedProfiles[key];
+        if (!profile) return false;
+
+        resetKnownGeometry();
+        var known = 0;
+        var ignored = 0;
+        for (var wid in profile) {
+            if (!profile.hasOwnProperty(wid)) continue;
+            if (!index[wid]) {
+                ignored++;
+                continue;
+            }
+
+            var r = profile[wid] || {};
+            var x = num(r.x);
+            var y = num(r.y);
+            var w = num(r.w);
+            var h = num(r.h);
+            if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)
+                || Math.abs(x) > 20000 || Math.abs(y) > 20000
+                || w < 120 || h < 64) {
+                ignored++;
+                continue;
+            }
+
+            geometry[wid] = { x: x, y: y, w: w, h: h, init: true };
+            known++;
+        }
+
+        drawGeometry();
+        if (ignored) {
+            var note = "layout profile ignored " + ignored + " window(s) that no longer exist or are invalid";
+            $.Msg("[Openlock] " + note + " scheme=" + key);
+            if (announce) globalThis.OpenlockToast("Layout profile", note, "", true);
+        }
+        $.Msg("[Openlock] layout profile applied scheme=", key, " windows=", known, " ignored=", ignored);
+        sendArgs("layout-applied", key + "|" + known + "|" + ignored);
+        if (announce && known) {
+            globalThis.OpenlockToast("Layout loaded", key + " · " + known + " window(s)", "", false);
+        }
+        return true;
+    }
+
+    // The server publishes a JSON payload through the host attribute. Reading it here, instead of
+    // on a fixed timer around the UI buttons, is what makes the saved profile available at boot
+    // even when the addon was mounted before this script started.
+    function syncLayoutProfiles(force) {
+        var raw = "";
+        try { raw = attr("layout", ""); } catch (e) { raw = ""; }
+        if (!raw || (!force && raw === layoutPayload)) return;
+        layoutPayload = raw;
+
+        var payload = null;
+        try { payload = JSON.parse(raw); } catch (e) {
+            $.Msg("[Openlock] layout payload unreadable: ", String(e));
+            if (!layoutNoticesSeen.payload) {
+                layoutNoticesSeen.payload = true;
+                globalThis.OpenlockToast("Layout profile", "payload unreadable; package defaults remain", "", true);
+            }
+            return;
+        }
+
+        if (!payload || payload.format !== "openlock.layouts/1") {
+            $.Msg("[Openlock] layout payload ignored: unknown format");
+            return;
+        }
+
+        savedProfiles = payload.profiles || {};
+        var notices = payload.notices || [];
+        for (var i = 0; i < notices.length; i++) {
+            var text = String(notices[i]);
+            if (!text || layoutNoticesSeen[text]) continue;
+            layoutNoticesSeen[text] = true;
+            $.Msg("[Openlock] layout notice: ", text);
+            globalThis.OpenlockToast("Layout profile", text, "", true);
+        }
+
+        applySavedLayoutFor(layoutScheme(), true);
+    }
+
+    globalThis.OpenlockRestoreLayout = resetUiLayout;
+    globalThis.OpenlockSaveLayout = saveUiLayout;
+    globalThis.OpenlockLoadLayout = loadUiLayout;
 
     globalThis.OpenlockToggle = function () {
         expanded = !expanded;
@@ -2105,6 +2269,17 @@
         try {
             $.DispatchEvent("CitadelConCommand",
                 "dw_ui openlock-shell|" + eventName + (arg === undefined ? "" : ":" + arg));
+        } catch (e) {
+            $.Msg("[Openlock] shell send failed: ", String(e));
+        }
+    }
+
+    // Events with a payload use the documented pipe-separated form, so the server receives the
+    // payload as one argument instead of folding it into the event name.
+    function sendArgs(eventName, arg) {
+        try {
+            $.DispatchEvent("CitadelConCommand",
+                "dw_ui openlock-shell|" + eventName + "|" + String(arg === undefined ? "" : arg));
         } catch (e) {
             $.Msg("[Openlock] shell send failed: ", String(e));
         }
@@ -2497,8 +2672,7 @@
         if (!commit) { applyWindow(win); return; }
         var g = ensureGeometry(win);
         applyWindow(win);
-        send("layout", drag.id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
+        sendLayout();
 
         // A press that produced neither a cursor nor a single move is a drag this client cannot
         // serve. Name which of the three spaces failed, so the player's one-line report is enough:
@@ -2594,8 +2768,7 @@
         g.init = true;
         hideGrid();
         applyWindow(win);
-        send("layout", win.id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
+        sendLayout();
     }
 
     // --- shell views ---------------------------------------------------------
@@ -2635,6 +2808,15 @@
             var id = "";
             try { id = p.id || ""; } catch (e) {}
             if (id.indexOf("DWHost_") === 0) return p;
+            // A launcher client can keep the shell under its standalone anchor while a
+            // server-mounted wrapper bridges dwv_* attributes onto that anchor. The wrapper
+            // marks the anchor with dw_live so it is distinguishable from any other generic
+            // HUD panel by the same name.
+            if (id === "OpenlockStandaloneHost") {
+                try {
+                    if (p.GetAttributeString && p.GetAttributeString("dw_live", "") !== "") return p;
+                } catch (e) {}
+            }
             try { p = p.GetParent(); } catch (e) { break; }
             depth++;
         }
@@ -3133,6 +3315,11 @@
                             (ext ? "  ·  " + ext + " extension(s)" : "") + "  ·  " + scheme.source,
                         function () {
                             applyScheme(scheme.id, true);
+                            if (!applySavedLayoutFor(scheme.id, true)) {
+                                showPackageDefaults();
+                                globalThis.OpenlockToast("Layout",
+                                    "no saved layout for " + scheme.id + "; package defaults", "", false);
+                            }
                             renderOwn(win, body);
                         });
                 })(themes.schemes[sc]);
@@ -3157,9 +3344,11 @@
             rowXd(body, "game " + (build.gameVersion || "unknown"), "ViewMuted");
 
             headingXd(body, "the layout is a schema");
-            rowXd(body, "Windows, tabs and pins come from shell/alpha-shell/package.shspec. Changing a geometry row changes the default; M and the corner grip change this session.", "ViewMuted");
+            rowXd(body, "Windows, tabs and pins come from shell/alpha-shell/package.shspec. Changing a geometry row changes the default; M and the corner grip change this window, and Save writes the active scheme's profile.", "ViewMuted");
             rowXd(body, data.windows.length + " declared windows · " + data.tabs.length + " tabs · " + data.pins.length + " pins", "ViewMuted");
-            actionXd(body, "Restore UI layout  ·  " + (currentScheme || themes.default), restoreUiLayout);
+            actionXd(body, "Save UI layout  ·  " + layoutScheme(), saveUiLayout);
+            actionXd(body, "Load saved layout  ·  " + layoutScheme(), loadUiLayout);
+            actionXd(body, "Reset to package defaults  ·  " + layoutScheme(), resetUiLayout);
 
             headingXd(body, "input");
             // This build exposes no cursor-position API (GameUI is absent). Drag is carried by
@@ -3342,6 +3531,11 @@
     var pollCount = 0;
     function poll() {
         pollCount++;
+        var request = attr("layoutrequest", "");
+        if (request && request !== layoutRequest) {
+            layoutRequest = request;
+            if (request.indexOf("save:") === 0) saveUiLayout();
+        }
         var want = attr("active", "");
         var sig = want + "|" + attr("view", "") + "|" + attr("refusal", "") + "|" + attr("body", "").length;
 
@@ -3371,6 +3565,7 @@
         // layout while the shell is open. The check is every other second, not every poll.
         // Only the small autoFrame set is retried here. HUD discovery is a one-shot sweep on
         // open (or the explicit Scan action), never part of the 2s poll.
+        if ((pollCount % 4) === 0) syncLayoutProfiles(false);
         if (expanded && (pollCount % 4) === 0) autoFrameOpen();
         if (expanded && (pollCount % 4) === 2) scanPopups();
 
@@ -3431,6 +3626,8 @@
     setLauncherName();
     $.Schedule(2.0, setLauncherName);
     applyScheme(themes.default, false);
+    syncLayoutProfiles(true);
+    $.Schedule(0.6, function () { syncLayoutProfiles(true); });
     renderBar();
     startClock();
 
