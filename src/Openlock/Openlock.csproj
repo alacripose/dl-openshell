@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Openlock</RootNamespace>
+    <AssemblyName>Openlock</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Version>0.7.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Where the Deadworks runtime lives. Override on the command line when the
+         game is not on D:, or when building against an unpacked release. -->
+    <DeadworksDir Condition="'$(DeadworksDir)' == ''">D:\SteamLibrary\steamapps\common\Deadlock\game\bin\win64</DeadworksDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="DeadworksManaged.Api">
+      <HintPath>$(DeadworksDir)\managed\DeadworksManaged.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="DeadworksManaged.Game">
+      <HintPath>$(DeadworksDir)\managed\DeadworksManaged.Game.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Google.Protobuf">
+      <HintPath>$(DeadworksDir)\managed\Google.Protobuf.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Copy the built plugin into the runtime's plugin folder.
+       Deadworks hot-loads new and changed DLLs, so no server restart is needed. -->
+  <Target Name="DeployToDeadworks" AfterTargets="Build" Condition="Exists('$(DeadworksDir)\managed')">
+    <PropertyGroup>
+      <_PluginDir>$(DeadworksDir)\managed\plugins</_PluginDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PluginDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(AssemblyName).pdb"
+          DestinationFolder="$(_PluginDir)"
+          SkipUnchangedFiles="false"
+          ContinueOnError="WarnAndContinue" />
+    <Message Importance="high" Text="Openlock: deployed $(AssemblyName).dll to $(_PluginDir)" />
+  </Target>
+
+  <!-- Declared patch recipes ship next to the plugin; the plugin refuses to apply a base whose
+       baseline is not declared and matched. -->
+  <Target Name="DeployPatches" AfterTargets="Build" Condition="Exists('$(DeadworksDir)\managed')">
+    <MakeDir Directories="$(DeadworksDir)\managed\plugins\patches" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\..\patches\openlock.baselines.shspec"
+          DestinationFolder="$(DeadworksDir)\managed\plugins\patches"
+          SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <!-- The UI half ships as one VPK (install-client.ps1 packs and mounts it). The build does not
+       scatter loose Panorama files into the addon folder: a second mounted copy of the same
+       layouts is exactly the kind of ambiguity the shell refuses to guess around. -->
+
+  <!-- The shell package travels with the plugin and is read at load time; the mount refuses every
+       record it cannot express by file and line. -->
+  <Target Name="DeployShellPackage" AfterTargets="Build" Condition="Exists('$(DeadworksDir)\managed')">
+    <ItemGroup>
+      <_ShellPackage Include="$(MSBuildProjectDirectory)\..\..\shell\alpha-shell\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ShellPackage)"
+          DestinationFiles="@(_ShellPackage->'$(DeadworksDir)\managed\plugins\shell\alpha-shell\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+</Project>

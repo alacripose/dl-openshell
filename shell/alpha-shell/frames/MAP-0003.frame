@@ -1,0 +1,174 @@
+shploingus.cellframe/1
+frame	MAP-0003
+	window	map-plan
+	cols	56
+	rows	22
+	order	12
+	requires	none
+	feature	mountain
+	field	elevation	terrain::elevation_m
+	field	biome	ecology::biome_at
+	shaper	profile32	32
+	projection	orthographic
+	centre	2488.0	1917.5
+	cell	32
+	extent	28	32
+	pitch	-24
+fill	1	1	54	background
+fill	1	2	54	background
+fill	1	3	54	background
+fill	1	4	54	background
+fill	1	5	54	background
+fill	1	6	54	background
+fill	1	7	54	background
+fill	1	8	54	background
+fill	1	9	54	background
+fill	1	10	54	background
+fill	1	11	54	background
+fill	1	12	54	background
+fill	1	13	54	background
+fill	1	14	54	background
+fill	1	15	54	background
+fill	1	16	54	background
+fill	1	17	54	background
+fill	1	18	54	chrome
+fill	1	19	54	chrome
+fill	1	20	54	chrome
+run	0	0	divider	+-
+run	2	0	accent	N
+run	3	0	divider	------+--------+--------+--------+--------+--------++
+run	0	1	divider	|
+run	1	1	disabled	:::tt:::::T:T:::T:t:::Tt:T:TT::::,:::,:::,:t:,:T:::t,,
+run	55	1	divider	|
+run	0	2	divider	|
+run	1	2	disabled	t:T:::t,T:TTT:T:T,T:T:TTT:T:T:tT:TtT::::TT:T:T:tT,::TT
+run	55	2	divider	|
+run	0	3	divider	+
+run	1	3	disabled	~TtT::T:T:T:T:T:,::T:t:TT:::::::tT::::Tt:TtT:::,TT::::
+run	55	3	divider	+
+run	0	4	divider	|
+run	1	4	disabled	:TTT:T:::TT::TT,:,T:T:::::T:T:tt,::.,#TT:::t:TT,t:::TT
+run	55	4	divider	|
+run	0	5	divider	|
+run	1	5	disabled	T:T,t::::T:::T::::T::::TT::t,T::::T.#..:TTT:,:t::::tTt
+run	55	5	divider	|
+run	0	6	divider	+
+run	1	6	disabled	TT:t:T:TT::TT:T:T:T:t:::TTTtTT:TT::.#..::
+run	42	6	divider	+
+run	43	6	disabled	:
+run	44	6	divider	++
+run	46	6	disabled	:T:::tt,:
+run	55	6	divider	+
+run	0	7	divider	|
+run	1	7	disabled	TTtTT:::TT::TT,:T:t,:::::
+run	26	7	divider	+
+run	27	7	disabled	T:T::::T:##,.::T
+run	43	7	divider	++
+run	45	7	disabled	:
+run	46	7	divider	+-+
+run	49	7	disabled	:T
+run	51	7	divider	+
+run	52	7	disabled	:TT
+run	55	7	divider	|
+run	0	8	divider	|
+run	1	8	disabled	TTtT:
+run	6	8	divider	+
+run	7	8	disabled	:t::TT::TTTT:::::::::T:T::::Tt:::,T
+run	42	8	divider	++
+run	44	8	disabled	T
+run	45	8	divider	+++
+run	48	8	disabled	:,T:TtT
+run	55	8	divider	|
+run	0	9	divider	+
+run	1	9	disabled	::TT
+run	5	9	divider	+
+run	6	9	disabled	,,:::::T:T:TTT:,T:T,
+run	26	9	divider	+
+run	27	9	disabled	tt
+run	29	9	divider	+-+
+run	32	9	disabled	::
+run	34	9	divider	++
+run	36	9	disabled	:
+run	37	9	divider	+
+run	38	9	disabled	,:
+run	40	9	divider	+-|++
+run	45	9	disabled	:
+run	46	9	divider	++
+run	48	9	disabled	TT
+run	50	9	divider	+
+run	51	9	disabled	::T:
+run	55	9	divider	+
+run	0	10	accent	W
+run	1	10	disabled	,:
+run	3	10	divider	++
+run	5	10	disabled	:
+run	6	10	divider	++
+run	8	10	disabled	:
+run	9	10	divider	++
+run	11	10	disabled	::T::TT::TT:::TtT:T:T,:::T:T:
+run	40	10	divider	+-+
+run	43	10	disabled	t
+run	44	10	divider	+
+run	45	10	disabled	t:t
+run	48	10	divider	+
+run	49	10	disabled	:Tt,T:
+run	55	10	accent	E
+run	0	11	divider	|
+run	1	11	disabled	T
+run	2	11	divider	++
+run	4	11	disabled	Tt
+run	6	11	divider	++
+run	8	11	disabled	:
+run	9	11	divider	+
+run	10	11	disabled	:t:TT::,:TTt:,:T:TT,:TT:TT:t:T:Tt
+run	43	11	divider	+
+run	44	11	disabled	TT:T:t:tT:T
+run	55	11	divider	|
+run	0	12	divider	+
+run	1	12	disabled	t::TT:T:::t:T:T,:T:::::::T::T:TT:TT:Tt::T::::T:t::tT:T
+run	55	12	divider	+
+run	0	13	divider	|
+run	1	13	disabled	:t:,T:T:::T:T:T:t::TtTT:t:::TT::T:t:::t::T:::tTt::::,T
+run	55	13	divider	|
+run	0	14	divider	|
+run	1	14	disabled	:::t:T::TTT:T:::::T::TTTT:::t::Tt::T:::T::TT::Tt::Tt:T
+run	55	14	divider	|
+run	0	15	divider	+
+run	1	15	disabled	TTTTT:::t:::::T:T:T::T:T:,T:TT:::::T:::::T,::,:TTT,t:T
+run	55	15	divider	+
+run	0	16	divider	|
+run	1	16	disabled	:tT:T,::T:::T:::::::T::T::TT:T:t::T::::TT:T::TT:tTTT:T
+run	55	16	divider	|
+run	0	17	divider	|
+run	1	17	disabled	::::T::::::T:t,,::t::tTtT:TT:Tt::::::::T:::T:T:T:TTT:T
+run	55	17	divider	|
+run	0	18	divider	+
+run	1	18	accent	~water
+run	8	18	green	,grass
+run	15	18	green	#forest
+run	23	18	dim	^alpine
+run	31	18	orange	.desert
+run	39	18	green	@rain
+run	45	18	dim	high
+run	50	18	dim	58m
+run	55	18	divider	+
+run	0	19	divider	|
+run	1	19	dim	N
+run	3	19	dim	^
+run	5	19	dim	32
+run	8	19	dim	m/cell
+run	16	19	dim	centre
+run	23	19	dim	2488.0,1917.5
+run	38	19	dim	view
+run	43	19	dim	mountain
+run	55	19	divider	|
+run	0	20	divider	|
+run	1	20	dim	seed
+run	6	20	dim	9418646105956113635
+run	27	20	dim	land
+run	32	20	dim	99%
+run	37	20	dim	49/918
+run	55	20	divider	|
+run	0	21	divider	+-
+run	2	21	accent	S
+run	3	21	divider	------+--------+--------+--------+--------+--------++

@@ -1,0 +1,413 @@
+shploingus.recipe/3
+package	alpha-shell	v1-alpha
+# The shell package, version 3. **A window has exactly one home**, and the rows at
+# the foot of this file are the homes:
+#
+#   tab    a bar tab (the six the user ruled, H-15.2), drawn in strip order
+#   bar    a bar entry that is not a tab — the console, the command surface (H-8.2)
+#   filed  a window a tab's menu offers (H-15.3: a tab sorts the windows)
+#   pin    a window hosted in the HUD while the shell is hidden (H-9.8)
+#
+# A declared window with **none** of the first three is console-opened: `log`,
+# `streamer` and `governance` are reached by id from the console (H-15.2, H-15.5).
+# The console opens any declared window, so nothing is unreachable.
+#
+# The eight tabs of UI-SPEC §5 were cut to six by the user: `governance` and `tools`
+# left the bar. UI-SPEC §5's table is corrected in the record, not rewritten here.
+window	inventory
+	title	Inventory / crafting
+	content	inventory
+	panel	class:CitadelHudHeroShop
+	scale	35
+	lane	tab
+	extent	square-pixels
+	geometry	16 64 672 378
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-inventory
+window	trees
+	title	Working / crafting trees
+	content	trees
+	panel	id:ShopModsSelectedBuild
+	lane	tab
+	extent	square-pixels
+	geometry	80 96 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-trees
+window	governance
+	title	Tickets / governance
+	content	ledger
+	lane	tab
+	extent	square-pixels
+	geometry	144 128 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-governance
+window	mods
+	title	Mods
+	content	mods
+	lane	tab
+	extent	square-pixels
+	geometry	208 160 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-mods
+window	docs
+	title	Docs
+	content	ledger
+	lane	tab
+	extent	square-pixels
+	geometry	272 192 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-docs
+window	settings
+	title	Settings
+	content	settings
+	lane	control
+	extent	square-pixels
+	geometry	336 224 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-settings
+window	tools
+	title	Tools
+	content	tools
+	lane	tab
+	extent	square-pixels
+	geometry	400 256 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-tools
+window	map-plan
+	title	Map / plan
+	content	map-plan
+	panel	class:CitadelHudMapScreen,class:CitadelHudMap,id:HudMap,class:HudMap
+	scale	35
+	lane	world
+	extent	square-pixels
+	geometry	596 120 672 378
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-map-plan
+# The console: a bar entry that is not a tab, because a tab sorts windows and the
+# console opens them (H-15.2, H-15.3).
+window	minimap
+	title	Minimap
+	content	minimap
+	panel	class:HudMinimap,id:HudMinimap,class:CitadelHudMinimap,token:minimap
+	lane	world
+	extent	square-pixels
+	geometry	1280 600 260 260
+	min-size	120 120
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-minimap
+window	abilities
+	title	Abilities
+	content	abilities
+	panel	id:HudAbilities,class:CitadelHudAbilities,class:AbilitiesContainer,id:AbilitiesContainer,token:abilities
+	lane	frame
+	extent	square-pixels
+	geometry	600 760 420 140
+	min-size	200 80
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-abilities
+window	hero-select
+	title	Hero select
+	content	hero-select
+	panel	id:CitadelHeroGrid,class:CitadelHeroGrid,id:CitadelDashboard,class:CitadelDashboard,token:hero_grid
+	lane	frame
+	extent	square-pixels
+	geometry	0 40 1920 1040
+	min-size	320 200
+	opacity	1000
+	elevation	0
+	theme-role	surface
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-hero-select
+window	quickbuy
+	title	Quickbuy
+	content	quickbuy
+	panel	class:HudQuickbuy,token:quickbuy
+	lane	frame
+	extent	square-pixels
+	geometry	1030 560 220 260
+	min-size	140 100
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-quickbuy
+window	combat-log
+	title	Combat log
+	content	combat-log
+	panel	class:CitadelHudCombatLog,token:combat
+	lane	beacon
+	extent	square-pixels
+	geometry	16 300 420 300
+	min-size	200 120
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-combat-log
+window	game-settings
+	title	Game settings
+	content	game-settings
+	panel	class:CitadelHudEscapeMenu,token:escapemenu
+	lane	control
+	extent	square-pixels
+	geometry	520 120 560 420
+	min-size	320 240
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	false
+	layout	minimize,close,title-position
+	behavior	drag,resize,minimize,close
+	record-id	window-game-settings
+window	uitree
+	title	UI tree
+	content	ui-tree
+	lane	control
+	extent	square-pixels
+	geometry	48 90 760 560
+	min-size	360 260
+	opacity	940
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-uitree
+window	console
+	title	Console
+	content	console
+	lane	control
+	extent	square-pixels
+	geometry	16 96 640 440
+	min-size	320 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	false
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-console
+# Console-opened, no bar home: the log and the streamer are peers of the console
+# (H-15.5), and governance keeps its window without a tab.
+window	log
+	title	Log
+	content	log
+	lane	frame
+	extent	square-pixels
+	geometry	80 128 640 440
+	min-size	320 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	false
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-log
+window	api-viewer
+	title	API viewer
+	content	api-viewer
+	lane	frame
+	extent	square-pixels
+	geometry	144 160 640 440
+	min-size	320 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	false
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-api-viewer
+window	notifications
+	title	Notifications
+	content	notifications
+	lane	beacon
+	extent	square-pixels
+	geometry	208 192 480 440
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-notifications
+window	streamer
+	title	Streamers
+	content	streamer
+	lane	motion
+	extent	square-pixels
+	geometry	500 500 500 500
+	min-size	500 500
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-streamer
+# The pinned HUD subset (H-9.8): stays in the user's view while the shell is hidden.
+#
+# The four geometries below are the four corners of a 1280 × 720 window with the
+# 48 dp bar across the top, sized so the panel each window hosts fits inside it:
+# **the port's chrome — a 1 dp border, a 40 dp title bar and a 40 dp pane header —
+# plus the panel's own height** (the tallest is 407 dp at seven rows — the World
+# panel, which grew two rows when the player's body started reporting whether it
+# was on the ground and whether it was in water). The chrome is the port's
+# (SHELL-PORT.md §5; the reference always draws a pane header, 2670–2675) and it
+# is 34 dp taller than the derived shell's title bar alone, so **the four corners
+# no longer clear the middle of the screen**: the left column (489 + 342) is
+# taller than the 672 dp a 720 dp viewport leaves under the bar, and the bottom
+# pair is anchored to the viewport's foot as before (720 − height). Owed a
+# ruling; the declaration is kept rather than an arrangement invented here. At
+# any other window size the windows keep these declarations — a shell that
+# resized them would be choosing an arrangement, and the arrangement is a package
+# (UI-SPEC §3).
+window	world
+	title	World
+	content	world-view
+	lane	world
+	extent	square-pixels
+	geometry	16 48 336 489
+	min-size	240 192
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag
+	record-id	window-world
+window	determinism
+	title	Determinism
+	content	readout
+	lane	frame
+	extent	square-pixels
+	geometry	16 378 336 342
+	min-size	240 192
+	opacity	930
+	elevation	0
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-determinism
+window	refusals
+	title	Refusals
+	content	table
+	lane	beacon
+	extent	square-pixels
+	geometry	928 378 336 342
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-refusals
+# The six tabs of the bar, in strip order (H-15.2).
+tab	inventory
+tab	trees
+tab	mods
+tab	docs
+tab	settings
+tab	map-plan
+# The one bar entry that is not a tab.
+bar	console
+# What each tab's menu offers (H-15.3). The tab's own window is opened by the tab
+# itself; these are the windows filed beside it.
+filed	tools	inventory
+filed	api-viewer	mods
+filed	refusals	docs
+filed	notifications	settings
+filed	uitree	settings
+filed	determinism	settings
+filed	world	map-plan
+filed	minimap	map-plan
+filed	abilities	map-plan
+filed	quickbuy	map-plan
+filed	combat-log	docs
+filed	game-settings	settings
+# Pinning is a layer move, declared here and not baked into a spec (UI-SPEC §4):
+# a pinned window keeps the player's placement while the shell is hidden. The two live
+# HUD elements are pinned by default; the record views are pinned where a player put them.
+
+pin	minimap
+pin	abilities
+pin	refusals
+pin	determinism
+
+
+# The map window's content is a cell data frame, not composed panels. The row's id is the
+# frame's id: `voxel_package::cellframe::read` refuses a declared frame this file names by
+# no row, and `voxel-layers` prints both together so a reader can check the join.
+row	MAP-0001	the map window's default cells: the world's own elevation and biomes, one sample a cell, with contours the mount grades before the shell draws one
+row	MAP-0002	the ocean view: the measured map centred on the nearest water, water in accent and land in disabled ink
+row	MAP-0003	the mountain view: alpine cells and high ground centred on the range the ring search found
+row	MAP-0004	the forest view: the five forest biomes, centred on the nearest stand
+row	MAP-0005	the grassland view: grassland cells, centred on the nearest grassland
+row	MAP-0006	the desert view: desert and subtropical scrub, centred on the nearest dry ground
+row	MAP-0007	the tundra view: tundra and polar desert, centred on the nearest cold ground

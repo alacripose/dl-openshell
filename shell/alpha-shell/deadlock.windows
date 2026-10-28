@@ -1,0 +1,322 @@
+shploingus.deadlock/1
+# Every top-level HUD, Citadel and ability window the game ships, one shell window each.
+# Generated from the game VPK layout list; the mount refuses any layout that will not load.
+window	game-ability_hud_element_cast	Ability Hud Element Cast	file://{resources}/layout/ability_hud_element_cast.xml
+window	game-ability_hud_element_lock_on	Ability Hud Element Lock On	file://{resources}/layout/ability_hud_element_lock_on.xml
+window	game-ability_hud_element_unit_target	Ability Hud Element Unit Target	file://{resources}/layout/ability_hud_element_unit_target.xml
+window	game-ability_hud_elements_container	Ability Hud Elements Container	file://{resources}/layout/ability_hud_elements_container.xml
+window	game-ability_panel	Ability Panel	file://{resources}/layout/ability_panel.xml
+window	game-ability_upgrades_panel	Ability Upgrades Panel	file://{resources}/layout/ability_upgrades_panel.xml
+window	game-chat	Chat	file://{resources}/layout/chat.xml
+window	game-citadel_ability_details_panel	Citadel Ability Details Panel	file://{resources}/layout/citadel_ability_details_panel.xml
+window	game-citadel_ability_property_panel	Citadel Ability Property Panel	file://{resources}/layout/citadel_ability_property_panel.xml
+window	game-citadel_alt_info_panel	Citadel Alt Info Panel	file://{resources}/layout/citadel_alt_info_panel.xml
+window	game-citadel_client_status	Citadel Client Status	file://{resources}/layout/citadel_client_status.xml
+window	game-citadel_client_version_status	Citadel Client Version Status	file://{resources}/layout/citadel_client_version_status.xml
+window	game-citadel_connection_status	Citadel Connection Status	file://{resources}/layout/citadel_connection_status.xml
+window	game-citadel_dashboard_footer_bar	Citadel Dashboard Footer Bar	file://{resources}/layout/citadel_dashboard_footer_bar.xml
+window	game-citadel_db_page_book_library	Citadel Db Page Book Library	file://{resources}/layout/citadel_db_page_book_library.xml
+window	game-citadel_db_page_book_reader	Citadel Db Page Book Reader	file://{resources}/layout/citadel_db_page_book_reader.xml
+window	game-citadel_db_page_book_toc	Citadel Db Page Book Toc	file://{resources}/layout/citadel_db_page_book_toc.xml
+window	game-citadel_db_page_event_debug	Citadel Db Page Event Debug	file://{resources}/layout/citadel_db_page_event_debug.xml
+window	game-citadel_db_page_hero_release_vote	Citadel Db Page Hero Release Vote	file://{resources}/layout/citadel_db_page_hero_release_vote.xml
+window	game-citadel_db_page_hero_vo_test	Citadel Db Page Hero Vo Test	file://{resources}/layout/citadel_db_page_hero_vo_test.xml
+window	game-citadel_db_page_holiday_2025	Citadel Db Page Holiday 2025	file://{resources}/layout/citadel_db_page_holiday_2025.xml
+window	game-citadel_db_page_home	Citadel Db Page Home	file://{resources}/layout/citadel_db_page_home.xml
+window	game-citadel_db_page_learn	Citadel Db Page Learn	file://{resources}/layout/citadel_db_page_learn.xml
+window	game-citadel_db_page_news	Citadel Db Page News	file://{resources}/layout/citadel_db_page_news.xml
+window	game-citadel_db_page_news_entry	Citadel Db Page News Entry	file://{resources}/layout/citadel_db_page_news_entry.xml
+window	game-citadel_db_page_play	Citadel Db Page Play	file://{resources}/layout/citadel_db_page_play.xml
+window	game-citadel_db_page_play_bots	Citadel Db Page Play Bots	file://{resources}/layout/citadel_db_page_play_bots.xml
+window	game-citadel_db_page_private_lobby	Citadel Db Page Private Lobby	file://{resources}/layout/citadel_db_page_private_lobby.xml
+window	game-citadel_db_page_profile	Citadel Db Page Profile	file://{resources}/layout/citadel_db_page_profile.xml
+window	game-citadel_db_page_profile_match_history	Citadel Db Page Profile Match History	file://{resources}/layout/citadel_db_page_profile_match_history.xml
+window	game-citadel_db_page_ranked_history	Citadel Db Page Ranked History	file://{resources}/layout/citadel_db_page_ranked_history.xml
+window	game-citadel_db_page_ranked_season	Citadel Db Page Ranked Season	file://{resources}/layout/citadel_db_page_ranked_season.xml
+window	game-citadel_db_page_training	Citadel Db Page Training	file://{resources}/layout/citadel_db_page_training.xml
+window	game-citadel_db_page_watch	Citadel Db Page Watch	file://{resources}/layout/citadel_db_page_watch.xml
+window	game-citadel_dropdown	Citadel Dropdown	file://{resources}/layout/citadel_dropdown.xml
+window	game-citadel_hero_abilities	Citadel Hero Abilities	file://{resources}/layout/citadel_hero_abilities.xml
+window	game-citadel_hero_card	Citadel Hero Card	file://{resources}/layout/citadel_hero_card.xml
+window	game-citadel_hero_grid	Citadel Hero Grid	file://{resources}/layout/citadel_hero_grid.xml
+window	game-citadel_hero_logo	Citadel Hero Logo	file://{resources}/layout/citadel_hero_logo.xml
+window	game-citadel_hero_picker_context_menu	Citadel Hero Picker Context Menu	file://{resources}/layout/citadel_hero_picker_context_menu.xml
+window	game-citadel_hero_spotlight	Citadel Hero Spotlight	file://{resources}/layout/citadel_hero_spotlight.xml
+window	game-citadel_hero_stats_armor_panel	Citadel Hero Stats Armor Panel	file://{resources}/layout/citadel_hero_stats_armor_panel.xml
+window	game-citadel_hero_stats_tech_panel	Citadel Hero Stats Tech Panel	file://{resources}/layout/citadel_hero_stats_tech_panel.xml
+window	game-citadel_hero_stats_weapon_panel	Citadel Hero Stats Weapon Panel	file://{resources}/layout/citadel_hero_stats_weapon_panel.xml
+window	game-citadel_hero_tags	Citadel Hero Tags	file://{resources}/layout/citadel_hero_tags.xml
+window	game-citadel_hideout_connection_status	Citadel Hideout Connection Status	file://{resources}/layout/citadel_hideout_connection_status.xml
+window	game-citadel_hud_ability_button	Citadel Hud Ability Button	file://{resources}/layout/citadel_hud_ability_button.xml
+window	game-citadel_hud_ability_button_hint	Citadel Hud Ability Button Hint	file://{resources}/layout/citadel_hud_ability_button_hint.xml
+window	game-citadel_hud_ability_button_readonly	Citadel Hud Ability Button Readonly	file://{resources}/layout/citadel_hud_ability_button_readonly.xml
+window	game-citadel_hud_ability_upgrade_button	Citadel Hud Ability Upgrade Button	file://{resources}/layout/citadel_hud_ability_upgrade_button.xml
+window	game-citadel_hud_ability_upgrade_list	Citadel Hud Ability Upgrade List	file://{resources}/layout/citadel_hud_ability_upgrade_list.xml
+window	game-citadel_hud_ability_upgrade_pips	Citadel Hud Ability Upgrade Pips	file://{resources}/layout/citadel_hud_ability_upgrade_pips.xml
+window	game-citadel_hud_active_mods	Citadel Hud Active Mods	file://{resources}/layout/citadel_hud_active_mods.xml
+window	game-citadel_hud_active_player_stats	Citadel Hud Active Player Stats	file://{resources}/layout/citadel_hud_active_player_stats.xml
+window	game-citadel_hud_and_db_overlay	Citadel Hud And Db Overlay	file://{resources}/layout/citadel_hud_and_db_overlay.xml
+window	game-citadel_hud_combat_log	Citadel Hud Combat Log	file://{resources}/layout/citadel_hud_combat_log.xml
+window	game-citadel_hud_data_feed_banned_heroes	Citadel Hud Data Feed Banned Heroes	file://{resources}/layout/citadel_hud_data_feed_banned_heroes.xml
+window	game-citadel_hud_data_feed_info	Citadel Hud Data Feed Info	file://{resources}/layout/citadel_hud_data_feed_info.xml
+window	game-citadel_hud_data_feed_team_event	Citadel Hud Data Feed Team Event	file://{resources}/layout/citadel_hud_data_feed_team_event.xml
+window	game-citadel_hud_flex_slot_unlocked_message	Citadel Hud Flex Slot Unlocked Message	file://{resources}/layout/citadel_hud_flex_slot_unlocked_message.xml
+window	game-citadel_hud_game_announcements	Citadel Hud Game Announcements	file://{resources}/layout/citadel_hud_game_announcements.xml
+window	game-citadel_hud_hero_builds	Citadel Hud Hero Builds	file://{resources}/layout/citadel_hud_hero_builds.xml
+window	game-citadel_hud_hero_shop	Citadel Hud Hero Shop	file://{resources}/layout/citadel_hud_hero_shop.xml
+window	game-citadel_hud_item_bar_graph	Citadel Hud Item Bar Graph	file://{resources}/layout/citadel_hud_item_bar_graph.xml
+window	game-citadel_hud_koth	Citadel Hud Koth	file://{resources}/layout/citadel_hud_koth.xml
+window	game-citadel_hud_modifier_message	Citadel Hud Modifier Message	file://{resources}/layout/citadel_hud_modifier_message.xml
+window	game-citadel_hud_player_level	Citadel Hud Player Level	file://{resources}/layout/citadel_hud_player_level.xml
+window	game-citadel_hud_player_level_up_bonus	Citadel Hud Player Level Up Bonus	file://{resources}/layout/citadel_hud_player_level_up_bonus.xml
+window	game-citadel_hud_player_stats	Citadel Hud Player Stats	file://{resources}/layout/citadel_hud_player_stats.xml
+window	game-citadel_hud_playerintents_player	Citadel Hud Playerintents Player	file://{resources}/layout/citadel_hud_playerintents_player.xml
+window	game-citadel_hud_playerintents_team	Citadel Hud Playerintents Team	file://{resources}/layout/citadel_hud_playerintents_team.xml
+window	game-citadel_hud_pregame_countdown	Citadel Hud Pregame Countdown	file://{resources}/layout/citadel_hud_pregame_countdown.xml
+window	game-citadel_hud_pregame_simple	Citadel Hud Pregame Simple	file://{resources}/layout/citadel_hud_pregame_simple.xml
+window	game-citadel_hud_quick_response	Citadel Hud Quick Response	file://{resources}/layout/citadel_hud_quick_response.xml
+window	game-citadel_hud_ranked_player_summary	Citadel Hud Ranked Player Summary	file://{resources}/layout/citadel_hud_ranked_player_summary.xml
+window	game-citadel_hud_shop_quickbuy	Citadel Hud Shop Quickbuy	file://{resources}/layout/citadel_hud_shop_quickbuy.xml
+window	game-citadel_hud_single_item_bar_graph	Citadel Hud Single Item Bar Graph	file://{resources}/layout/citadel_hud_single_item_bar_graph.xml
+window	game-citadel_hud_subtitles	Citadel Hud Subtitles	file://{resources}/layout/citadel_hud_subtitles.xml
+window	game-citadel_hud_top_bar	Citadel Hud Top Bar	file://{resources}/layout/citadel_hud_top_bar.xml
+window	game-citadel_hud_top_bar_chat	Citadel Hud Top Bar Chat	file://{resources}/layout/citadel_hud_top_bar_chat.xml
+window	game-citadel_hud_top_bar_player	Citadel Hud Top Bar Player	file://{resources}/layout/citadel_hud_top_bar_player.xml
+window	game-citadel_hud_top_bar_player_details	Citadel Hud Top Bar Player Details	file://{resources}/layout/citadel_hud_top_bar_player_details.xml
+window	game-citadel_hud_top_bar_team	Citadel Hud Top Bar Team	file://{resources}/layout/citadel_hud_top_bar_team.xml
+window	game-citadel_hud_zipline_boost_icon	Citadel Hud Zipline Boost Icon	file://{resources}/layout/citadel_hud_zipline_boost_icon.xml
+window	game-citadel_item_draft_option	Citadel Item Draft Option	file://{resources}/layout/citadel_item_draft_option.xml
+window	game-citadel_item_draft_panel	Citadel Item Draft Panel	file://{resources}/layout/citadel_item_draft_panel.xml
+window	game-citadel_keybind_map_view	Citadel Keybind Map View	file://{resources}/layout/citadel_keybind_map_view.xml
+window	game-citadel_match_history_block_large	Citadel Match History Block Large	file://{resources}/layout/citadel_match_history_block_large.xml
+window	game-citadel_match_history_block_small	Citadel Match History Block Small	file://{resources}/layout/citadel_match_history_block_small.xml
+window	game-citadel_match_in_progress_status	Citadel Match In Progress Status	file://{resources}/layout/citadel_match_in_progress_status.xml
+window	game-citadel_matchmaking_status	Citadel Matchmaking Status	file://{resources}/layout/citadel_matchmaking_status.xml
+window	game-citadel_mod_bonus_display	Citadel Mod Bonus Display	file://{resources}/layout/citadel_mod_bonus_display.xml
+window	game-citadel_modified_attribute_label	Citadel Modified Attribute Label	file://{resources}/layout/citadel_modified_attribute_label.xml
+window	game-citadel_mods_purchased_panel	Citadel Mods Purchased Panel	file://{resources}/layout/citadel_mods_purchased_panel.xml
+window	game-citadel_party	Citadel Party	file://{resources}/layout/citadel_party.xml
+window	game-citadel_prewarm_assets_status	Citadel Prewarm Assets Status	file://{resources}/layout/citadel_prewarm_assets_status.xml
+window	game-citadel_ranked_badge	Citadel Ranked Badge	file://{resources}/layout/citadel_ranked_badge.xml
+window	game-citadel_ranked_badge_full	Citadel Ranked Badge Full	file://{resources}/layout/citadel_ranked_badge_full.xml
+window	game-citadel_ranked_badge_mini	Citadel Ranked Badge Mini	file://{resources}/layout/citadel_ranked_badge_mini.xml
+window	game-citadel_roster_hero_lore	Citadel Roster Hero Lore	file://{resources}/layout/citadel_roster_hero_lore.xml
+window	game-citadel_shop_ability_menu_icon	Citadel Shop Ability Menu Icon	file://{resources}/layout/citadel_shop_ability_menu_icon.xml
+window	game-citadel_shop_mod_icon	Citadel Shop Mod Icon	file://{resources}/layout/citadel_shop_mod_icon.xml
+window	game-citadel_shop_mod_view	Citadel Shop Mod View	file://{resources}/layout/citadel_shop_mod_view.xml
+window	game-citadel_shop_mod_view_favorites	Citadel Shop Mod View Favorites	file://{resources}/layout/citadel_shop_mod_view_favorites.xml
+window	game-citadel_shop_mods_build	Citadel Shop Mods Build	file://{resources}/layout/citadel_shop_mods_build.xml
+window	game-citadel_shop_mods_build_category	Citadel Shop Mods Build Category	file://{resources}/layout/citadel_shop_mods_build_category.xml
+window	game-citadel_shop_mods_filtered	Citadel Shop Mods Filtered	file://{resources}/layout/citadel_shop_mods_filtered.xml
+window	game-citadel_shop_mods_list	Citadel Shop Mods List	file://{resources}/layout/citadel_shop_mods_list.xml
+window	game-citadel_shop_mods_recommended	Citadel Shop Mods Recommended	file://{resources}/layout/citadel_shop_mods_recommended.xml
+window	game-citadel_shop_mods_tier	Citadel Shop Mods Tier	file://{resources}/layout/citadel_shop_mods_tier.xml
+window	game-citadel_stat_scaling_label	Citadel Stat Scaling Label	file://{resources}/layout/citadel_stat_scaling_label.xml
+window	game-citadel_status_effect	Citadel Status Effect	file://{resources}/layout/citadel_status_effect.xml
+window	game-citadel_ui_ability_order	Citadel Ui Ability Order	file://{resources}/layout/citadel_ui_ability_order.xml
+window	game-citadel_ui_account_survey	Citadel Ui Account Survey	file://{resources}/layout/citadel_ui_account_survey.xml
+window	game-citadel_ui_binding	Citadel Ui Binding	file://{resources}/layout/citadel_ui_binding.xml
+window	game-citadel_ui_binding_button	Citadel Ui Binding Button	file://{resources}/layout/citadel_ui_binding_button.xml
+window	game-citadel_ui_book_achievements	Citadel Ui Book Achievements	file://{resources}/layout/citadel_ui_book_achievements.xml
+window	game-citadel_ui_book_nav_button	Citadel Ui Book Nav Button	file://{resources}/layout/citadel_ui_book_nav_button.xml
+window	game-citadel_ui_book_nav_button_choice	Citadel Ui Book Nav Button Choice	file://{resources}/layout/citadel_ui_book_nav_button_choice.xml
+window	game-citadel_ui_book_nav_button_icon	Citadel Ui Book Nav Button Icon	file://{resources}/layout/citadel_ui_book_nav_button_icon.xml
+window	game-citadel_ui_book_nav_button_toc	Citadel Ui Book Nav Button Toc	file://{resources}/layout/citadel_ui_book_nav_button_toc.xml
+window	game-citadel_ui_book_toc	Citadel Ui Book Toc	file://{resources}/layout/citadel_ui_book_toc.xml
+window	game-citadel_ui_book_unlock_item	Citadel Ui Book Unlock Item	file://{resources}/layout/citadel_ui_book_unlock_item.xml
+window	game-citadel_ui_book_viewer	Citadel Ui Book Viewer	file://{resources}/layout/citadel_ui_book_viewer.xml
+window	game-citadel_ui_build_details	Citadel Ui Build Details	file://{resources}/layout/citadel_ui_build_details.xml
+window	game-citadel_ui_build_selector	Citadel Ui Build Selector	file://{resources}/layout/citadel_ui_build_selector.xml
+window	game-citadel_ui_build_tag	Citadel Ui Build Tag	file://{resources}/layout/citadel_ui_build_tag.xml
+window	game-citadel_ui_color_picker	Citadel Ui Color Picker	file://{resources}/layout/citadel_ui_color_picker.xml
+window	game-citadel_ui_color_picker_context_menu	Citadel Ui Color Picker Context Menu	file://{resources}/layout/citadel_ui_color_picker_context_menu.xml
+window	game-citadel_ui_color_picker_hue	Citadel Ui Color Picker Hue	file://{resources}/layout/citadel_ui_color_picker_hue.xml
+window	game-citadel_ui_color_picker_saturation_value	Citadel Ui Color Picker Saturation Value	file://{resources}/layout/citadel_ui_color_picker_saturation_value.xml
+window	game-citadel_ui_commend_notification	Citadel Ui Commend Notification	file://{resources}/layout/citadel_ui_commend_notification.xml
+window	game-citadel_ui_context_menu_game_chat	Citadel Ui Context Menu Game Chat	file://{resources}/layout/citadel_ui_context_menu_game_chat.xml
+window	game-citadel_ui_context_menu_party	Citadel Ui Context Menu Party	file://{resources}/layout/citadel_ui_context_menu_party.xml
+window	game-citadel_ui_context_menu_player	Citadel Ui Context Menu Player	file://{resources}/layout/citadel_ui_context_menu_player.xml
+window	game-citadel_ui_friend	Citadel Ui Friend	file://{resources}/layout/citadel_ui_friend.xml
+window	game-citadel_ui_friend_menu	Citadel Ui Friend Menu	file://{resources}/layout/citadel_ui_friend_menu.xml
+window	game-citadel_ui_gamepad_binding	Citadel Ui Gamepad Binding	file://{resources}/layout/citadel_ui_gamepad_binding.xml
+window	game-citadel_ui_gamepad_glyph	Citadel Ui Gamepad Glyph	file://{resources}/layout/citadel_ui_gamepad_glyph.xml
+window	game-citadel_ui_hero_challenge_status	Citadel Ui Hero Challenge Status	file://{resources}/layout/citadel_ui_hero_challenge_status.xml
+window	game-citadel_ui_invite_friend_menu	Citadel Ui Invite Friend Menu	file://{resources}/layout/citadel_ui_invite_friend_menu.xml
+window	game-citadel_ui_keyboard_binding	Citadel Ui Keyboard Binding	file://{resources}/layout/citadel_ui_keyboard_binding.xml
+window	game-citadel_ui_keyboard_glyph	Citadel Ui Keyboard Glyph	file://{resources}/layout/citadel_ui_keyboard_glyph.xml
+window	game-citadel_ui_library_book	Citadel Ui Library Book	file://{resources}/layout/citadel_ui_library_book.xml
+window	game-citadel_ui_modified_abilities_panel	Citadel Ui Modified Abilities Panel	file://{resources}/layout/citadel_ui_modified_abilities_panel.xml
+window	game-citadel_ui_modified_stats_panel	Citadel Ui Modified Stats Panel	file://{resources}/layout/citadel_ui_modified_stats_panel.xml
+window	game-citadel_ui_newplayer	Citadel Ui Newplayer	file://{resources}/layout/citadel_ui_newplayer.xml
+window	game-citadel_ui_party_code	Citadel Ui Party Code	file://{resources}/layout/citadel_ui_party_code.xml
+window	game-citadel_ui_party_invite	Citadel Ui Party Invite	file://{resources}/layout/citadel_ui_party_invite.xml
+window	game-citadel_ui_party_invite_list	Citadel Ui Party Invite List	file://{resources}/layout/citadel_ui_party_invite_list.xml
+window	game-citadel_ui_player_level_bonus_display	Citadel Ui Player Level Bonus Display	file://{resources}/layout/citadel_ui_player_level_bonus_display.xml
+window	game-citadel_ui_private_lobby_team_slot	Citadel Ui Private Lobby Team Slot	file://{resources}/layout/citadel_ui_private_lobby_team_slot.xml
+window	game-citadel_ui_privileged_features	Citadel Ui Privileged Features	file://{resources}/layout/citadel_ui_privileged_features.xml
+window	game-citadel_ui_radial	Citadel Ui Radial	file://{resources}/layout/citadel_ui_radial.xml
+window	game-citadel_ui_radial_commswheel	Citadel Ui Radial Commswheel	file://{resources}/layout/citadel_ui_radial_commswheel.xml
+window	game-citadel_ui_radial_minimap_ping	Citadel Ui Radial Minimap Ping	file://{resources}/layout/citadel_ui_radial_minimap_ping.xml
+window	game-citadel_ui_scroll_shortcuts	Citadel Ui Scroll Shortcuts	file://{resources}/layout/citadel_ui_scroll_shortcuts.xml
+window	game-citadel_ui_shop_filters	Citadel Ui Shop Filters	file://{resources}/layout/citadel_ui_shop_filters.xml
+window	game-citadel_waiting_for_map_status	Citadel Waiting For Map Status	file://{resources}/layout/citadel_waiting_for_map_status.xml
+window	game-citadel_waiting_for_players_status	Citadel Waiting For Players Status	file://{resources}/layout/citadel_waiting_for_players_status.xml
+window	game-hud_abilities	Hud Abilities	file://{resources}/layout/hud_abilities.xml
+window	game-hud_abilities_entry	Hud Abilities Entry	file://{resources}/layout/hud_abilities_entry.xml
+window	game-hud_ability_icon	Hud Ability Icon	file://{resources}/layout/hud_ability_icon.xml
+window	game-hud_ability_icon_active	Hud Ability Icon Active	file://{resources}/layout/hud_ability_icon_active.xml
+window	game-hud_ability_icon_passive	Hud Ability Icon Passive	file://{resources}/layout/hud_ability_icon_passive.xml
+window	game-hud_ability_interrupt	Hud Ability Interrupt	file://{resources}/layout/hud_ability_interrupt.xml
+window	game-hud_ability_panels_container	Hud Ability Panels Container	file://{resources}/layout/hud_ability_panels_container.xml
+window	game-hud_ability_resource	Hud Ability Resource	file://{resources}/layout/hud_ability_resource.xml
+window	game-hud_castbar_entry	Hud Castbar Entry	file://{resources}/layout/hud_castbar_entry.xml
+window	game-hud_castbars	Hud Castbars	file://{resources}/layout/hud_castbars.xml
+window	game-hud_damage_impact	Hud Damage Impact	file://{resources}/layout/hud_damage_impact.xml
+window	game-hud_damage_report	Hud Damage Report	file://{resources}/layout/hud_damage_report.xml
+window	game-hud_damage_rows	Hud Damage Rows	file://{resources}/layout/hud_damage_rows.xml
+window	game-hud_damage_summary	Hud Damage Summary	file://{resources}/layout/hud_damage_summary.xml
+window	game-hud_data_feed	Hud Data Feed	file://{resources}/layout/hud_data_feed.xml
+window	game-hud_escape_menu	Hud Escape Menu	file://{resources}/layout/hud_escape_menu.xml
+window	game-hud_event_indicator	Hud Event Indicator	file://{resources}/layout/hud_event_indicator.xml
+window	game-hud_event_indicator_item_used	Hud Event Indicator Item Used	file://{resources}/layout/hud_event_indicator_item_used.xml
+window	game-hud_event_indicator_status_impact	Hud Event Indicator Status Impact	file://{resources}/layout/hud_event_indicator_status_impact.xml
+window	game-hud_gold_and_ap_container	Hud Gold And Ap Container	file://{resources}/layout/hud_gold_and_ap_container.xml
+window	game-hud_health	Hud Health	file://{resources}/layout/hud_health.xml
+window	game-hud_health_container	Hud Health Container	file://{resources}/layout/hud_health_container.xml
+window	game-hud_hero_testing	Hud Hero Testing	file://{resources}/layout/hud_hero_testing.xml
+window	game-hud_hideout	Hud Hideout	file://{resources}/layout/hud_hideout.xml
+window	game-hud_hints	Hud Hints	file://{resources}/layout/hud_hints.xml
+window	game-hud_join_team	Hud Join Team	file://{resources}/layout/hud_join_team.xml
+window	game-hud_kill_hype	Hud Kill Hype	file://{resources}/layout/hud_kill_hype.xml
+window	game-hud_match_end	Hud Match End	file://{resources}/layout/hud_match_end.xml
+window	game-hud_match_start	Hud Match Start	file://{resources}/layout/hud_match_start.xml
+window	game-hud_minimap	Hud Minimap	file://{resources}/layout/hud_minimap.xml
+window	game-hud_modifier_history	Hud Modifier History	file://{resources}/layout/hud_modifier_history.xml
+window	game-hud_modifiers	Hud Modifiers	file://{resources}/layout/hud_modifiers.xml
+window	game-hud_modifiers_custom	Hud Modifiers Custom	file://{resources}/layout/hud_modifiers_custom.xml
+window	game-hud_modifiers_entry	Hud Modifiers Entry	file://{resources}/layout/hud_modifiers_entry.xml
+window	game-hud_modifiers_entry_center	Hud Modifiers Entry Center	file://{resources}/layout/hud_modifiers_entry_center.xml
+window	game-hud_modifiers_icon	Hud Modifiers Icon	file://{resources}/layout/hud_modifiers_icon.xml
+window	game-hud_movement_speed	Hud Movement Speed	file://{resources}/layout/hud_movement_speed.xml
+window	game-hud_next_level_reward_icon	Hud Next Level Reward Icon	file://{resources}/layout/hud_next_level_reward_icon.xml
+window	game-hud_objective_health	Hud Objective Health	file://{resources}/layout/hud_objective_health.xml
+window	game-hud_paused	Hud Paused	file://{resources}/layout/hud_paused.xml
+window	game-hud_personal_best	Hud Personal Best	file://{resources}/layout/hud_personal_best.xml
+window	game-hud_player_cam	Hud Player Cam	file://{resources}/layout/hud_player_cam.xml
+window	game-hud_playerintents	Hud Playerintents	file://{resources}/layout/hud_playerintents.xml
+window	game-hud_quickbuy	Hud Quickbuy	file://{resources}/layout/hud_quickbuy.xml
+window	game-hud_quickbuy_entry	Hud Quickbuy Entry	file://{resources}/layout/hud_quickbuy_entry.xml
+window	game-hud_reportcard	Hud Reportcard	file://{resources}/layout/hud_reportcard.xml
+window	game-hud_sandbox_tutorial	Hud Sandbox Tutorial	file://{resources}/layout/hud_sandbox_tutorial.xml
+window	game-hud_screen_effects_low_health	Hud Screen Effects Low Health	file://{resources}/layout/hud_screen_effects_low_health.xml
+window	game-hud_screen_effects_muted	Hud Screen Effects Muted	file://{resources}/layout/hud_screen_effects_muted.xml
+window	game-hud_screen_effects_scope	Hud Screen Effects Scope	file://{resources}/layout/hud_screen_effects_scope.xml
+window	game-hud_screen_effects_silenced	Hud Screen Effects Silenced	file://{resources}/layout/hud_screen_effects_silenced.xml
+window	game-hud_screen_effects_stunned	Hud Screen Effects Stunned	file://{resources}/layout/hud_screen_effects_stunned.xml
+window	game-hud_shields	Hud Shields	file://{resources}/layout/hud_shields.xml
+window	game-hud_spectate_bar	Hud Spectate Bar	file://{resources}/layout/hud_spectate_bar.xml
+window	game-hud_team_objective_health	Hud Team Objective Health	file://{resources}/layout/hud_team_objective_health.xml
+window	game-hud_unit_indicators_v2	Hud Unit Indicators V2	file://{resources}/layout/hud_unit_indicators_v2.xml
+window	game-hud_weapon_clip	Hud Weapon Clip	file://{resources}/layout/hud_weapon_clip.xml
+window	game-in_world_event_timer	In World Event Timer	file://{resources}/layout/in_world_event_timer.xml
+window	game-in_world_item_panel	In World Item Panel	file://{resources}/layout/in_world_item_panel.xml
+window	game-in_world_prompt_base	In World Prompt Base	file://{resources}/layout/in_world_prompt_base.xml
+window	game-in_world_prompt_shop	In World Prompt Shop	file://{resources}/layout/in_world_prompt_shop.xml
+window	game-in_world_prompt_spawn_room	In World Prompt Spawn Room	file://{resources}/layout/in_world_prompt_spawn_room.xml
+window	game-in_world_prompt_spawn_room_b	In World Prompt Spawn Room B	file://{resources}/layout/in_world_prompt_spawn_room_b.xml
+window	game-in_world_prompt_zipline	In World Prompt Zipline	file://{resources}/layout/in_world_prompt_zipline.xml
+window	game-in_world_prompt_zipline_blue	In World Prompt Zipline Blue	file://{resources}/layout/in_world_prompt_zipline_blue.xml
+window	game-in_world_prompt_zipline_orange	In World Prompt Zipline Orange	file://{resources}/layout/in_world_prompt_zipline_orange.xml
+window	game-in_world_prompt_zipline_purple	In World Prompt Zipline Purple	file://{resources}/layout/in_world_prompt_zipline_purple.xml
+window	game-in_world_prompt_zipline_sign	In World Prompt Zipline Sign	file://{resources}/layout/in_world_prompt_zipline_sign.xml
+window	game-in_world_prompt_zipline_sign_blue	In World Prompt Zipline Sign Blue	file://{resources}/layout/in_world_prompt_zipline_sign_blue.xml
+window	game-in_world_prompt_zipline_sign_orange	In World Prompt Zipline Sign Orange	file://{resources}/layout/in_world_prompt_zipline_sign_orange.xml
+window	game-in_world_prompt_zipline_sign_purple	In World Prompt Zipline Sign Purple	file://{resources}/layout/in_world_prompt_zipline_sign_purple.xml
+window	game-in_world_prompt_zipline_sign_yellow	In World Prompt Zipline Sign Yellow	file://{resources}/layout/in_world_prompt_zipline_sign_yellow.xml
+window	game-in_world_prompt_zipline_yellow	In World Prompt Zipline Yellow	file://{resources}/layout/in_world_prompt_zipline_yellow.xml
+window	game-in_world_sign_district_battery	In World Sign District Battery	file://{resources}/layout/in_world_sign_district_battery.xml
+window	game-in_world_sign_district_broadcast	In World Sign District Broadcast	file://{resources}/layout/in_world_sign_district_broadcast.xml
+window	game-in_world_sign_district_dispensary	In World Sign District Dispensary	file://{resources}/layout/in_world_sign_district_dispensary.xml
+window	game-in_world_sign_district_factory	In World Sign District Factory	file://{resources}/layout/in_world_sign_district_factory.xml
+window	game-in_world_sign_district_hotel	In World Sign District Hotel	file://{resources}/layout/in_world_sign_district_hotel.xml
+window	game-in_world_sign_district_inner_dispensary	In World Sign District Inner Dispensary	file://{resources}/layout/in_world_sign_district_inner_dispensary.xml
+window	game-in_world_sign_district_inner_hotel	In World Sign District Inner Hotel	file://{resources}/layout/in_world_sign_district_inner_hotel.xml
+window	game-in_world_sign_district_inner_research	In World Sign District Inner Research	file://{resources}/layout/in_world_sign_district_inner_research.xml
+window	game-in_world_sign_district_inner_trade	In World Sign District Inner Trade	file://{resources}/layout/in_world_sign_district_inner_trade.xml
+window	game-in_world_sign_district_lighthouse	In World Sign District Lighthouse	file://{resources}/layout/in_world_sign_district_lighthouse.xml
+window	game-in_world_sign_district_market	In World Sign District Market	file://{resources}/layout/in_world_sign_district_market.xml
+window	game-in_world_sign_district_martial	In World Sign District Martial	file://{resources}/layout/in_world_sign_district_martial.xml
+window	game-in_world_sign_district_research	In World Sign District Research	file://{resources}/layout/in_world_sign_district_research.xml
+window	game-in_world_sign_district_theater	In World Sign District Theater	file://{resources}/layout/in_world_sign_district_theater.xml
+window	game-in_world_sign_district_trade	In World Sign District Trade	file://{resources}/layout/in_world_sign_district_trade.xml
+window	game-in_world_sign_district_velvet	In World Sign District Velvet	file://{resources}/layout/in_world_sign_district_velvet.xml
+window	game-in_world_text_panel	In World Text Panel	file://{resources}/layout/in_world_text_panel.xml
+window	game-in_world_training_lane	In World Training Lane	file://{resources}/layout/in_world_training_lane.xml
+window	game-in_world_training_range	In World Training Range	file://{resources}/layout/in_world_training_range.xml
+window	game-playofthegame-citadel_hud_playofthegame	Citadel Hud Playofthegame	file://{resources}/layout/playofthegame/citadel_hud_playofthegame.xml
+window	game-popups-citadel_popup_build_browser	Citadel Popup Build Browser	file://{resources}/layout/popups/citadel_popup_build_browser.xml
+window	game-popups-citadel_popup_build_tag_picker	Citadel Popup Build Tag Picker	file://{resources}/layout/popups/citadel_popup_build_tag_picker.xml
+window	game-popups-citadel_popup_commend_player	Citadel Popup Commend Player	file://{resources}/layout/popups/citadel_popup_commend_player.xml
+window	game-popups-citadel_popup_custom_match	Citadel Popup Custom Match	file://{resources}/layout/popups/citadel_popup_custom_match.xml
+window	game-popups-citadel_popup_discord_invite	Citadel Popup Discord Invite	file://{resources}/layout/popups/citadel_popup_discord_invite.xml
+window	game-popups-citadel_popup_global_leaderboard	Citadel Popup Global Leaderboard	file://{resources}/layout/popups/citadel_popup_global_leaderboard.xml
+window	game-popups-citadel_popup_hero_debut	Citadel Popup Hero Debut	file://{resources}/layout/popups/citadel_popup_hero_debut.xml
+window	game-popups-citadel_popup_join_forum	Citadel Popup Join Forum	file://{resources}/layout/popups/citadel_popup_join_forum.xml
+window	game-popups-citadel_popup_keybind	Citadel Popup Keybind	file://{resources}/layout/popups/citadel_popup_keybind.xml
+window	game-popups-citadel_popup_player_feedback	Citadel Popup Player Feedback	file://{resources}/layout/popups/citadel_popup_player_feedback.xml
+window	game-popups-citadel_popup_private_bots	Citadel Popup Private Bots	file://{resources}/layout/popups/citadel_popup_private_bots.xml
+window	game-popups-citadel_popup_report_player	Citadel Popup Report Player	file://{resources}/layout/popups/citadel_popup_report_player.xml
+window	game-popups-citadel_popup_reporter_updates	Citadel Popup Reporter Updates	file://{resources}/layout/popups/citadel_popup_reporter_updates.xml
+window	game-popups-citadel_popup_roster_select	Citadel Popup Roster Select	file://{resources}/layout/popups/citadel_popup_roster_select.xml
+window	game-post_game-citadel_db_page_post_game_new	Citadel Db Page Post Game New	file://{resources}/layout/post_game/citadel_db_page_post_game_new.xml
+window	game-post_game-citadel_db_post_game_award	Citadel Db Post Game Award	file://{resources}/layout/post_game/citadel_db_post_game_award.xml
+window	game-post_game-citadel_db_post_game_player_context_menu	Citadel Db Post Game Player Context Menu	file://{resources}/layout/post_game/citadel_db_post_game_player_context_menu.xml
+window	game-post_game-citadel_db_post_game_progress_accolade	Citadel Db Post Game Progress Accolade	file://{resources}/layout/post_game/citadel_db_post_game_progress_accolade.xml
+window	game-post_game-citadel_db_post_game_progress_hero_release_vote_results	Citadel Db Post Game Progress Hero Release Vote Results	file://{resources}/layout/post_game/citadel_db_post_game_progress_hero_release_vote_results.xml
+window	game-post_game-citadel_db_post_game_progress_local_player	Citadel Db Post Game Progress Local Player	file://{resources}/layout/post_game/citadel_db_post_game_progress_local_player.xml
+window	game-post_game-citadel_db_post_game_progress_mvp	Citadel Db Post Game Progress Mvp	file://{resources}/layout/post_game/citadel_db_post_game_progress_mvp.xml
+window	game-post_game-citadel_db_post_game_progress_ranked	Citadel Db Post Game Progress Ranked	file://{resources}/layout/post_game/citadel_db_post_game_progress_ranked.xml
+window	game-post_game-citadel_db_post_game_scoreboard_new	Citadel Db Post Game Scoreboard New	file://{resources}/layout/post_game/citadel_db_post_game_scoreboard_new.xml
+window	game-post_game-citadel_db_post_game_team	Citadel Db Post Game Team	file://{resources}/layout/post_game/citadel_db_post_game_team.xml
+window	game-replay-citadel_hud_replay	Citadel Hud Replay	file://{resources}/layout/replay/citadel_hud_replay.xml
+window	game-replay-citadel_hud_replay_scrubber	Citadel Hud Replay Scrubber	file://{resources}/layout/replay/citadel_hud_replay_scrubber.xml
+window	game-street_brawl-citadel_hud_street_brawl_scoring_display	Citadel Hud Street Brawl Scoring Display	file://{resources}/layout/street_brawl/citadel_hud_street_brawl_scoring_display.xml
+window	game-tarot-citadel_db_page_tarot	Citadel Db Page Tarot	file://{resources}/layout/tarot/citadel_db_page_tarot.xml
+window	game-tarot-citadel_tarot_debug_context_menu	Citadel Tarot Debug Context Menu	file://{resources}/layout/tarot/citadel_tarot_debug_context_menu.xml
+window	game-tarot-citadel_tarot_playtest_context_menu	Citadel Tarot Playtest Context Menu	file://{resources}/layout/tarot/citadel_tarot_playtest_context_menu.xml
+window	game-tarot-citadel_tarot_playtest_outcome_popup	Citadel Tarot Playtest Outcome Popup	file://{resources}/layout/tarot/citadel_tarot_playtest_outcome_popup.xml
+window	game-tarot-citadel_tarot_rune	Citadel Tarot Rune	file://{resources}/layout/tarot/citadel_tarot_rune.xml
+window	game-tarot-citadel_tarot_tile	Citadel Tarot Tile	file://{resources}/layout/tarot/citadel_tarot_tile.xml
+window	game-tooltips-citadel_creep_gold_tooltip	Citadel Creep Gold Tooltip	file://{resources}/layout/tooltips/citadel_creep_gold_tooltip.xml
+window	game-tooltips-citadel_hero_stats_tooltip	Citadel Hero Stats Tooltip	file://{resources}/layout/tooltips/citadel_hero_stats_tooltip.xml
+window	game-tooltips-citadel_player_award_tooltip	Citadel Player Award Tooltip	file://{resources}/layout/tooltips/citadel_player_award_tooltip.xml
+window	game-tooltips-citadel_text_tooltip	Citadel Text Tooltip	file://{resources}/layout/tooltips/citadel_text_tooltip.xml
+window	game-tooltips-citadel_tooltip_ability_details	Citadel Tooltip Ability Details	file://{resources}/layout/tooltips/citadel_tooltip_ability_details.xml
+window	game-tooltips-citadel_tooltip_ability_property_stat_formula	Citadel Tooltip Ability Property Stat Formula	file://{resources}/layout/tooltips/citadel_tooltip_ability_property_stat_formula.xml
+window	game-tooltips-citadel_tooltip_ability_upgrade_button	Citadel Tooltip Ability Upgrade Button	file://{resources}/layout/tooltips/citadel_tooltip_ability_upgrade_button.xml
+window	game-tooltips-citadel_tooltip_book_toc	Citadel Tooltip Book Toc	file://{resources}/layout/tooltips/citadel_tooltip_book_toc.xml
+window	game-tooltips-citadel_tooltip_build_details	Citadel Tooltip Build Details	file://{resources}/layout/tooltips/citadel_tooltip_build_details.xml
+window	game-tooltips-citadel_tooltip_choose_voting_poster	Citadel Tooltip Choose Voting Poster	file://{resources}/layout/tooltips/citadel_tooltip_choose_voting_poster.xml
+window	game-tooltips-citadel_tooltip_damage_report_ability_summary	Citadel Tooltip Damage Report Ability Summary	file://{resources}/layout/tooltips/citadel_tooltip_damage_report_ability_summary.xml
+window	game-tooltips-citadel_tooltip_damage_report_hero_summary	Citadel Tooltip Damage Report Hero Summary	file://{resources}/layout/tooltips/citadel_tooltip_damage_report_hero_summary.xml
+window	game-tooltips-citadel_tooltip_graph_playernetworth	Citadel Tooltip Graph Playernetworth	file://{resources}/layout/tooltips/citadel_tooltip_graph_playernetworth.xml
+window	game-tooltips-citadel_tooltip_keybind_map	Citadel Tooltip Keybind Map	file://{resources}/layout/tooltips/citadel_tooltip_keybind_map.xml
+window	game-tooltips-citadel_tooltip_level_rewards	Citadel Tooltip Level Rewards	file://{resources}/layout/tooltips/citadel_tooltip_level_rewards.xml
+window	game-tooltips-citadel_tooltip_minimap	Citadel Tooltip Minimap	file://{resources}/layout/tooltips/citadel_tooltip_minimap.xml
+window	game-tooltips-citadel_tooltip_mod_bonus_display	Citadel Tooltip Mod Bonus Display	file://{resources}/layout/tooltips/citadel_tooltip_mod_bonus_display.xml
+window	game-tooltips-citadel_tooltip_mod_details	Citadel Tooltip Mod Details	file://{resources}/layout/tooltips/citadel_tooltip_mod_details.xml
+window	game-tooltips-citadel_tooltip_mod_hover	Citadel Tooltip Mod Hover	file://{resources}/layout/tooltips/citadel_tooltip_mod_hover.xml
+window	game-tooltips-citadel_tooltip_objectives	Citadel Tooltip Objectives	file://{resources}/layout/tooltips/citadel_tooltip_objectives.xml
+window	game-tooltips-citadel_tooltip_party_code	Citadel Tooltip Party Code	file://{resources}/layout/tooltips/citadel_tooltip_party_code.xml
+window	game-tooltips-citadel_tooltip_party_rosters_for_hero	Citadel Tooltip Party Rosters For Hero	file://{resources}/layout/tooltips/citadel_tooltip_party_rosters_for_hero.xml
+window	game-tooltips-citadel_tooltip_post_game_healing	Citadel Tooltip Post Game Healing	file://{resources}/layout/tooltips/citadel_tooltip_post_game_healing.xml
+window	game-tooltips-citadel_tooltip_priority_token	Citadel Tooltip Priority Token	file://{resources}/layout/tooltips/citadel_tooltip_priority_token.xml
+window	game-tooltips-citadel_tooltip_progress_bar_delta	Citadel Tooltip Progress Bar Delta	file://{resources}/layout/tooltips/citadel_tooltip_progress_bar_delta.xml
+window	game-tooltips-citadel_tooltip_ranked_badge	Citadel Tooltip Ranked Badge	file://{resources}/layout/tooltips/citadel_tooltip_ranked_badge.xml
+window	game-tooltips-citadel_tooltip_roster_select_hero	Citadel Tooltip Roster Select Hero	file://{resources}/layout/tooltips/citadel_tooltip_roster_select_hero.xml
+window	game-tooltips-citadel_tooltip_roster_select_hero_hover	Citadel Tooltip Roster Select Hero Hover	file://{resources}/layout/tooltips/citadel_tooltip_roster_select_hero_hover.xml
+window	game-tooltips-citadel_tooltip_spirit_stat	Citadel Tooltip Spirit Stat	file://{resources}/layout/tooltips/citadel_tooltip_spirit_stat.xml
+window	game-tooltips-citadel_tooltip_stat_formula	Citadel Tooltip Stat Formula	file://{resources}/layout/tooltips/citadel_tooltip_stat_formula.xml
+window	game-tooltips-citadel_tooltip_stats_panel	Citadel Tooltip Stats Panel	file://{resources}/layout/tooltips/citadel_tooltip_stats_panel.xml
+window	game-tooltips-citadel_tooltip_weapon_stats	Citadel Tooltip Weapon Stats	file://{resources}/layout/tooltips/citadel_tooltip_weapon_stats.xml
+window	game-tooltips-citadel_tooltip_win_streak_bonus	Citadel Tooltip Win Streak Bonus	file://{resources}/layout/tooltips/citadel_tooltip_win_streak_bonus.xml

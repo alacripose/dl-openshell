@@ -1,0 +1,24 @@
+shploingus.theme/1
+# The palette the shell shipped with: Deadlock's warm parchment on a dark
+# surface, declared here so it is one scheme among the others instead of the
+# only hard-coded one. The alpha values are the shell's own window opacity.
+theme	alpha
+	label	Alpha parchment
+	source	the shell's original openlock_shell.css palette
+	body	#14100bf2
+	panel	#241a10f2
+	title	#2a2012f2
+	meta	#1a140df2
+	border	#8a6f42
+	borderStrong	#e0b56a
+	ink	#f4e6c8
+	muted	#a8977c
+	accent	#e0b56a
+	alert	#d06a4e
+	alertBody	#2a1410f2
+# The shell's original palette applied to the two game surfaces the shell frames most often.
+# The default Deadlock scheme has no such rows, which is how the native look stays available.
+rule	.CitadelHudTopBar	background-color	#14100BE6
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#14100BE6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

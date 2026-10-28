@@ -1,0 +1,24 @@
+# Freebuff Desktop project marker (its own .gitignore covers the folder)
+.freebuff/
+
+# Local playtest material, reference checkouts and the source archive
+.scratch/
+.reference/
+ala-system.zip
+exceptions.txt
+clientaddon/logs/
+
+# Build output (install.ps1 regenerates these)
+dist/
+*.vpk
+shell/alpha-shell/build.json
+src/**/bin/
+src/**/obj/
+
+# Logs
+*.log
+openlock.log
+
+# OS cruft
+Thumbs.db
+.DS_Store
