@@ -26,38 +26,14 @@ param(
     [switch]$ForcePackage,
     [bool]$Update = $true,
     [switch]$VpkOnly,
-    [switch]$Compile
+    [switch]$Compile,
+    [int]$PackTimeoutSeconds = 30
 )
 
 $ErrorActionPreference = 'Stop'
 
-# The persona is read from *this* machine's Steam login record and passed to the generator for
-# this build only. It is never committed and never copied from another person's build: a VPK
-# packed here says the installer's name; a VPK packed anywhere else says that machine's name.
-function Get-SteamPersona {
-    $paths = @()
-    try {
-        $steamPath = (Get-ItemProperty -Path 'HKCU:\Software\Valve\Steam' -Name SteamPath -ErrorAction Stop).SteamPath
-        if ($steamPath) { $paths += (Join-Path $steamPath 'config\loginusers.vdf') }
-    } catch {}
-    foreach ($root in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
-        if ($root) { $paths += (Join-Path $root 'Steam\config\loginusers.vdf') }
-    }
-
-    foreach ($path in $paths) {
-        if (-not $path -or -not (Test-Path -LiteralPath $path)) { continue }
-        try { $text = [System.IO.File]::ReadAllText($path) } catch { continue }
-        $fallback = ''
-        foreach ($block in [regex]::Matches($text, '\{[^{}]*\}')) {
-            $persona = [regex]::Match($block.Value, '"PersonaName"\s+"([^"]*)"')
-            if (-not $persona.Success) { continue }
-            if ($block.Value -match '"MostRecent"\s+"1"') { return $persona.Groups[1].Value.Trim() }
-            if (-not $fallback) { $fallback = $persona.Groups[1].Value.Trim() }
-        }
-        if ($fallback) { return $fallback }
-    }
-    return ''
-}
+# The launcher name is read from Steam by the running client, never baked into the VPK. A build
+# copied to another player must show that player's name, not the builder's.
 
 # The script is also shipped beside a game: in game/bin/win64 next to deadlock.exe or project8.exe.
 # Resolve the install from the executable, then from an explicit root, so the same file works from
@@ -126,6 +102,119 @@ $repoRoot = Split-Path $source -Parent
 $build = Join-Path $repoRoot 'dist\openlock_ui'
 $archive = Join-Path $build 'pak01_dir.vpk'
 
+# Read one NUL-terminated string from a VPK directory tree. Returns $null when the tree ends
+# before a terminator, which is how Test-VpkArchive tells a truncated tree from an empty string.
+function Read-VpkString([byte[]]$Data, [int]$Start, [ref]$Next) {
+    $i = $Start
+    while ($i -lt $Data.Length -and $Data[$i] -ne 0) { $i++ }
+    if ($i -ge $Data.Length) { return $null }
+    $value = [System.Text.Encoding]::UTF8.GetString($Data, $Start, $i - $Start)
+    $Next.Value = $i + 1
+    return $value
+}
+
+# An entry name is a resource path under the archive root. The engine resolves it against the
+# mount, so `..`, an absolute path, a drive prefix or a backslash must never reach it.
+function Test-VpkEntryPath([string]$Path) {
+    if (-not $Path) { return $false }
+    if ($Path -match '[:\\]') { return $false }
+    foreach ($segment in $Path.Split('/')) {
+        if (-not $segment -or $segment -eq '.' -or $segment -eq '..') { return $false }
+    }
+    return $true
+}
+
+# A VPK is installable only when its header and directory tree parse. The packer in this SDK can
+# leave a syntactically complete archive behind and then not exit; this check is what makes that
+# observable success, and what refuses a half-written file. Returns $null on success, or the
+# reason as a string.
+function Test-VpkArchive([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return 'archive was not written' }
+    $stream = $null
+    try {
+        $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open,
+            [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+        $length = $stream.Length
+        if ($length -lt 12) { return 'archive is shorter than a VPK header' }
+        $head = New-Object byte[] 12
+        $read = $stream.Read($head, 0, 12)
+        if ($read -ne 12) { return 'archive header is truncated' }
+        if ($head[0] -ne 0x34 -or $head[1] -ne 0x12 -or $head[2] -ne 0xAA -or $head[3] -ne 0x55) {
+            return 'archive has bad VPK magic'
+        }
+        $version = [int][BitConverter]::ToUInt32($head, 4)
+        if ($version -ne 1 -and $version -ne 2) { return "archive uses unsupported VPK version $version" }
+        $treeSize = [int][BitConverter]::ToUInt32($head, 8)
+        $headerSize = 12
+        if ($version -eq 2) { $headerSize += 16 }
+        if ($treeSize -lt 1) { return 'archive has an empty VPK tree' }
+        if ([long]$headerSize + [long]$treeSize -gt $length) { return 'VPK tree runs past the end of the archive' }
+
+        $stream.Position = $headerSize
+        $tree = New-Object byte[] $treeSize
+        $got = 0
+        while ($got -lt $treeSize) {
+            $n = $stream.Read($tree, $got, $treeSize - $got)
+            if ($n -le 0) { return 'VPK tree read ended early' }
+            $got += $n
+        }
+
+        $pos = 0
+        $entries = 0
+        $extensions = 0
+        while ($pos -lt $treeSize) {
+            $next = 0
+            $ext = Read-VpkString -Data $tree -Start $pos -Next ([ref]$next)
+            if ($null -eq $ext) { return 'VPK tree has an unterminated extension string' }
+            $pos = $next
+            if ($ext.Length -eq 0) { break }
+            $extensions++
+            while ($true) {
+                $next = 0
+                $dir = Read-VpkString -Data $tree -Start $pos -Next ([ref]$next)
+                if ($null -eq $dir) { return 'VPK tree has an unterminated directory string' }
+                $pos = $next
+                if ($dir.Length -eq 0) { break }
+                while ($true) {
+                    $next = 0
+                    $name = Read-VpkString -Data $tree -Start $pos -Next ([ref]$next)
+                    if ($null -eq $name) { return 'VPK tree has an unterminated entry name' }
+                    $pos = $next
+                    if ($name.Length -eq 0) { break }
+                    if ($pos + 18 -gt $treeSize) { return 'VPK entry metadata runs past the tree' }
+                    $pos += 18
+                    $entryPath = if ($dir.Length -gt 0) { "$dir/$name" } else { $name }
+                    if ($ext.Length -gt 0) { $entryPath += '.' + $ext }
+                    if (-not (Test-VpkEntryPath $entryPath)) {
+                        return "VPK entry '$entryPath' escapes the archive root"
+                    }
+                    $entries++
+                }
+            }
+        }
+        if ($extensions -eq 0 -or $entries -eq 0) { return 'VPK tree contains no entries' }
+        if ($pos -ne $treeSize) { return "VPK tree has trailing bytes ($pos of $treeSize read)" }
+        return $null
+    } catch {
+        return 'could not read VPK: ' + $_.Exception.Message
+    } finally {
+        if ($stream) { $stream.Dispose() }
+    }
+}
+
+function Stop-VpkPacker([System.Diagnostics.Process]$Process) {
+    if (-not $Process) { return }
+    if (-not $Process.HasExited) {
+        try { $Process.Kill() } catch {}
+        try { [void]$Process.WaitForExit(5000) } catch {}
+    }
+}
+
+function Get-LogTail([string]$Path) {
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return '' }
+    return ((Get-Content -LiteralPath $Path -Tail 12 -ErrorAction SilentlyContinue) -join "`n")
+}
+
 # A clean checkout may fast-forward to the remote before the version-specific generation. Local
 # changes are never discarded; an update is skipped and the build proceeds from what is here.
 if ($Update -and (Test-Path (Join-Path $repoRoot '.git'))) {
@@ -150,20 +239,9 @@ $generator = Join-Path $repoRoot 'tools\gen_shell_data.py'
 $dataFile = Join-Path $source 'panorama\scripts\openlock_shell_data.js'
 if (-not (Test-Path $generator)) { throw "data generator not found at '$generator'." }
 
-# Local-only launcher label. The previous value is restored even if the generator fails so a
-# later command in this shell cannot inherit someone's persona.
-$persona = Get-SteamPersona
-$previousPersona = $env:OPENLOCK_STEAM_NAME
-$env:OPENLOCK_STEAM_NAME = $persona
-Write-Host $(if ($persona) { "Launcher name: $persona (this install only)" } else { 'No Steam persona found; launcher will use the package name.' })
-try {
-    & $Python $generator (Join-Path $repoRoot 'shell\alpha-shell') $dataFile $gameinfo
-    if ($LASTEXITCODE -ne 0) {
-        throw "gen_shell_data.py failed with exit code $LASTEXITCODE; refusing to pack stale UI data."
-    }
-} finally {
-    if ($null -eq $previousPersona) { Remove-Item Env:\OPENLOCK_STEAM_NAME -ErrorAction SilentlyContinue }
-    else { $env:OPENLOCK_STEAM_NAME = $previousPersona }
+& $Python $generator (Join-Path $repoRoot 'shell\alpha-shell') $dataFile $gameinfo
+if ($LASTEXITCODE -ne 0) {
+    throw "gen_shell_data.py failed with exit code $LASTEXITCODE; refusing to pack stale UI data."
 }
 
 $sdkCandidates = @()
@@ -322,16 +400,92 @@ if (Test-Path $compiler) {
     Write-Host "Compiled $($compiled.Count) Panorama resources with $compiler"
 }
 
-# 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write.
-& $VpkTool $build $archive
-if ($LASTEXITCODE -ne 0) { throw "CSDKCfgVPK failed with exit code $LASTEXITCODE." }
-if (-not (Test-Path $archive)) { throw "CSDKCfgVPK reported success but wrote no archive at '$archive'." }
+# 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
+#    packer writes the archive and then never exits, so run it as a child, wait for a stable file,
+#    terminate it when it overruns, and validate the VPK tree before installing. A timeout only
+#    ends the wait; a missing or invalid archive is still a hard failure.
+if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+$packLog = Join-Path $env:TEMP ('openlock-vpk-' + [guid]::NewGuid().ToString('N') + '.out.log')
+$packErr = Join-Path $env:TEMP ('openlock-vpk-' + [guid]::NewGuid().ToString('N') + '.err.log')
+$packArgs = '"' + $build + '" "' + $archive + '"'
+$packTimeout = [Math]::Max(5, $PackTimeoutSeconds)
+Write-Host "Packing with $VpkTool"
+try {
+    $pack = Start-Process -FilePath $VpkTool -ArgumentList $packArgs -WorkingDirectory $repoRoot `
+        -PassThru -NoNewWindow -RedirectStandardOutput $packLog -RedirectStandardError $packErr
+} catch {
+    throw "Could not start CSDKCfgVPK at '$VpkTool': $($_.Exception.Message)"
+}
+if (-not $pack) { throw 'CSDKCfgVPK did not start.' }
+
+$deadline = (Get-Date).AddSeconds($packTimeout)
+$lastLength = -1
+$stablePolls = 0
+$packExited = $false
+while ((Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 250
+    if ($pack.HasExited) { $packExited = $true; break }
+    $item = Get-Item -LiteralPath $archive -ErrorAction SilentlyContinue
+    if ($item -and $item.Length -gt 0) {
+        if ($item.Length -eq $lastLength) {
+            $stablePolls++
+        } else {
+            $stablePolls = 0
+            $lastLength = $item.Length
+        }
+        if ($stablePolls -ge 3) { break }
+    } else {
+        $stablePolls = 0
+    }
+}
+$timedOut = (-not $packExited -and $stablePolls -lt 3)
+$packerWasRunning = -not $pack.HasExited
+$packExitCode = if ($pack.HasExited) { $pack.ExitCode } else { $null }
+if ($packerWasRunning) { Stop-VpkPacker $pack }
+
+$archiveInfo = Get-Item -LiteralPath $archive -ErrorAction SilentlyContinue
+$archiveBytes = if ($archiveInfo) { $archiveInfo.Length } else { 0 }
+$vpkError = Test-VpkArchive $archive
+if ($vpkError) {
+    $tail = Get-LogTail $packLog
+    if ($tail) { $tail = "`nCSDKCfgVPK output:`n" + $tail }
+    if ($timedOut) {
+        $reason = "CSDKCfgVPK produced no valid archive within $packTimeout seconds (packer PID $($pack.Id) was terminated; $archiveBytes bytes at '$archive'; $vpkError)."
+    } elseif ($packerWasRunning) {
+        $reason = "CSDKCfgVPK left an invalid archive and did not exit (packer PID $($pack.Id) was terminated; $archiveBytes bytes at '$archive'; $vpkError)."
+    } elseif ($packExitCode -ne 0) {
+        $reason = "CSDKCfgVPK exited with code $packExitCode and left no valid archive ($archiveBytes bytes at '$archive'; $vpkError)."
+    } else {
+        $reason = "CSDKCfgVPK reported success but left no valid archive ($archiveBytes bytes at '$archive'; $vpkError)."
+    }
+    throw ($reason + $tail)
+}
+$archiveBytes = (Get-Item -LiteralPath $archive).Length
+if ($packerWasRunning) {
+    Write-Host "CSDKCfgVPK wrote a valid $archiveBytes-byte archive and did not exit; terminated PID $($pack.Id)."
+} elseif ($packExitCode -ne 0) {
+    Write-Warning "CSDKCfgVPK exited with code $packExitCode after writing a valid archive; continuing."
+} else {
+    Write-Host "CSDKCfgVPK wrote a valid $archiveBytes-byte archive."
+}
+Remove-Item -LiteralPath $packLog,$packErr -Force -ErrorAction SilentlyContinue
 
 # 5. Install the archive as the only source. A loose copy of the same layout names beside the
 #    archive is a duplicate answer for `base_hud`; the shipping client reads the compiled resource
 #    from the archive, so the loose tree is removed rather than kept as a second authority.
+$builtHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
 New-Item -ItemType Directory -Force -Path $addonRoot | Out-Null
-Copy-Item $archive (Join-Path $addonRoot 'pak01_dir.vpk') -Force
+$installedArchive = Join-Path $addonRoot 'pak01_dir.vpk'
+Copy-Item $archive $installedArchive -Force
+$installedHash = (Get-FileHash -LiteralPath $installedArchive -Algorithm SHA256).Hash
+if ($builtHash -ne $installedHash) {
+    throw "Installed VPK hash $installedHash does not match the built archive's $builtHash."
+}
+$installedError = Test-VpkArchive $installedArchive
+if ($installedError) {
+    throw "Installed VPK is not readable: $installedError"
+}
+Write-Host "Installed VPK SHA-256 $builtHash matches the built archive."
 $legacy = Join-Path $addonRoot 'panorama'
 if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force }
 
@@ -388,6 +542,7 @@ if ($PackageRepo.Count -gt 0) {
 
     $packageBase = Join-Path $PSScriptRoot 'openlock-packages'
     New-Item -ItemType Directory -Force -Path $packageBase | Out-Null
+    $packageBaseFull = [System.IO.Path]::GetFullPath($packageBase).TrimEnd('\') + '\'
     $steamInfo = Get-GameSteamInfo $citadel
     $seenPackages = @{}
 
@@ -397,6 +552,10 @@ if ($PackageRepo.Count -gt 0) {
         $repoName = Split-Path $repoName -Leaf
         if (-not $repoName) { $repoName = 'package-' + ($installedPackages.Count + 1) }
         $checkout = Join-Path $packageBase $repoName
+        $checkoutResolved = [System.IO.Path]::GetFullPath($checkout)
+        if (-not $checkoutResolved.StartsWith($packageBaseFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "package repo '$repo' resolves its checkout outside '$packageBase'; refusing."
+        }
 
         if (Test-Path (Join-Path $checkout '.git')) {
             $dirty = & git -C $checkout status --porcelain
@@ -409,7 +568,9 @@ if ($PackageRepo.Count -gt 0) {
         } else {
             $cloneArgs = @('clone', '--depth', '1')
             if ($PackageRef) { $cloneArgs += @('--branch', $PackageRef) }
-            $cloneArgs += @($repo, $checkout)
+            # `--` ends git's options. Without it a repo value beginning with '-' is parsed as a
+            # git option (for example an upload-pack command) rather than a source.
+            $cloneArgs += @('--', $repo, $checkout)
             Write-Host "Cloning package $repo into $checkout"
             & git @cloneArgs
             if ($LASTEXITCODE -ne 0) { throw "git clone failed for package '$repo' with exit code $LASTEXITCODE." }
@@ -423,7 +584,12 @@ if ($PackageRepo.Count -gt 0) {
         catch { throw "package '$repo' has an unreadable openlock.package.json: $($_.Exception.Message)" }
 
         $id = [string]$manifest.id
-        if (-not $id -or $id -notmatch '^[A-Za-z0-9_.-]{1,40}$' -or $id -eq 'openlock_ui') {
+        # The id is a directory name and a gameinfo path component. `.` and `..` are valid under
+        # the character class but resolve to the package root or its parent, which would copy the
+        # package VPK into citadel/addons and mount the whole addons tree. A trailing dot is
+        # stripped by Windows and can alias another package.
+        if (-not $id -or $id -notmatch '^[A-Za-z0-9_.-]{1,40}$' -or $id -eq 'openlock_ui' -or
+            $id -eq '.' -or $id -eq '..' -or $id.EndsWith('.')) {
             throw "package '$repo' declares an invalid id '$id'."
         }
         if ($seenPackages.ContainsKey($id)) { throw "two package repositories declare the id '$id'." }
@@ -455,7 +621,24 @@ if ($PackageRepo.Count -gt 0) {
         if (-not (Test-Path -LiteralPath $vpkFull) -or [System.IO.Path]::GetExtension($vpkFull) -ne '.vpk') {
             throw "package '$id' has no prebuilt .vpk at '$vpkRel'."
         }
+        # The lexical containment check above does not stop a link/junction inside the checkout
+        # from pointing the VPK at a file outside it. Walk the components and refuse reparse points.
+        $checkoutRoot = $checkoutFull.TrimEnd('\')
+        $vpkRelative = $vpkFull.Substring($checkoutRoot.Length).TrimStart('\')
+        $walk = $checkoutRoot
+        foreach ($segment in $vpkRelative.Split([char]'\')) {
+            if (-not $segment) { continue }
+            $walk = Join-Path $walk $segment
+            $item = Get-Item -LiteralPath $walk -Force -ErrorAction Stop
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "package '$id' vpk path follows a link at '$segment'; refusing."
+            }
+        }
         Assert-PackageVpk $vpkFull
+        $structureError = Test-VpkArchive $vpkFull
+        if ($structureError) {
+            throw "package '$id' vpk '$vpkRel' is not a readable VPK: $structureError"
+        }
 
         $packageMountRel = 'citadel/addons/openlock_packages/' + $id
         $packageMount = Join-Path $citadel ('addons\openlock_packages\' + $id)

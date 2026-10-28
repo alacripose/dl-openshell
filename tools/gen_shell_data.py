@@ -378,6 +378,7 @@ def read_search_paths(gameinfo: Path):
         return rows, {"file": gameinfo.name, "line": 1, "subject": "search paths",
                       "why": f"no gameinfo.gi at '{gameinfo}'"}
 
+    game_root = gameinfo.parent.parent.resolve()
     in_block = False
     depth = 0
     for index, raw in enumerate(gameinfo.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
@@ -400,6 +401,14 @@ def read_search_paths(gameinfo: Path):
 
         relative = fields[1].replace("\\", "/")
         root = (gameinfo.parent.parent / relative).resolve()
+        try:
+            root.relative_to(game_root)
+            inside = True
+        except ValueError:
+            # Never stat or list a search path outside the install: a gameinfo entry is not a
+            # reason for the generator to read another directory, and the layout/theme scanners
+            # already refuse these roots.
+            inside = False
         rows.append(
             {
                 "kind": fields[0],
@@ -407,8 +416,8 @@ def read_search_paths(gameinfo: Path):
                 # not carry this machine's path into someone else's client.
                 "path": relative,
                 "line": index,
-                "exists": root.exists(),
-                "mounts": _mounts(root),
+                "exists": inside and root.exists(),
+                "mounts": _mounts(root) if inside else "outside game root",
             }
         )
     return rows, None
@@ -426,13 +435,12 @@ def _mounts(root: Path):
 
 
 def read_steam_persona() -> str:
-    """The installer's local Steam persona, or an empty string.
+    """Always empty: a package must never carry the builder's Steam name.
 
-    The name is deliberately *not* read automatically: a package built on one machine must never
-    carry that person's name to everyone else. install.ps1 reads loginusers.vdf on the machine it
-    runs on and passes the result in OPENLOCK_STEAM_NAME for that local build only.
+    The shell reads the logged-in persona from Steam at runtime, on the machine showing it. A VPK
+    built here and copied to someone else must show *their* name, not this builder's.
     """
-    return os.environ.get("OPENLOCK_STEAM_NAME", "").strip()
+    return ""
 
 
 def read_layouts(gameinfo: Path) -> list[str]:

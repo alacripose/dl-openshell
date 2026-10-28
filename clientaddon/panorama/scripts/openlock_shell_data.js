@@ -11587,16 +11587,16 @@ var SHELL = {
     "panorama/layout/unit_status_stagger.xml",
     "panorama/layout/unit_status_stagger_progress_bar_text.xml"
   ],
-  "steamName": "rat burger",
+  "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "",
-    "branch": "",
-    "dirty": false,
+    "commit": "ae88fd7",
+    "branch": "main",
+    "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 11:54",
+    "generatedAt": "2026-10-28 13:20",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  game 6821"
+    "label": "v0.7.0  ·  ae88fd7+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11731,9 +11731,9 @@ var SHELL = {
   },
   "buildState": {
     "stage": "installed",
-    "finishedAt": "2026-10-28 11:50",
+    "finishedAt": "2026-10-28 12:04",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 1045639,
+    "vpkBytes": 1041351,
     "resources": 9,
     "path": "citadel/addons/openlock_ui/pak01_dir.vpk",
     "stages": [
@@ -11745,7 +11745,7 @@ var SHELL = {
       {
         "name": "pack",
         "ok": true,
-        "bytes": 1045639
+        "bytes": 1041351
       },
       {
         "name": "install",

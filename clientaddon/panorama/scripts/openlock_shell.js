@@ -26,7 +26,6 @@
     var windowLayer = root.FindChildTraverse("WindowLayer");
     var panelLayer = root.FindChildTraverse("PanelLayer");
     var dropGrid = root.FindChildTraverse("DropGrid");
-    var pointerProbe = root.FindChildTraverse("PointerProbe");
     var toastStack = root.FindChildTraverse("ToastStack");
     var updateModal = root.FindChildTraverse("UpdateModal");
     var clockLabel = root.FindChildTraverse("Clock");
@@ -92,9 +91,7 @@
     // to move. writes are style assignments; skipped are the same value met again and not written.
     var perf = { polls: 0, applies: 0, writes: 0, skips: 0, scans: 0, fullScans: 0, cost: {} };
     var frameMs = 0;
-    var frameClockAt = 0;
-    var frameTickAt = 0;
-    var frameTicks = 0;
+    var frameTickAt = -1;
     var reportedRefusals = {};
 
     var frames = {};      // id -> { frame, title, meta, body, refusal, win }
@@ -582,12 +579,21 @@
         // of letting the bar slice through the top-row HUD frames.
         g.y = clamp(g.y, SHELL_TOP_DP + CHROME_DP, Math.max(SHELL_TOP_DP + CHROME_DP, screenH - 80));
 
-        var scale = clamp(g.w / nat.w, 0.08, 4);
-        var tx = g.x - nat.x - (nat.w - nat.w * scale) / 2;
-        var ty = g.y - nat.y - (nat.h - nat.h * scale) / 2;
+        g.w = clamp(g.w, num(win.minWidth) || 160, screenW);
+        g.h = clamp(g.h, num(win.minHeight) || 120, screenH);
+
+        // A live game panel is scaled into the frame, not the frame around the panel. Two
+        // independent factors are what let a corner change height: the old single `scale` was
+        // derived from width alone, and the frame height was then recomputed from the panel's
+        // natural aspect, so any height delta was thrown away and a north drag left a fixed top
+        // edge. g.h is now the authority on both axes.
+        var sx = clamp(g.w / nat.w, 0.08, 4);
+        var sy = clamp(g.h / nat.h, 0.08, 4);
+        var tx = g.x - nat.x - (nat.w - nat.w * sx) / 2;
+        var ty = g.y - nat.y - (nat.h - nat.h * sy) / 2;
 
         var transform = "translate3d(" + tx + "px," + ty + "px,0px) scale3d(" +
-            scale + "," + scale + ",1)";
+            sx + "," + sy + ",1)";
         if (b.lastTransform === transform) {
             perf.skips++;
         } else {
@@ -600,156 +606,91 @@
             }
         }
 
-        setRect(record, g.x, g.y - CHROME_DP, g.w, nat.h * scale + CHROME_DP);
+        setRect(record, g.x, g.y - CHROME_DP, g.w, g.h + CHROME_DP);
         return true;
     }
 
-    // A real clock, never a guessed one. Panorama exposes performance.now on current V8 builds;
-    // Date.now is a 1 ms fallback and the readout says so instead of pretending to be precise.
-    var clockIsPrecise = typeof performance !== "undefined" && performance && typeof performance.now === "function";
-    function nowMs() {
+    // Deadlock exposes no performance.now and no GameUI. $.FrameTime() is the engine's frame
+    // timestamp (seconds since Panorama started); its deltas are the only sub-millisecond frame
+    // clock here. Per-window work is measured with Date.now, which is a 1 ms clock, so the label
+    // shows "<1 ms" rather than inventing precision.
+    function engineNowMs() {
         try {
-            if (clockIsPrecise) return performance.now();
+            if (typeof $ !== "undefined" && typeof $.FrameTime === "function") {
+                var t = Number($.FrameTime());
+                if (isFinite(t)) return t * 1000;
+            }
         } catch (e) {}
-        return Date.now();
+        return -1;
     }
 
     function noteWindowCost(id, started) {
-        var elapsed = Math.max(0, nowMs() - started);
-        if (!perf.cost[id]) perf.cost[id] = { total: 0, samples: 0 };
-        perf.cost[id].total += elapsed;
-        perf.cost[id].samples++;
+        // Force this frame's layout once so the measurement covers the style writes and the
+        // layout they cause, not just the JS property assignments.
+        var f = frames[id];
+        if (f && f.frame) {
+            try { var flush = f.frame.actuallayoutwidth; if (flush < 0) $.Msg("[Openlock] layout read negative"); } catch (e) {}
+        }
+        var b = bound[id];
+        if (b && b.panel) {
+            // Read the live panel too: the frame read flushes the chrome, but the transform on the
+            // game panel is what a panel window's resize costs, so its layout must be forced here.
+            try { var panelFlush = b.panel.actuallayoutwidth; if (panelFlush < 0) $.Msg("[Openlock] panel layout read negative"); } catch (e) {}
+        }
+        var elapsed = Math.max(0, Date.now() - started);
+        if (!perf.cost[id]) perf.cost[id] = { total: 0, max: 0, avg: 0, samples: 0 };
+        var cost = perf.cost[id];
+        cost.total += elapsed;
+        if (elapsed > cost.max) cost.max = elapsed;
+        // Date.now is the only sub-frame clock this client exposes, so the average is honest at
+        // 1 ms resolution; values below one tick are shown as "<1" rather than invented.
+        cost.avg = cost.samples ? (cost.avg * 0.8 + elapsed * 0.2) : elapsed;
+        cost.samples++;
     }
 
     function updateCost(f, id) {
         if (!f || !f.cost) return;
-        var cost = perf.cost[id] || { total: 0, samples: 0 };
-        var own = cost.samples ? (cost.total / cost.samples) : 0;
-        // ui = the measured interval between two engine UI frames (frameTick); own = the mean
-        // apply cost this window paid. Both are measurements, not a spinner.
-        var ui = frameMs ? frameMs.toFixed(1) : "--";
-        var text = ui + " · " + (clockIsPrecise ? own.toFixed(2) : own.toFixed(0)) + " ms";
+        var cost = perf.cost[id] || { total: 0, max: 0, avg: 0, samples: 0 };
+        var own = cost.samples ? cost.avg : 0;
+        // win = this window's sampled apply + forced layout; frame = measured UI frame interval.
+        var label = own >= 0.95 ? own.toFixed(1) : "<1";
+        var ui = frameMs > 0 ? frameMs.toFixed(1) : "--";
+        var text = "win " + label + " ms · frame " + ui + " ms";
         if (f.lastCost === text) return;
         f.lastCost = text;
         f.cost.text = text;
     }
 
-    // A real frame interval: Game.GetFrameTime/GetFPS when the client exposes it, otherwise the
-    // scheduler cadence. This never fabricates a number from a spinner.
-    function sampleFrameMs() {
-        var owners = [];
-        try { if (typeof Game !== "undefined") owners.push(Game); } catch (e) {}
-        try { if (typeof GameUI !== "undefined") owners.push(GameUI); } catch (e) {}
-        try { if (typeof $ !== "undefined") owners.push($); } catch (e) {}
-        for (var i = 0; i < owners.length; i++) {
-            var owner = owners[i];
-            try {
-                if (owner.GetFrameTime) {
-                    var t = Number(owner.GetFrameTime());
-                    if (isFinite(t) && t > 0) return t > 1 ? t : t * 1000;
-                }
-            } catch (e) {}
-            try {
-                if (owner.GetFPS) {
-                    var fps = Number(owner.GetFPS());
-                    if (isFinite(fps) && fps > 0) return 1000 / fps;
-                }
-            } catch (e) {}
-        }
-        try {
-            if (typeof Game !== "undefined" && Game.GetConVar) {
-                var frame = Number(Game.GetConVar("host_frametime"));
-                if (isFinite(frame) && frame > 0) return frame > 1 ? frame : frame * 1000;
-            }
-        } catch (e) {}
-        return 0;
-    }
-
-    // A safe capability probe. Enumerating the native GameUI/Game objects with Object.keys is
-    // what took the previous build down at boot; typeof never touches the host object's own
-    // property table.
-    function apiProbe() {
-        var bits = [];
-        try {
-            if (typeof GameUI === "undefined") {
-                bits.push("GameUI:none");
-            } else {
-                bits.push("cursor:" + (typeof GameUI.GetCursorPosition === "function" ? "yes" : "no"));
-                bits.push("down:" + (typeof GameUI.IsMouseDown === "function" ? "yes" : "no"));
-            }
-        } catch (e) {
-            bits.push("GameUI:error");
-        }
-        try {
-            bits.push("frame:" + (typeof Game !== "undefined" && typeof Game.GetFrameTime === "function" ? "api" : "none"));
-        } catch (e) {
-            bits.push("frame:error");
-        }
-        try {
-            bits.push("$cursor:" + (typeof $ !== "undefined" && typeof $.GetCursorPosition === "function" ? "yes" : "no"));
-        } catch (e) {
-            bits.push("$cursor:error");
-        }
-        bits.push("clock:" + (clockIsPrecise ? "perf" : "date"));
-        return bits.join(" ");
-    }
-
-    // Diagnostic shape of an event's arguments. Panels deliver events but the docs do not say
-    // whether mousemove/mousedown carry the pointer; this prints exactly what arrives.
-    function probeArgs(args) {
-        if (args === undefined || args === null) return "null";
-        var out = "n" + args.length;
-        for (var i = 0; i < args.length && i < 2; i++) {
-            var a = args[i];
-            out += " " + (typeof a);
-            if (a && typeof a === "object") {
-                var keys = ["x", "y", "cursorX", "cursorY", "mouseX", "mouseY"];
-                for (var k = 0; k < keys.length; k++) {
-                    if (a[keys[k]] !== undefined) out += " " + keys[k] + "=" + Math.round(Number(a[keys[k]]));
-                }
-            } else if (typeof a === "number") {
-                out += "=" + Math.round(a);
+    // The frame interval changes even when a window is idle, so the readout is refreshed twice a
+    // second from the same measurements instead of freezing at its last apply.
+    function refreshCosts() {
+        if (expanded) {
+            for (var id in frames) {
+                if (frames[id] && frames[id].cost) updateCost(frames[id], id);
             }
         }
-        return out;
+        $.Schedule(0.5, refreshCosts);
     }
 
-    // The engine's UI frame interval, measured between two scheduled callbacks. This is the
-    // only real frame cadence a Panorama addon can observe; it is shown as "ui" beside each
-    // window's own measured apply cost.
+    // The engine's frame interval, measured from $.FrameTime deltas. Without that API the
+    // Date.now fallback is still a real (1 ms) scheduler interval, never a guessed FPS.
     function frameTick() {
-        // The interval only matters while chrome is on screen. Collapsed: one wake a second,
-        // no per-frame callback added to the game's own loop.
         if (!expanded) {
-            frameTickAt = 0;
+            frameTickAt = -1;
             frameMs = 0;
             $.Schedule(1, frameTick);
             return;
         }
-        var at = nowMs();
-        if (frameTickAt) {
+        var at = engineNowMs();
+        if (at < 0) at = Date.now();
+        if (frameTickAt >= 0) {
             var delta = at - frameTickAt;
             if (delta > 0 && delta < 250) {
                 frameMs = frameMs ? (frameMs * 0.85 + delta * 0.15) : delta;
             }
         }
         frameTickAt = at;
-        frameTicks++;
         $.Schedule(0.001, frameTick);
-    }
-
-    function frameClock() {
-        frameClockAt = Date.now();
-        if (!frameTicks) {
-            var sampled = sampleFrameMs();
-            if (sampled > 0) frameMs = sampled;
-        }
-        if (pointerProbe) {
-            var p = cursorPoint();
-            pointerProbe.text = "ptr " + (p ? (Math.round(p.x) + "," + Math.round(p.y)) : "NONE") +
-                " | ev " + lastPointerEvent + " | " + apiProbe();
-        }
-        $.Schedule(1, frameClock);
     }
 
     function applyWindow(win) {
@@ -808,8 +749,10 @@
             }
             var ok = applyPanelRect(win, f, g);
             noteWindowCost(win.id, started);
+            var nat = bound[win.id] && bound[win.id].natural;
             f.meta.text = (win.panelCandidates[0].name || win.panelCandidates[0].kind) +
-                (ok ? "  ·  scale " + Math.round((g.w / bound[win.id].natural.w) * 100) + "%" : "  ·  not on screen");
+                (ok && nat ? "  ·  scale " + Math.round((g.w / nat.w) * 100) + "%×" +
+                    Math.round((g.h / nat.h) * 100) + "%" : "  ·  not on screen");
             setChildVisibility(f, "refusal", f.refusal, !ok);
             setChildVisibility(f, "body", f.body, false);
             f.frame.style.backgroundColor = "transparent";
@@ -1785,7 +1728,10 @@
         var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); });
         var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); });
         if (pinned[win.id]) pinButton.AddClass("PinOn");
-        titleButton(title, "Close", function () { closeWindow(win.id); });
+        // The close button's right margin is wider than the others so the northeast grip has a
+        // clear corner: the grip is 22 dp and the close button would otherwise sit on top of it.
+        var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); });
+        closeButton.AddClass("WindowClose");
 
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions");
@@ -1816,8 +1762,9 @@
             var grip = $.CreatePanel("Panel", frame, "");
             grip.AddClass("ResizeGrip");
             grip.AddClass("Grip" + gripSpecs[gi][0]);
+            grip.hittest = true;
             bindDwell(grip, "Resize " + gripSpecs[gi][0],
-                "Drag this corner. Shell windows resize freely; game panels scale from their own width.");
+                "Drag this corner. Shell windows resize freely; a live game panel scales into the new rect.");
             makeDraggable(grip, win.id, gripSpecs[gi][1]);
             grips.push(grip);
         }
@@ -2176,159 +2123,403 @@
         renderBar();
     }
 
-    // Source 2 exposes the pointer through GameUI; a window drag is a pointer poll rather than a
-    // second drag-and-drop layer. The old drop grid snapped every window to a 100 dp cell, which
-    // is the regression this replaces.
-    var pointerDrag = null;
+    // The drag path does not need this (it is event-driven). Dwell placement and the context
+    // menu's follow test use it when a client exposes one; Deadlock does not.
+    // Deadlock does not expose GameUI, but the Panorama root does expose MousePosition(): "the
+    // position of the mouse in the parent window" (Panorama Javascript API). That is the engine's
+    // own pointer, not an event argument, so it works while a button is held. The other three are
+    // kept as feature-checked fallbacks for builds that rename or drop the root function.
+    var cursorApi = "none";
+    var cursorFailure = "";
+    var cursorDetail = "";
+    var cursorScaleDetail = "";
 
-    function cursorPoint() {
-        var p = null;
+    // The engine cursor's coordinate space is undocumented in the addon API. Measure the shell
+    // first and classify the reading against it: a fractional 0..1 pair is normalized, a pair
+    // inside the root is already root-local, and a pair inside Game.GetScreenWidth/Height is a
+    // render-pixel position that must be scaled into the root. A pair outside both is not guessed
+    // at: it is a scale mismatch and the drag refuses rather than moving the window by the wrong
+    // amount.
+    function renderSize() {
         try {
-            if (typeof GameUI !== "undefined" && GameUI.GetCursorPosition) p = GameUI.GetCursorPosition();
-        } catch (e) {}
-        if (!p) {
-            try {
-                if (typeof $ !== "undefined" && $.GetCursorPosition) p = $.GetCursorPosition();
-            } catch (e) {}
-        }
-        if (!p) {
-            try {
-                if (typeof Game !== "undefined" && Game.GetCursorPosition) p = Game.GetCursorPosition();
-            } catch (e) {}
-        }
-        if (!p) return null;
-        var x = p.x !== undefined ? p.x : (p[0] !== undefined ? p[0] : (p.position && p.position.x));
-        var y = p.y !== undefined ? p.y : (p[1] !== undefined ? p[1] : (p.position && p.position.y));
-        if (x === undefined || y === undefined) return null;
-        x = num(x);
-        y = num(y);
-        // Some Panorama builds return a normalized cursor; the tooltip and drag math need pixels.
-        if (Math.abs(x) <= 1 && Math.abs(y) <= 1) {
-            x *= screenW;
-            y *= screenH;
-        }
-        return { x: x, y: y };
-    }
-
-    function pointerHeld() {
-        try {
-            if (typeof GameUI !== "undefined" && GameUI.IsMouseDown) {
-                var down = GameUI.IsMouseDown(0);
-                if (down === undefined) down = GameUI.IsMouseDown();
-                return !!down;
+            if (typeof Game !== "undefined" && Game) {
+                var pairs = [["GetScreenWidth", "GetScreenHeight"], ["GetRenderWidth", "GetRenderHeight"]];
+                for (var i = 0; i < pairs.length; i++) {
+                    var getW = Game[pairs[i][0]];
+                    var getH = Game[pairs[i][1]];
+                    if (typeof getW !== "function" || typeof getH !== "function") continue;
+                    var w = Number(getW.call(Game));
+                    var h = Number(getH.call(Game));
+                    if (isFinite(w) && isFinite(h) && w > 200 && h > 200) {
+                        return { w: w, h: h, source: "Game." + pairs[i][0] };
+                    }
+                }
             }
         } catch (e) {}
-        try {
-            if (typeof Game !== "undefined" && Game.IsMouseDown) return !!Game.IsMouseDown();
-        } catch (e) {}
+        return { w: screenW, h: screenH, source: "root layout" };
+    }
+
+    function normalizeCursor(x, y) {
+        measureScreen();
+        var ref = renderSize();
+        var sx = ref.w > 200 ? screenW / ref.w : 1;
+        var sy = ref.h > 200 ? screenH / ref.h : 1;
+
+        // A fractional pair in 0..1 can only be normalized. Integer 0/1 stay root pixels: the
+        // two interpretations differ by at most the top-left corner at that scale.
+        var fractional = (x % 1 !== 0) || (y % 1 !== 0);
+        if (fractional && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+            return { x: clamp(x * screenW, 0, screenW), y: clamp(y * screenH, 0, screenH),
+                mode: "normalized", ref: ref };
+        }
+
+        // Root-local is the common case. The measured shell size, not a hard-coded 1600x900,
+        // decides whether the pair fits.
+        if (x >= -2 && y >= -2 && x <= screenW + 2 && y <= screenH + 2) {
+            return { x: clamp(x, 0, screenW), y: clamp(y, 0, screenH), mode: "root", ref: ref };
+        }
+
+        // Without a render-size reference there is nothing to normalize against. Refuse instead of
+        // silently clamping an out-of-frame reading to the edge, which would look like a cursor
+        // that stopped following the pointer.
+        if (ref.source === "root layout") {
+            cursorScaleDetail = "the cursor read " + x + "," + y + ", outside the shell " + screenW + "×" + screenH +
+                ", and this client exposes no render-size API (Game.GetScreenWidth/GetRenderWidth) to normalize it";
+            return null;
+        }
+
+        // Render pixels: only usable if both axes need the same scale. Different X and Y factors
+        // mean the reference frame and the shell are not the same aspect; a 1:1 drag is impossible
+        // without guessing, so say so.
+        var halfW = ref.w * 0.5;
+        var halfH = ref.h * 0.5;
+        if (ref.w > 200 && ref.h > 200 &&
+            x >= -halfW && y >= -halfH && x <= ref.w + halfW && y <= ref.h + halfH) {
+            if (Math.abs(sx - sy) > 0.02 * Math.max(1, Math.abs(sx), Math.abs(sy))) {
+                cursorScaleDetail = "the engine frame is " + ref.w + "×" + ref.h + " (" + ref.source +
+                    ") and the shell measures " + screenW + "×" + screenH +
+                    ", which need different X and Y scales (" + sx.toFixed(3) + " vs " + sy.toFixed(3) + ")";
+                return null;
+            }
+            return { x: clamp(x * sx, 0, screenW), y: clamp(y * sy, 0, screenH),
+                mode: "scaled", ref: ref };
+        }
+
+        cursorScaleDetail = "the cursor read " + x + "," + y + ", outside the shell " + screenW + "×" + screenH +
+            " and the engine frame " + ref.w + "×" + ref.h + " (" + ref.source + ")";
         return null;
     }
 
-    var lastPointerEvent = "none";
-
-    // The engine does not deliver a mousemove stream to Panorama panels, but it does expose the
-    // cursor and the button state. One scheduled poll reads both; the delta since mousedown is
-    // written straight into the window's geometry. No capture panel, no grid, no cell snapping.
-    function pollPointerDrag() {
-        if (!pointerDrag) return;
-        if (Date.now() - pointerDrag.at > 20000) {
-            endPointerDrag(true);
-            return;
+    function cursorPoint() {
+        cursorFailure = "";
+        cursorDetail = "";
+        cursorScaleDetail = "";
+        var p = null;
+        var api = "";
+        var tried = [];
+        try {
+            if (typeof $ !== "undefined" && typeof $.MousePosition === "function") {
+                tried.push("$.MousePosition");
+                p = $.MousePosition();
+                if (p !== null && p !== undefined) api = "$.MousePosition";
+            }
+        } catch (e) {}
+        if (!p) {
+            try {
+                if (typeof GameUI !== "undefined" && GameUI.GetCursorPosition) {
+                    tried.push("GameUI.GetCursorPosition");
+                    p = GameUI.GetCursorPosition();
+                    if (p !== null && p !== undefined) api = "GameUI.GetCursorPosition";
+                }
+            } catch (e) {}
         }
-
-        // IsMouseDown is authoritative only after it has reported a press. On a build where the
-        // method exists but always reports false, the onmouseup binding is the release path and
-        // the first poll must not cancel the drag.
-        var held = pointerHeld();
-        if (held === true) pointerDrag.heldSeen = true;
-        if (pointerDrag.heldSeen && held === false) {
-            endPointerDrag(true);
-            return;
+        if (!p) {
+            try {
+                if (typeof $ !== "undefined" && $.GetCursorPosition) {
+                    tried.push("$.GetCursorPosition");
+                    p = $.GetCursorPosition();
+                    if (p !== null && p !== undefined) api = "$.GetCursorPosition";
+                }
+            } catch (e) {}
         }
-
-        var win = windowById(pointerDrag.id);
-        var at = cursorPoint();
-        if (!win || !at) {
-            endPointerDrag(false);
-            return;
+        if (!p) {
+            try {
+                if (typeof Game !== "undefined" && Game.GetCursorPosition) {
+                    tried.push("Game.GetCursorPosition");
+                    p = Game.GetCursorPosition();
+                    if (p !== null && p !== undefined) api = "Game.GetCursorPosition";
+                }
+            } catch (e) {}
         }
+        if (!p || !api) {
+            cursorApi = "none";
+            cursorFailure = "api";
+            cursorDetail = tried.length
+                ? tried.join(", ") + " returned no position"
+                : "this client exposes no mouse-position function ($.MousePosition, GameUI.GetCursorPosition, $.GetCursorPosition, Game.GetCursorPosition)";
+            return null;
+        }
+        cursorApi = api;
 
-        var g = ensureGeometry(win);
-        var dx = at.x - pointerDrag.startX;
-        var dy = at.y - pointerDrag.startY;
-        lastPointerEvent = "poll " + Math.round(dx) + "," + Math.round(dy);
-        if (pointerDrag.mode.indexOf("resize") === 0) {
-            var west = pointerDrag.mode.indexOf("w") >= 0;
-            var north = pointerDrag.mode.indexOf("n") >= 0;
-            var panelWindow = isPanelWindow(win);
-            var width = clamp(pointerDrag.w + (west ? -dx : dx), num(win.minWidth) || 160, screenW);
-            var height = clamp(pointerDrag.h + (north ? -dy : dy), num(win.minHeight) || 120, screenH);
-            if (west) g.x = clamp(pointerDrag.x + (pointerDrag.w - width), 0, Math.max(0, screenW - 160));
-            if (north && !panelWindow) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
-            g.w = width;
-            if (!panelWindow) g.h = height;
+        var x;
+        var y;
+        if (typeof p === "string") {
+            // Some builds serialize the pair ("x y" / "x,y"); numbers are the only useful part.
+            var parts = p.match(/-?\d+(?:\.\d+)?/g);
+            if (!parts || parts.length < 2) {
+                cursorFailure = "api";
+                cursorDetail = api + " returned an unreadable string";
+                return null;
+            }
+            x = Number(parts[0]);
+            y = Number(parts[1]);
         } else {
-            g.x = clamp(pointerDrag.x + dx, 4, Math.max(4, screenW - 160));
-            g.y = clamp(pointerDrag.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
+            x = p.x !== undefined ? p.x : (p[0] !== undefined ? p[0] : (p.position && p.position.x));
+            y = p.y !== undefined ? p.y : (p[1] !== undefined ? p[1] : (p.position && p.position.y));
         }
-        g.init = true;
-        applyWindow(win);
-        $.Schedule(0.016, pollPointerDrag);
+        if (x === undefined || y === undefined) {
+            cursorFailure = "api";
+            cursorDetail = api + " returned no coordinate pair";
+            return null;
+        }
+        x = num(x);
+        y = num(y);
+        if (!isFinite(x) || !isFinite(y)) {
+            cursorFailure = "api";
+            cursorDetail = api + " returned a non-numeric position";
+            return null;
+        }
+
+        var at = normalizeCursor(x, y);
+        if (!at) {
+            cursorFailure = "scale";
+            cursorDetail = cursorScaleDetail;
+            return null;
+        }
+        at.source = "engine";
+        at.raw = { x: x, y: y };
+        return at;
     }
 
-    // A Panorama panel does not deliver a stream of mousemove events. GameUI does expose the
-    // cursor position and button state, so a drag is a bounded poll: mousedown captures the
-    // start point, a scheduled tick reads the pointer and writes the new rectangle, and release
-    // ends it. No grid, no engine drop target, no cell snapping.
-    function beginPointerDrag(id, mode) {
+    // The drag is driven by the engine's own cursor (cursorPoint), polled every frame while the
+    // button is held. Panel mouse events are only the start/release signals and a coordinate
+    // fallback: a build that does not deliver MousePosition still gets a refusal, never a window
+    // that silently snaps back to its starting cell.
+    var pointerDrag = null;
+    var dragCapture = null;
+    var dragGeneration = 0;
+
+    function eventPoint(args) {
+        if (!args) return null;
+        for (var i = 0; i < args.length; i++) {
+            var arg = args[i];
+            if (arg && typeof arg === "object") {
+                var candidates = [arg, arg.position, arg.cursor, arg.mouse, arg.data];
+                for (var c = 0; c < candidates.length; c++) {
+                    var p = candidates[c];
+                    if (!p || typeof p !== "object") continue;
+                    var x = p.x !== undefined ? p.x : (p.cursorX !== undefined ? p.cursorX : (p.mouseX !== undefined ? p.mouseX : p[0]));
+                    var y = p.y !== undefined ? p.y : (p.cursorY !== undefined ? p.cursorY : (p.mouseY !== undefined ? p.mouseY : p[1]));
+                    if (x !== undefined && y !== undefined && isFinite(Number(x)) && isFinite(Number(y))) {
+                        return { x: num(x), y: num(y) };
+                    }
+                }
+            }
+            if (typeof arg === "number" && i + 1 < args.length && typeof args[i + 1] === "number") {
+                return { x: num(arg), y: num(args[i + 1]) };
+            }
+        }
+        return null;
+    }
+
+    // A full-screen capture for the duration of a drag. It is what makes the release reliable:
+    // the pointer can leave the 30 dp title bar or the corner grip, and the mouseup still lands
+    // here instead of on the game under the shell.
+    function createDragCapture() {
+        if (dragCapture) return;
+        try {
+            dragCapture = $.CreatePanel("Panel", root, "OpenlockDragCapture");
+            dragCapture.AddClass("DragCapture");
+            dragCapture.hittest = true;
+            dragCapture.hittestchildren = false;
+            dragCapture.SetPanelEvent("onmousemove", function () { movePointerDrag(arguments); });
+            dragCapture.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
+        } catch (e) {
+            dragCapture = null;
+            $.Msg("[Openlock] drag capture unavailable: ", String(e));
+        }
+    }
+
+    function dropDragCapture() {
+        if (!dragCapture) return;
+        var panel = dragCapture;
+        dragCapture = null;
+        try { panel.hittest = false; } catch (e) {}
+        try { panel.DeleteAsync(0); } catch (e) {}
+    }
+
+    function beginPointerDrag(id, mode, args) {
         var win = windowById(id);
-        lastPointerEvent = "down " + mode;
         if (!win) { endPointerDrag(false); return; }
+        if (pointerDrag) endPointerDrag(false);
+        measureScreen();
+        dragGeneration++;
         var at = cursorPoint();
-        if (!at) {
-            refuseFeature("Drag refused",
-                "this client does not expose GameUI.GetCursorPosition; the pointer probe above the window says which API is missing");
+        var press = eventPoint(args);
+        if (!at && cursorFailure === "scale") {
+            refuseFeature("Drag refused — scale mismatch", cursorDetail);
             return;
         }
         var g = ensureGeometry(win);
         pointerDrag = {
+            generation: dragGeneration,
             id: id,
             mode: mode,
-            startX: at.x,
-            startY: at.y,
+            startX: at ? at.x : null,
+            startY: at ? at.y : null,
+            anchorSource: at ? "engine" : "",
+            press: press,
             x: g.x,
             y: g.y,
             w: g.w,
             h: g.h,
-            at: Date.now(),
-            heldSeen: false
+            moved: false,
+            downAt: Date.now(),
+            at: Date.now()
         };
         hideGrid();
-        var startedFrame = frames[id];
-        if (startedFrame && startedFrame.cost) startedFrame.cost.text = "drag";
+        var f = frames[id];
+        if (f && f.cost) f.cost.text = "drag";
+        createDragCapture();
         $.Schedule(0.016, pollPointerDrag);
+    }
+
+    // The engine cursor, read once per UI frame. This is the same pointer the game uses for aim,
+    // so it is live while the button is held; no per-move event or drop grid is needed.
+    function pollPointerDrag() {
+        if (!pointerDrag) return;
+        var generation = pointerDrag.generation;
+        var at = cursorPoint();
+        if (at) applyPointer(at, "engine");
+        else if (cursorFailure === "scale") {
+            var scaleWhy = cursorDetail;
+            endPointerDrag(false);
+            refuseFeature("Drag refused — scale mismatch", scaleWhy);
+            return;
+        }
+        if (!pointerDrag || pointerDrag.generation !== generation) return;
+        if (Date.now() - pointerDrag.at > 30000) { endPointerDrag(true); return; }
+        $.Schedule(0.016, pollPointerDrag);
+    }
+
+    function applyPointer(at, source) {
+        if (!pointerDrag) return;
+        if (pointerDrag.startX === null) {
+            // Anchor on the first reading that arrives after the capture exists. In particular the
+            // mousedown's title-panel coordinates are not used: they are in a different space from
+            // a capture move, and using them is the anchor-space jump this build had.
+            pointerDrag.startX = at.x;
+            pointerDrag.startY = at.y;
+            pointerDrag.anchorSource = source;
+            pointerDrag.at = Date.now();
+            return;
+        }
+        if (source !== pointerDrag.anchorSource) {
+            var mismatch = pointerDrag;
+            endPointerDrag(false);
+            refuseFeature("Drag refused — anchor-space mismatch",
+                "the anchor was read in " + mismatch.anchorSource + "-space at " +
+                Math.round(mismatch.startX) + "," + Math.round(mismatch.startY) +
+                " but the next move arrived in " + source + "-space at " +
+                Math.round(at.x) + "," + Math.round(at.y) +
+                "; mixing the two would move the window by the panel offset");
+            return;
+        }
+
+        var win = windowById(pointerDrag.id);
+        if (!win) { endPointerDrag(false); return; }
+        var dx = at.x - pointerDrag.startX;
+        var dy = at.y - pointerDrag.startY;
+        if (dx === 0 && dy === 0) {
+            pointerDrag.at = Date.now();
+            return;
+        }
+
+        var g = ensureGeometry(win);
+        if (pointerDrag.mode.indexOf("resize") === 0) {
+            var west = pointerDrag.mode.indexOf("w") >= 0;
+            var north = pointerDrag.mode.indexOf("n") >= 0;
+            var width = clamp(pointerDrag.w + (west ? -dx : dx), num(win.minWidth) || 160, screenW);
+            var height = clamp(pointerDrag.h + (north ? -dy : dy), num(win.minHeight) || 120, screenH);
+            if (west) g.x = clamp(pointerDrag.x + (pointerDrag.w - width), 0, Math.max(0, screenW - 160));
+            // A panel frame's title is CHROME_DP above its content, so its content top can be a
+            // little lower than a shell frame's; both edges move so a north drag keeps the bottom
+            // fixed. This applies to live game panels too; the panel is scaled to the new height.
+            var minY = isPanelWindow(win) ? SHELL_TOP_DP + CHROME_DP : SHELL_TOP_DP;
+            if (north) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), minY, Math.max(minY, screenH - 80));
+            g.w = width;
+            g.h = height;
+        } else {
+            g.x = clamp(pointerDrag.x + dx, 4, Math.max(4, screenW - 160));
+            g.y = clamp(pointerDrag.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
+        }
+        pointerDrag.moved = true;
+        pointerDrag.at = Date.now();
+        g.init = true;
+        applyWindow(win);
+    }
+
+    // Event coordinates are a fallback for a build where MousePosition is absent. They are only
+    // used for a capture-space move, never for the press anchor, so the first delta cannot jump by
+    // the title bar's screen offset.
+    function movePointerDrag(args) {
+        if (!pointerDrag) return;
+        var at = cursorPoint();
+        if (at) { applyPointer(at, "engine"); return; }
+        if (cursorFailure === "scale") {
+            var scaleWhy = cursorDetail;
+            endPointerDrag(false);
+            refuseFeature("Drag refused — scale mismatch", scaleWhy);
+            return;
+        }
+        var ev = eventPoint(args);
+        if (ev) applyPointer(ev, "event");
     }
 
     function endPointerDrag(commit) {
         if (!pointerDrag) return;
-        lastPointerEvent = "up ";
-        var id = pointerDrag.id;
+        var drag = pointerDrag;
         pointerDrag = null;
-        var win = windowById(id);
-        if (!win || !commit) return;
+        dragGeneration++;
+        dropDragCapture();
+        var win = windowById(drag.id);
+        if (!win) return;
+        if (!commit) { applyWindow(win); return; }
         var g = ensureGeometry(win);
         applyWindow(win);
-        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
+        send("layout", drag.id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
             Math.round(g.w) + " " + Math.round(g.h));
+
+        // A press that produced neither a cursor nor a single move is a drag this client cannot
+        // serve. Name which of the three spaces failed, so the player's one-line report is enough:
+        // no usable cursor API; a cursor we cannot map onto the measured shell; or a press anchor
+        // in title-panel space with moves in capture space.
+        if (!drag.moved && drag.startX === null && Date.now() - drag.downAt > 250) {
+            if (drag.press) {
+                refuseFeature("Drag refused — anchor-space mismatch",
+                    "the press arrived at " + Math.round(drag.press.x) + "," + Math.round(drag.press.y) +
+                    " in the title panel's space, no engine cursor was available to convert it, and no capture-space move arrived; using it directly would jump the window by the panel offset");
+            } else {
+                refuseFeature("Drag refused — API absent",
+                    "no window can follow the cursor: " + cursorDetail);
+            }
+        }
     }
 
     function makeDraggable(panel, id, mode) {
         if (!panel) return;
         try {
-            // onmousedown starts the poll. SetDraggable is deliberately NOT called: it hands the
-            // panel to the engine's drag-and-drop layer, which is where the 100 dp cell snap came
-            // from, and it does not deliver a JS drag event this build can use.
-            panel.SetPanelEvent("onmousedown", function () { beginPointerDrag(id, mode); });
+            panel.SetPanelEvent("onmousedown", function () { beginPointerDrag(id, mode, arguments); });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
         } catch (e) {
             refuseFeature("Drag refused", "the engine rejected the drag binding: " + String(e));
@@ -2971,11 +3162,10 @@
             actionXd(body, "Restore UI layout  ·  " + (currentScheme || themes.default), restoreUiLayout);
 
             headingXd(body, "input");
-            var pointerAt = cursorPoint();
-            var held = pointerHeld();
-            rowXd(body, "pointer " + (pointerAt ? (Math.round(pointerAt.x) + ", " + Math.round(pointerAt.y)) : "unavailable") +
-                "  ·  mouse " + (held === null ? "unavailable" : (held ? "down" : "up")) +
-                "  ·  GameUI " + (typeof GameUI !== "undefined" ? "present" : "absent"), "ViewMuted");
+            // This build exposes no cursor-position API (GameUI is absent). Drag is carried by
+            // the panel mouse events; this line states what is available instead of faking a
+            // pointer coordinate.
+            rowXd(body, "drag the title bar to move · drag a corner grip to resize · cursor coordinates unavailable in this client", "ViewMuted");
 
             headingXd(body, "server");
             rowXd(body, connected() ? "connected" : "not connected — showing the declared package only", "ViewMuted");
@@ -3112,7 +3302,7 @@
                 var isBound = !!b && alive(b.panel) && panelVisible(b.panel);
                 var candidate = (win.panelCandidates[0].name || win.panelCandidates[0].kind);
                 var label = (isBound ? "● " : "○ ") + win.title + "  →  " + candidate +
-                    (isBound ? "  ·  scale " + Math.round((bound[win.id].natural.w ? 1 : 1) * 100) + "%" : "  ·  not on screen");
+                    (isBound ? "  ·  live" : "  ·  not on screen");
                 actionXd(body, label, function () {
                     if (hookWindow(win.id)) renderWindowBrowser(body);
                 });
@@ -3201,7 +3391,8 @@
                 if (typeof Game !== "undefined" && Game.GetSteamPersonaName) name = String(Game.GetSteamPersonaName() || "");
             } catch (e) {}
         }
-        if (!name) name = String(data.steamName || "");
+        // Never fall back to a value baked at build time: that value belongs to the builder, not
+        // to whoever is running this install. If Steam is unavailable, show the shell name.
         if (launcherLabel) launcherLabel.text = name || "Openlock";
     }
 
@@ -3214,21 +3405,29 @@
         $.Msg("[Openlock] tooltip lifetime REFUSED: ", String(e));
     }
 
-    // The launcher is hit-testable and always on screen, so it is the safest panel to learn what
-    // this build's event system actually delivers before wiring a drag to it again.
+    // Panel events route up the parent chain. The root therefore keeps a drag alive while the
+    // pointer is over any shell chrome and catches the release even outside the title bar.
     try {
-        if (launcherBar) {
-            launcherBar.SetPanelEvent("onmouseover", function () { lastPointerEvent = "over"; });
-            launcherBar.SetPanelEvent("onmousemove", function () { lastPointerEvent = "mov " + probeArgs(arguments); });
-            launcherBar.SetPanelEvent("onmousedown", function () { lastPointerEvent = "down " + probeArgs(arguments); });
-        }
+        root.SetPanelEvent("onmousemove", function () { if (pointerDrag) movePointerDrag(arguments); });
+        root.SetPanelEvent("onmouseup", function () { if (pointerDrag) endPointerDrag(true); });
     } catch (e) {
-        lastPointerEvent = "bind-error";
+        $.Msg("[Openlock] drag capture REFUSED: ", String(e));
     }
 
     measureScreen();
     frameTick();
-    frameClock();
+    refreshCosts();
+
+    // One line in console.log records which pointer source this client actually exposes. It is a
+    // report, not synthesized input: nothing here moves the cursor or opens anything.
+    (function () {
+        var at = cursorPoint();
+        $.Msg("[Openlock] pointer api: ", cursorApi, " at ",
+            at ? (Math.round(at.x) + "," + Math.round(at.y)) : "unavailable",
+            " screen ", Math.round(screenW), "x", Math.round(screenH),
+            " frameTime ", (engineNowMs() >= 0 ? "yes" : "no"));
+    })();
+
     setLauncherName();
     $.Schedule(2.0, setLauncherName);
     applyScheme(themes.default, false);
