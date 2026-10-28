@@ -17,12 +17,14 @@ namespace Openlock.Shell;
 public sealed class ShellMount
 {
     public const string RootPanel = "openlock-shell";
-    public const string LayoutPath = "file://{resources}/layout/openlock_shell.xml";
+    public const string LayoutPath = "file://{resources}/layout/openlock_shell_server.xml";
 
     private readonly OpenlockPlugin _plugin;
     private readonly HashSet<int> _announced = [];
+    private readonly Dictionary<int, AddonState> _lastState = [];
 
     private ShellPackage? _package;
+    private LayoutProfiles? _layouts;
     private string _active = "";
     private bool _addonFailedLogged;
 
@@ -31,16 +33,19 @@ public sealed class ShellMount
     public bool Mounted => _package is not null;
     public IReadOnlyList<ShellPackage.Refusal> Refusals => _package?.Refusals ?? [];
     public IReadOnlyList<ShellPackage.Window> Windows => _package?.Windows ?? [];
+    public string LayoutDirectory => _layouts?.DirectoryPath ?? "";
 
     public void Load(string root)
     {
         _package = ShellPackage.Load(root);
+        _layouts = new LayoutProfiles(root);
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
 
         Log.Write(
             $"[Openlock] shell {_package.Name} {_package.Version}: {_package.Windows.Count} windows, " +
             $"{_package.Tabs.Count} tabs, bar {_package.Bar ?? "none"}, {_package.Filed.Count} filed, " +
             $"{_package.Pins.Count} pins, {_package.Refusals.Count} refusal(s)");
+        Log.Write($"[Openlock] layout profiles: {_layouts.DirectoryPath}");
 
         foreach (var refusal in _package.Refusals)
             Log.Write($"[Openlock] shell REFUSED {Rel(root, refusal.File)}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
@@ -62,7 +67,16 @@ public sealed class ShellMount
         }
 
         UI.Panel(RootPanel).On("steady", e => _plugin.ReconcileAll("shell reconcile"));
+        UI.Panel(RootPanel).On("mountlog", e => Log.Write($"[Openlock] client mount: {e.ArgAt(0)}"));
         UI.Panel(RootPanel).On("restore", e => _plugin.RestoreAllFromShell());
+
+        UI.Panel(RootPanel).On("layout", e => SaveLayout(e));
+        UI.Panel(RootPanel).On("layout-applied", e =>
+            Log.Write(
+                $"[Openlock] layout APPLIED by {NameOf(e.Caller)}: scheme={e.ArgAt(0, "?")} " +
+                $"windows={e.ArgAt(1, "?")} ignored={e.ArgAt(2, "?")}"));
+        UI.Panel(RootPanel).On("layout-load", e => LoadLayout(e));
+        UI.Panel(RootPanel).On("layout-reset", e => ResetLayout(e));
 
         UI.Panel(RootPanel).On("mode", e =>
         {
@@ -95,6 +109,7 @@ public sealed class ShellMount
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
+        PublishLayout(controller);
         SendWindow(_active, controller);
         Log.Write($"[Openlock] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} windows declared");
     }
@@ -113,6 +128,7 @@ public sealed class ShellMount
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
+        PublishLayout(controller);
         SendWindow(_active, controller);
     }
 
@@ -137,6 +153,11 @@ public sealed class ShellMount
                 continue;
 
             var state = UI.Addon(controller.Slot, RootPanel);
+            if (!_lastState.TryGetValue(controller.Slot, out var previous) || previous != state)
+            {
+                _lastState[controller.Slot] = state;
+                Log.Write($"[Openlock] shell addon state for {controller.PlayerName}: {previous} -> {state}");
+            }
             if (state is AddonState.Failed)
             {
                 if (_addonFailedLogged)
@@ -153,11 +174,120 @@ public sealed class ShellMount
             // window is sent again as soon as the script reports that it is receiving updates.
             if (state is AddonState.Ready && _announced.Add(controller.Slot))
             {
+                PublishLayout(controller);
                 SendWindow(_active, controller);
                 Log.Write($"[Openlock] shell addon ready for {controller.PlayerName}; active '{_active}' re-sent");
             }
         }
     }
+
+    private void SaveLayout(UIEvent e)
+    {
+        if (_layouts is null)
+            return;
+
+        var caller = e.Caller;
+        var raw = e.ArgAt(0);
+        Log.Write(
+            $"[Openlock] layout SAVE raw args={e.Args.Length} len={raw.Length} " +
+            $"text='{(raw.Length > 300 ? raw[..300] + "…" : raw)}'");
+        if (!_layouts.TryParse(raw, out var scheme, out var windows, out var why))
+        {
+            Log.Write($"[Openlock] layout SAVE REFUSED by {NameOf(caller)}: {why}");
+            PublishLayout(caller, "layout not saved: " + why);
+            return;
+        }
+
+        if (!_layouts.Save(scheme, windows, out why))
+        {
+            Log.Write($"[Openlock] layout SAVE FAILED scheme={scheme} by {NameOf(caller)}: {why}");
+            PublishLayout(caller, "layout not saved: " + why);
+            return;
+        }
+
+        Log.Write(
+            $"[Openlock] layout saved scheme={scheme} windows={windows.Count} " +
+            $"file={_layouts.PathFor(scheme)} by {NameOf(caller)}");
+        if (caller is not null)
+            UI.Panel(RootPanel).Set(caller.Recipients, "layoutrequest", "");
+        PublishLayout(caller, $"layout saved · {scheme} · {windows.Count} windows");
+    }
+
+    private void LoadLayout(UIEvent e)
+    {
+        if (_layouts is null)
+            return;
+
+        var scheme = (e.ArgAt(0) ?? "").Trim().ToLowerInvariant();
+        if (!LayoutProfiles.IsValidScheme(scheme))
+        {
+            Log.Write($"[Openlock] layout LOAD REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
+            PublishLayout(e.Caller, "layout not loaded: invalid scheme");
+            return;
+        }
+
+        var exists = _layouts.HasProfile(scheme);
+        Log.Write($"[Openlock] layout load scheme={scheme} exists={exists} by {NameOf(e.Caller)}");
+        PublishLayout(e.Caller, exists
+            ? $"layout loaded · {scheme}"
+            : $"no saved layout for '{scheme}'; package defaults remain");
+    }
+
+    private void ResetLayout(UIEvent e)
+    {
+        if (_layouts is null)
+            return;
+
+        var scheme = (e.ArgAt(0) ?? "").Trim().ToLowerInvariant();
+        if (!LayoutProfiles.IsValidScheme(scheme))
+        {
+            Log.Write($"[Openlock] layout RESET REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
+            PublishLayout(e.Caller, "layout not reset: invalid scheme");
+            return;
+        }
+
+        if (!_layouts.Reset(scheme, out var why))
+        {
+            Log.Write($"[Openlock] layout RESET FAILED scheme={scheme} by {NameOf(e.Caller)}: {why}");
+            PublishLayout(e.Caller, "layout not reset: " + why);
+            return;
+        }
+
+        Log.Write($"[Openlock] layout reset scheme={scheme} by {NameOf(e.Caller)}");
+        PublishLayout(e.Caller, $"layout reset · {scheme} · package defaults");
+    }
+
+    private void PublishLayout(CCitadelPlayerController? controller, string? notice = null)
+    {
+        if (controller is null || _layouts is null)
+            return;
+
+        UI.Panel(RootPanel).Set(controller.Recipients, "layout", _layouts.PayloadJson(notice));
+    }
+
+    /// <summary>
+    /// Asks each connected shell to publish its current geometry through the same layout event
+    /// the Save button uses. This is the operator path for verifying persistence without moving
+    /// a window by hand.
+    /// </summary>
+    public void RequestLayoutSave()
+    {
+        var request = "save:" + DateTime.UtcNow.Ticks.ToString();
+        var sent = 0;
+        foreach (var controller in Players.GetAll())
+        {
+            if (controller.IsBot)
+                continue;
+
+            UI.Panel(RootPanel).Set(controller.Recipients, "layoutrequest", request);
+            sent++;
+        }
+
+        Log.Write($"[Openlock] layout save requested for {sent} connected shell(s)");
+    }
+
+    private static string NameOf(CCitadelPlayerController? controller) =>
+        controller?.PlayerName ?? "console";
 
     private void SendWindow(string windowId, CCitadelPlayerController? controller)
     {

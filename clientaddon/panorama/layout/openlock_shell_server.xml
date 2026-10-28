@@ -1,0 +1,13 @@
+<root>
+    <!-- Server-mounted shell. The standalone base_hud mount has no Deadworks UI channel and must
+         stay free of dw_addon.js; this wrapper is the one path that has a server to report to. -->
+    <scripts>
+        <include src="s2r://panorama/scripts/dw_addon.js" />
+        <include src="file://{resources}/scripts/openlock_server_mount.js" />
+    </scripts>
+    <!-- The compiler hoists a sole top-level panel to the layout root, and a root panel may not
+         carry an id. This anonymous wrapper keeps ServerHost one level down where it is legal. -->
+    <Panel style="width: 100%; height: 100%;">
+        <Panel id="ServerHost" style="width: 100%; height: 100%;" />
+    </Panel>
+</root>

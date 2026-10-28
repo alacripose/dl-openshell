@@ -356,9 +356,11 @@ if (Test-Path $compiler) {
     # Start-Process does not always hand it the one this script set.
     $inputs = @(
         'panorama\layout\openlock_shell.xml',
+        'panorama\layout\openlock_shell_server.xml',
         'panorama\layout\openlock_hud.xml',
         'panorama\layout\base_hud.xml',
         'panorama\scripts\openlock_shell.js',
+        'panorama\scripts\openlock_server_mount.js',
         'panorama\scripts\openlock_hud.js',
         'panorama\scripts\openlock_shell_data.js',
         'panorama\scripts\openlock_boot.js',
@@ -389,6 +391,8 @@ if (Test-Path $compiler) {
     $required = @(
         'panorama\layout\base_hud.vxml_c',
         'panorama\layout\openlock_shell.vxml_c',
+        'panorama\layout\openlock_shell_server.vxml_c',
+        'panorama\scripts\openlock_server_mount.vjs_c',
         'panorama\scripts\openlock_boot.vjs_c',
         'panorama\styles\openlock_schemes.vcss_c'
     )

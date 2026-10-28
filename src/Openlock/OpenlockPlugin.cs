@@ -219,6 +219,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
         _watch.Tick();
         _abilityHud.Tick();
+        _shell.Tick();
 
         // The engine's own learning gate: with it closed the upgrade never happens, so there is
         // nothing to revert afterwards. Innates are outside the four hero ability slots.
@@ -394,6 +395,30 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
                 return;
         }
     }
+
+    [Command("openlock_layout", Description = "Openlock layout profiles: status | save")]
+    public void CmdLayout(Caller caller, string verb = "status")
+    {
+        var command = (verb ?? "status").Trim().ToLowerInvariant();
+        switch (command)
+        {
+            case "save":
+                _shell.RequestLayoutSave();
+                caller.Reply("[OPENLOCK] layout save requested from connected shells");
+                return;
+
+            case "status":
+                caller.Reply($"[OPENLOCK] layout profiles: {_shell.LayoutDirectory}");
+                return;
+
+            default:
+                caller.Reply("[OPENLOCK] usage: openlock_layout status|save");
+                return;
+        }
+    }
+
+    [Command("openlock-layout", Description = "Openlock layout profiles: status | save")]
+    public void CmdLayoutDashed(Caller caller, string verb = "status") => CmdLayout(caller, verb);
 
     [Command("openlock_ui", Description = "Openlock shell panel: open | hide")]
     public void CmdUi(Caller caller, string verb = "open")

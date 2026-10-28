@@ -11076,22 +11076,29 @@ var SHELL = {
   "searchPaths": [
     {
       "kind": "Game",
-      "path": "citadel/addons/openlock_ui",
-      "line": 74,
+      "path": "citadel/deadworks_mods",
+      "line": 65,
       "exists": true,
       "mounts": "vpk"
     },
     {
       "kind": "Game",
-      "path": "citadel",
+      "path": "citadel/addons/openlock_ui",
       "line": 77,
       "exists": true,
       "mounts": "vpk"
     },
     {
       "kind": "Game",
+      "path": "citadel",
+      "line": 80,
+      "exists": true,
+      "mounts": "vpk"
+    },
+    {
+      "kind": "Game",
       "path": "core",
-      "line": 82,
+      "line": 85,
       "exists": true,
       "mounts": "vpk"
     }
@@ -11466,6 +11473,7 @@ var SHELL = {
     "panorama/layout/objectives_map.xml",
     "panorama/layout/openlock_hud.xml",
     "panorama/layout/openlock_shell.xml",
+    "panorama/layout/openlock_shell_server.xml",
     "panorama/layout/players_list.xml",
     "panorama/layout/players_list_entry.xml",
     "panorama/layout/playofthegame/citadel_hud_playofthegame.xml",
@@ -11590,13 +11598,13 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "ae88fd7",
+    "commit": "af918a8",
     "branch": "main",
     "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 13:20",
+    "generatedAt": "2026-10-28 15:19",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  ae88fd7+  ·  game 6821"
+    "label": "v0.7.0  ·  af918a8+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11731,21 +11739,21 @@ var SHELL = {
   },
   "buildState": {
     "stage": "installed",
-    "finishedAt": "2026-10-28 12:04",
+    "finishedAt": "2026-10-28 15:11",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 1041351,
-    "resources": 9,
+    "vpkBytes": 1094465,
+    "resources": 11,
     "path": "citadel/addons/openlock_ui/pak01_dir.vpk",
     "stages": [
       {
         "name": "compile",
         "ok": true,
-        "resources": 9
+        "resources": 11
       },
       {
         "name": "pack",
         "ok": true,
-        "bytes": 1041351
+        "bytes": 1094465
       },
       {
         "name": "install",
