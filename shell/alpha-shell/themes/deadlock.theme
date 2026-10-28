@@ -1,0 +1,24 @@
+shploingus.theme/1
+# The game's own palette, resolved at generation time from
+# game/citadel/pak01_dir.vpk: panorama/styles/citadel_base_styles.vcss_c.
+#
+# The values are token NAMES, not copied hex: when Deadlock updates a define the
+# shell follows it, and a token the build no longer declares is a refusal in the
+# Refusals window rather than a silent fallback.
+theme	deadlock
+	label	Deadlock default
+	source	citadel_base_styles.vcss_c @define
+	body	@offBlack
+	panel	@colorCommonDarkestGray
+	title	@colorCommonDarkGray
+	meta	@offBlack
+	border	@baseBorder
+	borderStrong	@goldColor
+	ink	@offWhite
+	muted	@silvered
+	accent	@brandGreen
+	alert	@warningRed
+	alertBody	#2E1512
+# No `rule` rows: this is the actual game UI's own palette. Selecting it restores Deadlock's
+# default look and leaves every game element exactly as the client built it.
+

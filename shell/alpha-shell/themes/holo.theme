@@ -1,0 +1,30 @@
+shploingus.theme/1
+# Android 4 Holo Dark, imported from ala_package_designer:
+# crates/foundry-designer/src/theme.rs (Bucket::AospValue) and the six roles in
+# crates/foundry-appearance/src/look.rs.
+#
+# The four design tokens are the AOSP values. title/meta/border are derived one
+# step from them in the appearance system (focus lift, edge shade, muted blend)
+# rather than being a second hand-picked palette; the exact source is recorded
+# in the comment above each slot.
+theme	holo
+	label	Holo Dark
+	source	ala_package_designer/foundry-designer theme.rs + foundry-appearance look.rs
+	body	#000000
+	panel	#0E0E0E
+	title	#1C1C1C
+	meta	#080808
+	border	#3A3A3A
+	borderStrong	#33B5E5
+	ink	#F3F3F3
+	muted	#BEBEBE
+	accent	#33B5E5
+	alert	#FF4444
+	alertBody	#2A0E0E
+# Real Deadlock HUD elements; the scheme class is also placed on the game HUD root. The title
+# and shop are the two surfaces a player sits in front of, so Holo paints those and nothing
+# structural. Removing these rows turns the game UI theming off for this scheme.
+rule	.CitadelHudTopBar	background-color	#0E0E0ECC
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#000000E6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

@@ -1,0 +1,847 @@
+/* Openlock shell: the window manager.
+   The palette is Deadlock's own warm parchment on a dark surface. Positions are absolute because
+   the package declares every window's geometry and the shell draws it where it was declared.
+   Pointer targets follow MD1's dense-pointer pair (40 dp target, 20 dp glyph) as the alpha shell
+   does; the shell is pointer-driven and never joins the game's gamepad focus graph. */
+
+.ShellRoot {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- launcher and bar ---------------------------------------------------- */
+
+.LauncherBar {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    margin-left: 12px;
+    margin-top: 10px;
+    width: fit-children;
+    height: fit-children;
+    flow-children: right;
+    z-index: 600;
+}
+
+/* The scheme switch sits beside the launcher: one click cycles the generated palettes and the
+   toast stack says which one is in force. The colours themselves come from openlock_schemes.css. */
+.SchemeButton {
+    margin-left: 5px;
+    width: 22px;
+    height: 20px;
+    border: 1px solid #6b5433;
+    border-radius: 2px;
+}
+
+.SchemeButton:hover {
+    border: 1px solid #c9a86a;
+}
+
+.SchemeLabel {
+    horizontal-align: center;
+    vertical-align: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.LauncherButton {
+    padding: 4px 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    /* The name sits over the game's own top-left mark; keep it legible but out of the logo's
+       way until the player reaches for it. */
+    opacity: 0.34;
+}
+
+.LauncherButton:hover {
+    opacity: 1;
+    background-color: #1a140dcc;
+    border: 1px solid #c9a86a;
+}
+
+.LauncherLabel {
+    color: #e0b56a;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    max-width: 180px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The launcher sits over the game's own top-left mark in menus. It fades to a low opacity by
+   default so the Deadlock logo reads through it, and comes back to full on hover. */
+.LauncherButton {
+    opacity: 0.42;
+}
+
+.LauncherButton:hover {
+    opacity: 1.0;
+}
+
+.LauncherBar:hover .LauncherButton {
+    opacity: 1.0;
+}
+
+/* One top surface: tabs, running windows, version, clock. No bottom strip, no Start. */
+.Taskbar {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    margin-left: 12px;
+    margin-top: 10px;
+    width: 100%;
+    height: 30px;
+    flow-children: right;
+    z-index: 500;
+}
+
+/* One row, always.  A HUD sweep can add dozens of frames; wrapping the strip grew the bar to
+   two rows and covered the top-row HUD.  Extra tabs stay reachable in the Windows window. */
+.TabStrip {
+    margin-left: 96px;
+    width: 78%;
+    height: 30px;
+    flow-children: right;
+    overflow: clip;
+}
+
+.TaskbarSpacer {
+    width: 0px;
+    height: 0px;
+}
+
+/* Fixed index into every frame. The strip itself clips when a HUD sweep adds many entries. */
+.WindowsButton {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    margin-right: 196px;
+    padding: 3px 9px;
+    background-color: #1a140de6;
+    border: 1px solid #4a3b25;
+    border-radius: 2px;
+    z-index: 501;
+}
+
+.WindowsButton:hover {
+    border: 1px solid #c9a86a;
+}
+
+.WindowsButtonLabel {
+    color: #b8a78f;
+    font-size: 12px;
+}
+
+.Clock {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    margin-right: 14px;
+    padding: 3px 8px;
+    color: #e0b56a;
+    font-size: 12px;
+    background-color: #1a140dcc;
+    border: 1px solid #4a3b25;
+    border-radius: 2px;
+}
+
+.VersionLabel {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    margin-right: 78px;
+    padding: 3px 8px;
+    color: #a8977c;
+    font-size: 11px;
+    background-color: #14100bd9;
+    border: 1px solid #33281a;
+    border-radius: 2px;
+}
+
+.ShellTab {
+    margin: 0px 4px 4px 0px;
+    padding: 3px 9px;
+    background-color: #1a140de6;
+    border: 1px solid #4a3b25;
+    border-radius: 2px;
+}
+
+.ShellTab:hover {
+    border: 1px solid #c9a86a;
+}
+
+.ShellTab .ShellTabLabel {
+    color: #b8a78f;
+    font-size: 12px;
+}
+
+.ShellTab.Active {
+    background-color: #3a2c14ee;
+    border: 1px solid #e0b56a;
+}
+
+.ShellTab.Active .ShellTabLabel {
+    color: #f4e6c8;
+    font-weight: bold;
+}
+
+.ShellTab.Pinned .ShellTabLabel {
+    color: #e0b56a;
+}
+
+/* --- layers -------------------------------------------------------------- */
+
+.WindowLayer,
+.PanelLayer {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+}
+
+.WindowLayer {
+    z-index: 100;
+}
+
+.PanelLayer {
+    z-index: 90;
+}
+
+/* --- windows the shell draws itself -------------------------------------- */
+
+.WindowFrame {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    flow-children: down;
+    background-color: #14100bf2;
+    border: 1px solid #8a6f42;
+    border-radius: 3px;
+    padding: 0px;
+    opacity: 0.93;
+}
+
+.WindowFrame.HudRole {
+    background-color: #100d09f7;
+    border: 1px solid #6b5433;
+}
+
+.WindowFrame.Focused {
+    border: 1px solid #e0b56a;
+}
+
+.WindowFrame.Pinned {
+    border: 1px solid #c9a86a;
+}
+
+.WindowTitle {
+    width: 100%;
+    height: 30px;
+    flow-children: right;
+    background-color: #241a10f2;
+    border-bottom: 1px solid #8a6f42;
+}
+
+.WindowTitleLabel {
+    margin-left: 9px;
+    vertical-align: center;
+    color: #f4e6c8;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.WindowSpacer {
+    width: fill-parent-flow(1);
+    height: 1px;
+}
+
+.WindowButton {
+    margin-right: 4px;
+    vertical-align: center;
+    width: 26px;
+    height: 22px;
+    padding: 0px;
+    background-color: #3a2416;
+    border: 1px solid #8a6f42;
+    border-radius: 2px;
+}
+
+.WindowButton:hover {
+    border: 1px solid #e0b56a;
+}
+
+.WindowButton Label {
+    horizontal-align: center;
+    vertical-align: center;
+    color: #e0b56a;
+    font-size: 14px;
+}
+
+.WindowButton.PinOn {
+    background-color: #5a4218;
+    border: 1px solid #e0b56a;
+}
+
+.WindowCost {
+    margin-right: 8px;
+    color: #8f806b;
+    font-size: 10px;
+    vertical-align: center;
+}
+
+/* Window controls are drawn, not typed: the client font has no coverage for the geometric
+   window glyphs, so a label made of codepoints renders as tofu. Each icon is a 12 dp box. */
+.WindowIcon {
+    width: 12px;
+    height: 12px;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.IconBar {
+    background-color: #e0b56a;
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.BarH {
+    width: 12px;
+    height: 2px;
+}
+
+.BarV {
+    width: 2px;
+    height: 12px;
+}
+
+.BarTiltA {
+    width: 12px;
+    height: 2px;
+    transform: rotate(45deg);
+}
+
+.BarTiltB {
+    width: 12px;
+    height: 2px;
+    transform: rotate(-45deg);
+}
+
+/* The client ships Arial Unicode MS; these are the actual Unicode window controls, not
+   codepoints from a fallback font that renders as tofu. */
+.WindowGlyph {
+    font-family: "Radiance";
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 15px;
+    color: #e0b56a;
+    horizontal-align: center;
+    vertical-align: center;
+    text-align: center;
+}
+
+.IconLeft,
+.IconRight {
+    width: 11px;
+    height: 9px;
+    border: 1px solid #e0b56a;
+}
+
+.IconHalf {
+    height: 7px;
+    width: 5px;
+    background-color: #e0b56a;
+    vertical-align: center;
+}
+
+.HalfLeft {
+    horizontal-align: left;
+}
+
+.HalfRight {
+    horizontal-align: right;
+}
+
+/* A straight pin: a wide head above a narrow stem, both absolutely placed so the icon does not
+   collapse into a single bar in the title's flow. */
+.IconPinHead {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: top;
+    width: 8px;
+    height: 5px;
+    margin-top: 0px;
+    background-color: #e0b56a;
+    border-radius: 2px;
+}
+
+.IconPinStem {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: top;
+    width: 2px;
+    height: 6px;
+    margin-top: 5px;
+    background-color: #e0b56a;
+}
+
+/* Four-arrow move handle: a cross with a square tip on each end. No CSS rotation is used,
+   because Panorama ignores transforms on these child panels. */
+.IconMoveBarH {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: center;
+    width: 12px;
+    height: 2px;
+    background-color: #e0b56a;
+}
+
+.IconMoveBarV {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: center;
+    width: 2px;
+    height: 12px;
+    background-color: #e0b56a;
+}
+
+.IconMoveTip {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background-color: #e0b56a;
+}
+
+.MoveTipUp {
+    horizontal-align: center;
+    vertical-align: top;
+}
+
+.MoveTipDown {
+    horizontal-align: center;
+    vertical-align: bottom;
+}
+
+.MoveTipLeft {
+    horizontal-align: left;
+    vertical-align: center;
+}
+
+.MoveTipRight {
+    horizontal-align: right;
+    vertical-align: center;
+}
+
+.WindowMeta {
+    width: 100%;
+    height: 17px;
+    background-color: #1a140d;
+    border-bottom: 1px solid #33281a;
+}
+
+.WindowMetaLabel {
+    margin-left: 9px;
+    vertical-align: center;
+    color: #a8977c;
+    font-size: 10px;
+}
+
+.WindowBody {
+    width: 100%;
+    height: fill-parent-flow(1);
+    padding: 8px 10px;
+    flow-children: down;
+    overflow: squish scroll;
+}
+
+.ViewRow {
+    width: 100%;
+    margin-bottom: 3px;
+}
+
+.ViewHeading {
+    color: #e0b56a;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+
+.ViewLine {
+    color: #efe4cf;
+    font-size: 12px;
+}
+
+.ViewMuted {
+    color: #a8977c;
+    font-size: 11px;
+}
+
+.ViewAction {
+    margin: 2px 4px 2px 0px;
+    padding: 3px 8px;
+    background-color: #2a2012;
+    border: 1px solid #6b5433;
+    border-radius: 2px;
+}
+
+.ViewAction:hover {
+    background-color: #3a2c14;
+    border: 1px solid #e0b56a;
+}
+
+.ViewAction Label {
+    color: #e0b56a;
+    font-size: 11px;
+}
+
+/* The console is the one text-entry surface. It is deliberately outside the game's focus graph;
+   a layout opened from it is an ordinary shell window with the same chrome. */
+.ConsoleRow {
+    width: 100%;
+    height: fit-children;
+    flow-children: right;
+    margin-bottom: 4px;
+}
+
+.ConsoleEntry {
+    width: fill-parent-flow(1);
+    height: 26px;
+    padding: 3px 7px;
+    background-color: #100d09;
+    border: 1px solid #6b5433;
+    color: #efe4cf;
+    font-size: 12px;
+}
+
+.ConsoleEntry:focus {
+    border: 1px solid #e0b56a;
+}
+
+.LayoutHost {
+    width: 100%;
+    height: 100%;
+}
+
+/* UI tree inspector: folders, selection actions, geometry and the CSS rule form. */
+.UiField {
+    width: 100%;
+    height: fit-children;
+    flow-children: right;
+    margin-bottom: 3px;
+}
+
+.UiFieldLabel {
+    color: #a8977c;
+    font-size: 11px;
+    width: 72px;
+    vertical-align: center;
+}
+
+.UiFieldEntry {
+    width: 160px;
+    height: 24px;
+    margin-right: 4px;
+}
+
+.UiActions {
+    width: 100%;
+    height: fit-children;
+    flow-children: right;
+    margin-bottom: 4px;
+}
+
+.ContextDismiss {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 890;
+}
+
+.ContextMenu {
+    position: absolute;
+    width: 170px;
+    height: fit-children;
+    padding: 6px;
+    flow-children: down;
+    background-color: #14100bfa;
+    border: 1px solid #e0b56a;
+    z-index: 900;
+}
+
+.ContextTitle {
+    color: #a8977c;
+    font-size: 11px;
+    margin: 2px 4px 5px 4px;
+    text-overflow: ellipsis;
+}
+
+.ContextMenu .ViewAction {
+    width: 100%;
+    margin: 1px 0px;
+}
+
+.PointerProbe {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    margin-left: 12px;
+    margin-top: 74px;
+    padding: 2px 5px;
+    max-width: 900px;
+    background-color: #000000d9;
+    color: #7dff8a;
+    font-size: 10px;
+    z-index: 9000;
+}
+
+.DragCapture {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+    background-color: #00000002;
+    z-index: 4000;
+}
+
+.DwellInfo {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 270px;
+    height: fit-children;
+    padding: 7px 9px;
+    flow-children: down;
+    background-color: #100d09fa;
+    border: 1px solid #8a6f42;
+    border-radius: 3px;
+    z-index: 850;
+    box-shadow: 0px 4px 14px #000000aa;
+}
+
+.DwellTitle {
+    color: #f4e6c8;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.DwellBody {
+    color: #a8977c;
+    font-size: 10px;
+    width: 250px;
+}
+
+.WindowRefusal {
+    width: 100%;
+    height: fit-children;
+    padding: 6px 10px;
+    background-color: #2a1410;
+    border-top: 1px solid #d06a4e;
+    color: #e8a08a;
+    font-size: 11px;
+    visibility: collapse;
+}
+
+/* --- chrome for live game panels ----------------------------------------- */
+/* The panel itself stays in the game's own tree (reparenting it aborts the client: the shop
+   asserts its parent). The frame is transparent: a border, a title bar above the panel, and the
+   grip below. The body is collapsed so the frame never blocks the panel's own hit testing. */
+
+.PanelWindow {
+    background-color: transparent;
+    border: 1px solid #8a6f42;
+    border-radius: 3px;
+    opacity: 1;
+}
+
+.PanelWindow.Focused {
+    border: 1px solid #e0b56a;
+}
+
+.PanelWindow.Pinned {
+    border: 1px solid #c9a86a;
+}
+
+.PanelWindow .WindowTitle {
+    background-color: #1a140df2;
+}
+
+.PanelWindow .WindowMeta {
+    background-color: #14100bd9;
+}
+
+.PanelWindow .WindowBody {
+    background-color: transparent;
+    padding: 0px;
+    visibility: collapse;
+}
+
+.PanelWindow .WindowRefusal {
+    background-color: #2a1410f2;
+}
+
+.PanelWindow.Minimized .WindowTitle {
+    border-bottom: 1px solid #8a6f42;
+}
+
+.ResizeGrip {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: bottom;
+    width: 18px;
+    height: 18px;
+    background-color: #8a6f42e6;
+    border-top: 1px solid #e0b56a;
+    border-left: 1px solid #e0b56a;
+}
+
+.ResizeGrip:hover {
+    background-color: #e0b56a;
+    border: 1px solid #fff0cc;
+}
+
+.GripNW {
+    horizontal-align: left;
+    vertical-align: top;
+}
+
+.GripNE {
+    horizontal-align: right;
+    vertical-align: top;
+}
+
+.GripSW {
+    horizontal-align: left;
+    vertical-align: bottom;
+}
+
+.GripSE {
+    horizontal-align: right;
+    vertical-align: bottom;
+}
+
+/* The grip is a real drag handle now, not a grid trigger. Keep the cursor affordance obvious. */
+.PanelWindow .ResizeGrip {
+    width: 22px;
+    height: 22px;
+}
+
+/* --- drop grid ----------------------------------------------------------- */
+/* Panorama has no pointer position, so a title or grip drag reveals a grid of targets and the
+   drop cell is where the window lands. This is the engine's own drag system. */
+
+.DropGrid {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+    visibility: collapse;
+    z-index: 700;
+}
+
+.DropCell {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background-color: #e0b56a08;
+    border: 1px solid #8a6f4255;
+}
+
+.DropCell:hover {
+    background-color: #e0b56a44;
+    border: 1px solid #e0b56a;
+}
+
+/* --- toasts -------------------------------------------------------------- */
+/* One stack, newest on top. A toast may name a window; clicking it opens that window. The stack is
+   above the windows and stays visible while the shell is closed, because an update notice is the
+   one thing the shell owes the player when it is not open. */
+
+.ToastStack {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    margin-top: 48px;
+    margin-right: 14px;
+    width: 300px;
+    height: fit-children;
+    flow-children: down;
+    z-index: 800;
+}
+
+.Toast {
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 7px 10px;
+    flow-children: down;
+    background-color: #1a140df2;
+    border: 1px solid #8a6f42;
+    border-left: 3px solid #e0b56a;
+    border-radius: 3px;
+}
+
+.Toast.Attention {
+    border-left: 3px solid #d06a4e;
+}
+
+.ToastTitle {
+    color: #f4e6c8;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.ToastBody {
+    color: #c9b89c;
+    font-size: 11px;
+}
+
+/* --- update modal -------------------------------------------------------- */
+
+.UpdateModal {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: center;
+    width: 420px;
+    height: fit-children;
+    padding: 14px 16px;
+    flow-children: down;
+    background-color: #14100bfa;
+    border: 1px solid #e0b56a;
+    border-radius: 4px;
+    visibility: collapse;
+}
+
+.UpdateTitle {
+    color: #e0b56a;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.UpdateBody {
+    color: #efe4cf;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.UpdateCountdown {
+    color: #a8977c;
+    font-size: 11px;
+    margin-bottom: 8px;
+}
+
+.UpdateButtons {
+    width: 100%;
+    height: fit-children;
+    flow-children: right;
+}

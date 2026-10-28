@@ -1,0 +1,5 @@
+# Picker order. The game's own palette stays first and remains an option even when a mod adds
+# more schemes. Extensions are applied to their base by load-order, not by this file.
+deadlock
+alpha
+holo

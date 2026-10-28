@@ -1,0 +1,65 @@
+<root>
+    <styles>
+        <include src="file://{resources}/styles/openlock_shell.css" />
+        <include src="file://{resources}/styles/openlock_schemes.css" />
+    </styles>
+    <scripts>
+        <include src="file://{resources}/scripts/openlock_shell_data.js" />
+        <include src="file://{resources}/scripts/openlock_shell.js" />
+    </scripts>
+
+    <!-- The shell is pointer-driven on purpose. Deadlock's own control suite owns the gamepad and
+         keyboard focus graph; every control here is a plain Panel with onmouseactivate, so opening
+         the shell never inserts a second set of focusable controls into that graph. -->
+    <Panel class="ShellRoot" hittest="false" hittestchildren="true">
+        <!-- Windows the shell draws itself. -->
+        <Panel id="WindowLayer" class="WindowLayer" hittest="false" hittestchildren="true" />
+
+        <!-- Chrome for live game panels. The panels are not reparented: the frame tracks the
+             panel's real rect and the panel is moved and scaled with a transform. -->
+        <Panel id="PanelLayer" class="PanelLayer" hittest="false" hittestchildren="true" />
+
+        <!-- The bar (alpha-shell D-2) sits above both layers. Panorama paints siblings in order,
+             and a live panel at the top of the screen was painting over the bar and its buttons. -->
+        <Panel id="Taskbar" class="Taskbar">
+            <Panel id="TabStrip" class="TabStrip" />
+            <Panel class="TaskbarSpacer" />
+            <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
+                <Label class="WindowsButtonLabel" text="Windows" />
+            </Panel>
+            <Label id="VersionLabel" class="VersionLabel" />
+            <Label id="Clock" class="Clock" text="--:--" />
+        </Panel>
+
+        <!-- The launcher is the one mark that is always on screen: it reopens the shell and it is
+             never covered by a window. Pinned windows stay beside it while the shell is closed. -->
+        <Panel id="LauncherBar" class="LauncherBar">
+            <Panel id="LauncherButton" class="LauncherButton" onmouseactivate="OpenlockToggle()">
+                <Label id="LauncherLabel" class="LauncherLabel" text="Openlock" />
+            </Panel>
+            <Panel id="SchemeButton" class="SchemeButton" onmouseactivate="OpenlockCycleScheme()">
+                <Label id="SchemeLabel" class="SchemeLabel" text="D" />
+            </Panel>
+        </Panel>
+
+        <Label id="PointerProbe" class="PointerProbe" text="pointer probe" />
+
+        <Panel id="DropGrid" class="DropGrid" />
+
+        <Panel id="ToastStack" class="ToastStack" />
+
+        <Panel id="UpdateModal" class="UpdateModal">
+            <Label id="UpdateTitle" class="UpdateTitle" text="Update ready" />
+            <Label id="UpdateBody" class="UpdateBody" />
+            <Label id="UpdateCountdown" class="UpdateCountdown" />
+            <Panel class="UpdateButtons">
+                <Panel class="ViewAction" onmouseactivate="OpenlockUpdateRestart()">
+                    <Label text="Restart now" />
+                </Panel>
+                <Panel class="ViewAction" onmouseactivate="OpenlockUpdateLater()">
+                    <Label text="Later" />
+                </Panel>
+            </Panel>
+        </Panel>
+    </Panel>
+</root>

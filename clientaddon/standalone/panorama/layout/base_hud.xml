@@ -1,0 +1,28 @@
+<root>
+    <!--
+        The client mount. This is the game's own base_hud layout — the root the client builds
+        before it decides which HUD a state needs — with exactly two additions: the boot script
+        and one full-screen anchor panel for the shell.
+
+        It is deliberately not hud_hideout: that layout belongs to one state (the hideout) and
+        other client mods, including Deadworks' own bootstrap, already own it. base_hud is the
+        agnostic root: it is loaded in the menu and in a match, and the CitadelHud it contains
+        still mounts every stock game window exactly as before.
+
+        Fail-safe: the stock HUD is the CitadelHud child below. The anchor is empty and
+        hittest="false" until openlock_boot.js mounts the shell into it, and the boot script only
+        removes what it created. A missing shell resource, a bad include in the shell, or a second
+        boot leaves the stock HUD drawing and the anchor empty — never a half-mounted tree over it.
+    -->
+    <styles>
+        <include src="s2r://panorama/styles/base.vcss_c" />
+    </styles>
+    <scripts>
+        <include src="file://{resources}/scripts/openlock_boot.js" />
+    </scripts>
+    <Panel class="WindowRoot" hittest="false" disallowedstyleflags="hover,descendantfocus">
+        <CitadelHud id="Hud" hittest="false" />
+        <Panel id="OpenlockStandaloneHost" hittest="false" hittestchildren="true"
+               style="width: 100%; height: 100%; z-index: 10000;" />
+    </Panel>
+</root>

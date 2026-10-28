@@ -1,0 +1,63 @@
+shploingus.recipe/3
+package	openlock	v0.4.0
+# Openlock's declared baselines, in the shploingus-clean record format:
+# one `kind<TAB>name` line per record, its fields tab-indented, `record-id` last.
+#
+# House rule (shploingus-clean/README.md): **Refuse, never default.** A record whose
+# baseline does not match the running build is refused and named; it is never
+# replaced by a plausible value.
+setting	sv_gravity
+	surface	ConVar sv_gravity
+	baseline	800
+	target	600
+	status	declared
+	record-id	openlock-setting-gravity
+setting	sv_friction
+	surface	ConVar sv_friction
+	baseline	4
+	target	2
+	status	declared
+	record-id	openlock-setting-friction
+hero-base	move-speed
+	surface	hero starting stats (CitadelHeroData_t.m_mapStartingStats)
+	baseline	unrecorded
+	target	10
+	unit	m/s
+	status	refused
+	reason	no documented shipped baseline for build 11170534 and no writable starting-stat accessor; m_flMaxspeed is runtime state, not a base
+	record-id	openlock-base-move-speed
+hero-base	sprint-speed
+	surface	sprint ability VData
+	baseline	unrecorded
+	target	2
+	unit	m/s
+	status	refused
+	reason	the sprint VData carries m_flSprintAccMS only; the shipped base has no documented baseline on this build
+	record-id	openlock-base-sprint-speed
+hero-base	stamina
+	surface	AbilityResource_t.m_flMaxValue
+	baseline	unrecorded
+	target	2
+	status	refused
+	reason	the resource maximum is per-pawn runtime state, not a hero base
+	record-id	openlock-base-stamina
+hero-base	stamina-regen
+	surface	AbilityResource_t
+	baseline	unrecorded
+	target	1.25
+	status	refused
+	reason	no writable regen field on build 11170534; m_flPrevRegenRate is a read-back only
+	record-id	openlock-base-stamina-regen
+conversion	spirit-worth
+	surface	CCitadel_Modifier_HeroUpgradeBonuses instance
+	baseline	declared
+	tier1	10
+	tier2	20
+	tier3	30
+	tier4	40
+	weapon-scale	1
+	vitality-scale	1
+	health-per-point	3
+	status	declared
+	reason	per-item spirit values are not exposed on this build; worth is priced by item tier, which is exposed (CitadelItemVData.m_iItemTier)
+	record-id	openlock-conversion-spirit-worth
