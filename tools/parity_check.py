@@ -212,14 +212,14 @@ def install_cell(root: Path, head: str) -> dict:
         facts.append("tools mount present" if mount else "tools mount missing from gameinfo.gi")
         if not mount:
             failures.append("AddonRoot citadel_addons is not mounted")
-        # A game archive in the same tree is a different surface. Report it if it disagrees.
+        # A game archive in the same tree is a different surface. Report its build, but do not
+        # fail the tools gate on it: the tools client mounts AddonRoot citadel_addons, not this
+        # archive. The live Steam client is compared separately above.
         game_vpk = root / INSTALLED_VPK
         if game_vpk.is_file():
             game = vpk_build(game_vpk)
             game_commit = str(game.get("commit") or "")
-            if game_commit and committed and game_commit != committed:
-                failures.append(f"game archive carries {game_commit}, tools slot carries {committed}")
-            facts.append(f"game archive {game_commit or '(no commit)'}")
+            facts.append(f"game archive {game_commit or '(no commit)'} (not the tools mount)")
         detail = "; ".join(facts)
         if failures:
             return cell("install", "absent", "B", tools, detail + " | " + "; ".join(failures), sha256_file(tools))
