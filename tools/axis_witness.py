@@ -48,6 +48,7 @@ SUBJECTS = (
     ("shell-data-source", "tools/gen_shell_data.py", "the generator that writes the package data"),
     ("shell-clicks", "tools/check_shell_clicks.py", "the pointer-surface check"),
     ("axis-witness", "tools/axis_witness.py", "this gate"),
+    ("parity-gate", "tools/parity_check.py", "the install/repo/GitHub/live-client parity gate"),
 )
 
 LANGUAGE_BY_SUFFIX = {

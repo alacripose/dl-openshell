@@ -82,6 +82,14 @@ MongoDB (`openlock_axis`), read back, and then re-derived and compared with the 
 reading that cannot be recorded refuses the mount. Requirements: Python 3 with `pymongo`, and a
 local MongoDB (the script probes `127.0.0.1:27017` and `:27018`, or `OPENLOCK_MONGO_URI`).
 
+Before launching, `tools/parity_check.py` re-reads the install instead of trusting the installer's
+record: it hashes the installed VPK against the archive this checkout built, extracts the commit
+and grade baked into the VPK's shell data, and compares them with the worktree and `origin/main`.
+A stale or hand-copied install refuses the launch. The live Steam client is read the same way and
+reported as its own cell; a shipping client on another build is named as an absence, not treated
+as a reason to refuse a local mount. The parity run is written to the same `openlock_axis`
+database and read back. `launch.ps1 -SelfTest` loads the gate without running an install.
+
 ### Build from a checkout
 
 Requirements: Deadlock, Python 3, the CSDK `resourcecompiler.exe`, and `CSDKCfgVPK.exe`. The game
@@ -256,6 +264,7 @@ generated file or a successful pack as proof that the UI drew.
 - [launch.ps1](launch.ps1) — boot entry: witness gate, discover installs, install/update through install.ps1, launch the installer shell or the game fallback.
 - [tools/list_installs.py](tools/list_installs.py) — discovery shared by launch.ps1 and the in-game Tools window.
 - [tools/axis_witness.py](tools/axis_witness.py) — axis code witnesses; records and verifies worktree results in MongoDB.
+- [tools/parity_check.py](tools/parity_check.py) — double-verifies an installed VPK against the build, the repo, GitHub and the live Steam client.
 - [install.ps1](install.ps1) — compile, pack and mount the UI addon.
 - [install.cmd](install.cmd) — double-click launcher for a downloaded install.ps1.
 - [clientaddon/panorama/layout/openlock_shell.xml](clientaddon/panorama/layout/openlock_shell.xml) — shell layout.
