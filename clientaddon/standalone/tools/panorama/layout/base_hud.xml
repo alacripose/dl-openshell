@@ -1,0 +1,17 @@
+<root>
+    <!--
+        CSDK 10 tools build only. This is the stock base_hud root with its CitadelHud child intact;
+        the shell is mounted into that child by openlock_boot_csdk10.js from the generated legacy
+        entry. The live base_hud is a separate file and is not part of a tools install.
+    -->
+    <styles>
+        <include src="s2r://panorama/styles/base.vcss_c" />
+    </styles>
+    <scripts>
+        <include src="file://{resources}/scripts/openlock_boot_csdk10.js" />
+    </scripts>
+    <Panel class="WindowRoot" hittest="false" hittestchildren="true"
+           disallowedstyleflags="hover,descendantfocus">
+        <CitadelHud id="Hud" hittest="false" />
+    </Panel>
+</root>

@@ -1,0 +1,16 @@
+<root>
+    <!--
+        CSDK 10 tools install only: the client still loads this deprecated dashboard root. Keep the
+        stock <CitadelDB id="Dashboard"> that owns the dashboard windows, and let the tools shim
+        mount the legacy shell into it. The live game never receives this file.
+    -->
+    <styles>
+        <include src="s2r://panorama/styles/base.vcss_c" />
+    </styles>
+    <scripts>
+        <include src="file://{resources}/scripts/openlock_boot_csdk10.js" />
+    </scripts>
+    <Panel class="WindowRoot" hittest="false" hittestchildren="true">
+        <CitadelDB id="Dashboard" />
+    </Panel>
+</root>

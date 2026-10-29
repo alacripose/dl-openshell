@@ -109,8 +109,15 @@ if (-not (Test-Path $gameinfo)) {
     throw "gameinfo.gi not found at '$gameinfo'. The installer will not restore a backup without asking; verify the game files so Steam writes a clean copy, then run this again."
 }
 
-if (Get-Process deadlock,project8 -ErrorAction SilentlyContinue) {
-    throw 'Deadlock is running. Close the game (not the server) and run this again; gameinfo.gi and a mounted VPK are read at launch.'
+# Only a client running from the tree being installed can hold its gameinfo.gi or VPK open. A
+# client from another tree (the live game beside a reduced tools install) is left untouched.
+$runningTarget = @(Get-Process deadlock,project8 -ErrorAction SilentlyContinue | Where-Object {
+    $path = ''
+    try { $path = [string]$_.Path } catch { }
+    $path -and $path.StartsWith($DeadlockRoot, [System.StringComparison]::OrdinalIgnoreCase)
+})
+if ($runningTarget.Count -gt 0) {
+    throw 'Deadlock is running from the install tree. Close it and run this again; gameinfo.gi and a mounted VPK are read at launch.'
 }
 
 # The source can be beside the script, in the parent checkout, in OPENLOCK_SOURCE, or cloned from
@@ -676,17 +683,11 @@ if ($Update -and (Test-Path (Join-Path $repoRoot '.git'))) {
 }
 
 # The layout catalog, tool paths, themes and build record must describe the game copy being
-# installed, not the checkout that happened to build the archive. Generate from this game's own
-# gameinfo.gi and VPKs before anything is copied or compiled. A minimal install simply produces a
-# smaller catalog; it is never replaced by a baked list from another version.
+# installed, not the checkout that happened to build the archive. They are generated from this
+# game's own gameinfo.gi and VPKs into the build tree only: installing to a minimal tools client
+# must never rewrite the checked-in live assets that the current game install ships.
 $generator = Join-Path $repoRoot 'tools\gen_shell_data.py'
-$dataFile = Join-Path $source 'panorama\scripts\openlock_shell_data.js'
 if (-not (Test-Path $generator)) { throw "data generator not found at '$generator'." }
-
-& $Python $generator (Join-Path $repoRoot 'shell\alpha-shell') $dataFile $gameinfo
-if ($LASTEXITCODE -ne 0) {
-    throw "gen_shell_data.py failed with exit code $LASTEXITCODE; refusing to pack stale UI data."
-}
 
 $sdkCandidates = @()
 if ($SdkRoot) { $sdkCandidates += $SdkRoot }
@@ -729,11 +730,11 @@ if (-not $SdkRoot) {
 
 # 1. Assemble the content tree.
 #
-#    Two stock roots are mounted, and both are the game's own layout plus the shell anchor:
-#    `base_hud.xml` keeps every <CitadelHud> window, and `base_dashboard.xml` keeps the client's
-#    <CitadelDB id="Dashboard">. The reduced CSDK 10 tools client still loads the dashboard root;
-#    a build that replaces it ignores the file. Neither copy removes a host child, so there is no
-#    half-HUD left behind. Other mode-specific roots (hud_hideout) stay untouched.
+#    A live install gets the live base_hud only, byte-for-byte. A reduced CSDK 10 tools tree gets
+#    its own base_hud and base_dashboard, both built from the stock host roots, plus a legacy shell
+#    entry generated from the live shell at pack time. The workaround for the older parser therefore
+#    never exists inside the live layouts, sheet or script.
+$toolsTarget = Test-Path (Join-Path $DeadlockRoot 'content\citadel_addons')
 if (Test-Path $build) { Remove-Item $build -Recurse -Force }
 $contentLayout = Join-Path $build 'panorama\layout'
 $contentScripts = Join-Path $build 'panorama\scripts'
@@ -745,7 +746,27 @@ Copy-Item (Join-Path $source 'panorama\scripts\*.js') $contentScripts -Force
 Copy-Item (Join-Path $source 'panorama\styles\*.css') $contentStyles -Force
 Copy-Item (Join-Path $source 'standalone\panorama\scripts\openlock_boot.js') $contentScripts -Force
 Copy-Item (Join-Path $source 'standalone\panorama\layout\base_hud.xml') $contentLayout -Force
-Copy-Item (Join-Path $source 'standalone\panorama\layout\base_dashboard.xml') $contentLayout -Force
+
+& $Python $generator (Join-Path $repoRoot 'shell\alpha-shell') `
+    (Join-Path $contentScripts 'openlock_shell_data.js') `
+    $gameinfo (Join-Path $contentStyles 'openlock_schemes.css')
+if ($LASTEXITCODE -ne 0) {
+    throw "gen_shell_data.py failed with exit code $LASTEXITCODE; refusing to pack stale UI data."
+}
+
+if ($toolsTarget) {
+    Copy-Item (Join-Path $source 'standalone\tools\panorama\layout\base_hud.xml') $contentLayout -Force
+    Copy-Item (Join-Path $source 'standalone\tools\panorama\layout\base_dashboard.xml') $contentLayout -Force
+    Copy-Item (Join-Path $source 'standalone\tools\panorama\scripts\openlock_boot_csdk10.js') $contentScripts -Force
+    & $Python (Join-Path $repoRoot 'tools\gen_legacy_shell.py') `
+        (Join-Path $source 'panorama\layout\openlock_shell.xml') `
+        (Join-Path $source 'panorama\styles\openlock_shell.css') `
+        (Join-Path $contentLayout 'openlock_shell_legacy.xml') `
+        (Join-Path $contentStyles 'openlock_shell_legacy.css')
+    if ($LASTEXITCODE -ne 0) {
+        throw "gen_legacy_shell.py failed with exit code $LASTEXITCODE; the tools shell entry was not generated."
+    }
+}
 
 # Fonts and stock art stay the game's. The addon supplies layouts, scripts, styles and the one
 # root HUD mount; a file under panorama/fonts here would override the client's own font set and
@@ -759,9 +780,15 @@ if ($fontOverrides.Count -gt 0) {
 
 # A second stock override would be a second answer for one layout name. Refuse it here rather
 # than let search-path order decide which copy the client parses.
-$allowedOverrides = @('base_hud.xml', 'base_dashboard.xml')
-$stockOverrides = @(Get-ChildItem (Join-Path $source 'standalone\panorama\layout') -Filter *.xml |
-    Where-Object { $allowedOverrides -notcontains $_.Name })
+$allowedOverrides = if ($toolsTarget) { @('base_hud.xml', 'base_dashboard.xml') } else { @('base_hud.xml') }
+$overrideDirs = if ($toolsTarget) {
+    @((Join-Path $source 'standalone\panorama\layout'), (Join-Path $source 'standalone\tools\panorama\layout'))
+} else {
+    @((Join-Path $source 'standalone\panorama\layout'))
+}
+$stockOverrides = @($overrideDirs | ForEach-Object {
+    Get-ChildItem $_ -Filter *.xml | Where-Object { $allowedOverrides -notcontains $_.Name }
+})
 if ($stockOverrides.Count -gt 0) {
     throw "Only $($allowedOverrides -join ' and ') may override a stock layout; refusing: $($stockOverrides.Name -join ', ')"
 }
@@ -813,7 +840,6 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_shell_server.xml',
         'panorama\layout\openlock_hud.xml',
         'panorama\layout\base_hud.xml',
-        'panorama\layout\base_dashboard.xml',
         'panorama\scripts\openlock_shell.js',
         'panorama\scripts\openlock_server_mount.js',
         'panorama\scripts\openlock_hud.js',
@@ -821,7 +847,16 @@ if (Test-Path $compiler) {
         'panorama\scripts\openlock_boot.js',
         'panorama\styles\openlock_shell.css',
         'panorama\styles\openlock_schemes.css'
-    ) | ForEach-Object { (Join-Path $sdkContent $_).Replace('\', '/') }
+    )
+    if ($toolsTarget) {
+        $inputs += @(
+            'panorama\layout\base_dashboard.xml',
+            'panorama\layout\openlock_shell_legacy.xml',
+            'panorama\scripts\openlock_boot_csdk10.js',
+            'panorama\styles\openlock_shell_legacy.css'
+        )
+    }
+    $inputs = $inputs | ForEach-Object { (Join-Path $sdkContent $_).Replace('\', '/') }
 
     # One command-line string: PowerShell 5.1 does not reliably split an array into separate
     # native arguments, and a compiler that receives one space-joined path compiles nothing.
@@ -845,13 +880,20 @@ if (Test-Path $compiler) {
     # which is the whole HUD, so this is a hard failure here rather than a discovery at launch.
     $required = @(
         'panorama\layout\base_hud.vxml_c',
-        'panorama\layout\base_dashboard.vxml_c',
         'panorama\layout\openlock_shell.vxml_c',
         'panorama\layout\openlock_shell_server.vxml_c',
         'panorama\scripts\openlock_server_mount.vjs_c',
         'panorama\scripts\openlock_boot.vjs_c',
         'panorama\styles\openlock_schemes.vcss_c'
     )
+    if ($toolsTarget) {
+        $required += @(
+            'panorama\layout\base_dashboard.vxml_c',
+            'panorama\layout\openlock_shell_legacy.vxml_c',
+            'panorama\scripts\openlock_boot_csdk10.vjs_c',
+            'panorama\styles\openlock_shell_legacy.vcss_c'
+        )
+    }
     $absent = @($required | Where-Object { -not (Test-Path (Join-Path $build $_)) })
     if ($absent.Count -gt 0) {
         throw "resourcecompiler wrote no $($absent -join ', '); base_hud would abort at load."
