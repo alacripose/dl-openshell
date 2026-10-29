@@ -39,6 +39,7 @@ BUILT_VPK = ROOT / "dist" / "openlock_ui" / "pak01_dir.vpk"
 BUILD_RECORD = Path("game") / "bin" / "win64" / "openlock.build.json"
 INSTALLED_VPK = Path("game") / "citadel" / "addons" / "mods" / "pak01_dir.vpk"
 LOOSE_DATA = Path("game") / "citadel" / "addons" / "mods" / "panorama" / "scripts" / "openlock_shell_data.vjs_c"
+TOOLS_DATA = Path("game") / "citadel_addons" / "openlock_ui" / "panorama" / "scripts" / "openlock_shell_data.vjs_c"
 GAMEINFO = Path("game") / "citadel" / "gameinfo.gi"
 DATA_ENTRY = "openlock_shell_data.js"
 
@@ -146,6 +147,16 @@ def mounted(root: Path) -> bool:
     return "citadel/addons/mods" in text
 
 
+def tools_mounted(root: Path) -> bool:
+    """The CSDK10 tools slot is `AddonRoot citadel_addons`, not the shipping addon archive."""
+    path = root / GAMEINFO
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace").replace("\\", "/").lower()
+    except OSError:
+        return False
+    return "addonroot" in text and "citadel_addons" in text and (root / TOOLS_DATA).is_file()
+
+
 def cell(name: str, state: str, grade: str, witness: str, detail: str, sha: str = "") -> dict:
     return {
         "cell": name,
@@ -178,7 +189,43 @@ def github_cell(root: Path, head: str, remote: str, error: str) -> dict:
 
 
 def install_cell(root: Path, head: str) -> dict:
-    # A live tools install writes loose compiled resources beside the (still open) VPK. The VPK is
+    # A CSDK10 tools install writes its live slot under AddonRoot citadel_addons. That slot is the
+    # client's authority even when a game addon VPK exists beside it in the same tree.
+    tools = root / TOOLS_DATA
+    if tools.is_file():
+        record = read_record(root)
+        baked = build_from_text(tools.read_text(encoding="utf-8", errors="replace"))
+        committed = str(baked.get("commit") or "")
+        facts = ["server tools slot"]
+        failures = []
+        if committed:
+            facts.append(f"commit {committed}{'+' if baked.get('dirty') else ''}")
+            if head and committed != head:
+                failures.append(f"baked commit {committed} != HEAD {head}")
+        else:
+            failures.append("no build commit is baked into the tools shell data")
+        record_state = f"{record.get('stage', '?')}/{record.get('state', '?')}"
+        facts.append(f"installer record {record_state}")
+        if record_state != "installed/ok":
+            failures.append("installer record is not installed/ok")
+        mount = tools_mounted(root)
+        facts.append("tools mount present" if mount else "tools mount missing from gameinfo.gi")
+        if not mount:
+            failures.append("AddonRoot citadel_addons is not mounted")
+        # A game archive in the same tree is a different surface. Report it if it disagrees.
+        game_vpk = root / INSTALLED_VPK
+        if game_vpk.is_file():
+            game = vpk_build(game_vpk)
+            game_commit = str(game.get("commit") or "")
+            if game_commit and committed and game_commit != committed:
+                failures.append(f"game archive carries {game_commit}, tools slot carries {committed}")
+            facts.append(f"game archive {game_commit or '(no commit)'}")
+        detail = "; ".join(facts)
+        if failures:
+            return cell("install", "absent", "B", tools, detail + " | " + "; ".join(failures), sha256_file(tools))
+        return cell("install", "held", "B", tools, detail, sha256_file(tools))
+
+    # A live game install writes loose compiled resources beside the (still open) VPK. The VPK is
     # stale by design in that mode, so the commit baked into the loose shell data is the authority.
     loose = root / LOOSE_DATA
     if loose.is_file():
@@ -382,7 +429,7 @@ def audit_installs(install_root: Path, live_root: Path | None, head: str) -> lis
     return audits
 
 
-def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
+def derive(install_root: Path, live_override: str, require_live: bool = False) -> tuple[dict, int]:
     head = git(ROOT, "rev-parse", "--short", "HEAD")
     dirty = bool(git(ROOT, "status", "--porcelain"))
     remote, remote_error = remote_main(ROOT)
@@ -415,8 +462,20 @@ def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
                     "detail": by_name[name]["detail"],
                 }
             )
+    # A CSDK10 development change is not a completed delivery until the live Steam client carries
+    # the same build. Refuse the tools gate when the player client is still on an older one.
+    if require_live and by_name["live"]["state"] != "held":
+        refusals.append(
+            {
+                "kind": "undelivered",
+                "cell": "live",
+                "detail": "the live Steam client has not received this build: " + by_name["live"]["detail"],
+            }
+        )
 
     if any(name in {r["cell"] for r in refusals} for name in ("repo", "install")):
+        state = "FAIL"
+    elif require_live and by_name["live"]["state"] != "held":
         state = "FAIL"
     elif refusals:
         state = "BLOCKED"
@@ -526,6 +585,11 @@ def main() -> int:
     parser.add_argument("--install", required=True, help="the Deadlock or tools tree the shell was installed into")
     parser.add_argument("--live", default="", help="the Steam Deadlock tree; auto-detected when omitted")
     parser.add_argument("--mongo-uri", default=None)
+    parser.add_argument(
+        "--require-live",
+        action="store_true",
+        help="refuse the run unless the live Steam client carries the same build",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -546,7 +610,7 @@ def main() -> int:
         }
         code = 1
     else:
-        payload, code = derive(install_root, args.live)
+        payload, code = derive(install_root, args.live, args.require_live)
 
     if payload["cells"]:
         try:
