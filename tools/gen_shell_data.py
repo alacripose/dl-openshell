@@ -28,9 +28,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_shell_theme  # noqa: E402  (the theme generator is a sibling tool, not a package)
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGE_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "shell" / "alpha-shell"
-OUTPUT = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "clientaddon" / "panorama" / "scripts" / "openlock_shell_data.js"
-SCHEMES_OUTPUT = Path(sys.argv[4]) if len(sys.argv) > 4 else None
+# Defaults live at import time. The CLI paths are applied in main(), so another tool can import
+# read_installs() without its own argv being mistaken for generator arguments.
+PACKAGE_DIR = ROOT / "shell" / "alpha-shell"
+OUTPUT = ROOT / "clientaddon" / "panorama" / "scripts" / "openlock_shell_data.js"
+SCHEMES_OUTPUT = None
 
 
 def read_recipe(path: Path):
@@ -568,13 +570,27 @@ def _install_state(root: Path):
     tool_count = sum(1 for name in tool_names if (bin_dir / name).exists() or (tools_dir / name).exists())
 
     version = ""
+    build = {}
     record = bin_dir / "openlock.build.json"
     if record.exists():
         try:
             state = json.loads(record.read_text(encoding="utf-8"))
             version = str(state.get("version") or state.get("finishedAt") or state.get("stage") or "")[:48]
-        except (OSError, json.JSONDecodeError):
+            build = {
+                "grade": str(state.get("grade") or ""),
+                "stage": str(state.get("stage") or ""),
+                "state": str(state.get("state") or ""),
+                "finishedAt": str(state.get("finishedAt") or ""),
+                "vpkBytes": int(state.get("vpkBytes") or 0),
+            }
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
             version = ""
+
+    exe = ""
+    for name in ("project8.exe", "deadlock.exe"):
+        if (bin_dir / name).exists():
+            exe = str(bin_dir / name).replace("\\", "/")
+            break
 
     return {
         "path": str(root).replace("\\", "/"),
@@ -584,10 +600,12 @@ def _install_state(root: Path):
         "toolsPresent": tool_count,
         "toolsTotal": len(tool_names),
         "version": version,
+        "build": build,
+        "exe": exe,
     }
 
 
-def read_installs(gameinfo: Path) -> list[dict]:
+def read_installs(gameinfo: Path | None = None, extra_roots: list[Path] | None = None) -> list[dict]:
     """Game and tools trees on this machine that carry a Deadlock gameinfo.
 
     The shell is a Panorama overlay and cannot enumerate a filesystem at runtime, so the
@@ -609,8 +627,11 @@ def read_installs(gameinfo: Path) -> list[dict]:
         seen.add(key)
         roots.append(root)
 
-    current_root = gameinfo.parent.parent.parent
-    remember(current_root)
+    current_root = gameinfo.parent.parent.parent if gameinfo is not None else None
+    if current_root is not None:
+        remember(current_root)
+    for extra in extra_roots or []:
+        remember(extra)
 
     letters = "CDEFGHIJKLMNOPQRSTUVWXYZAB"
     steam_leaves = (
@@ -623,6 +644,7 @@ def read_installs(gameinfo: Path) -> list[dict]:
         "Users/*/Documents/Documents/deadlockpreview/Project8Staging/*",
         "Users/*/Documents/deadlockpreview/Project8Staging/*",
         "Users/*/Documents/*/Project8Staging/*",
+        "Users/*/Downloads/Reduced_CSDK_*",
         "Users/*/*/Project8Staging/*",
         "Projects/*/Project8Staging/*",
         "dev/*/Project8Staging/*",
@@ -653,7 +675,8 @@ def read_installs(gameinfo: Path) -> list[dict]:
         state = _install_state(root)
         if state:
             rows.append(state)
-    rows.sort(key=lambda row: (row["path"] != str(current_root).replace("\\", "/"), row["path"].lower()))
+    preferred = str(current_root).replace("\\", "/") if current_root is not None else ""
+    rows.sort(key=lambda row: (row["path"] != preferred, row["path"].lower()))
     return rows[:40]
 
 
@@ -735,6 +758,14 @@ def read_build(gameinfo: Path) -> dict:
 
 
 def main():
+    global PACKAGE_DIR, OUTPUT, SCHEMES_OUTPUT
+    if len(sys.argv) > 1:
+        PACKAGE_DIR = Path(sys.argv[1])
+    if len(sys.argv) > 2:
+        OUTPUT = Path(sys.argv[2])
+    if len(sys.argv) > 4:
+        SCHEMES_OUTPUT = Path(sys.argv[4])
+
     recipe = read_recipe(PACKAGE_DIR / "package.shspec")
     recipe["windows"].extend(read_deadlock_windows(PACKAGE_DIR / "deadlock.windows"))
     content_refusals = resolve_content(recipe["windows"])

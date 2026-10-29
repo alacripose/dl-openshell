@@ -123,6 +123,17 @@ def main() -> int:
         if required not in script:
             errors.append(f"script: missing idle-hover path '{required}'")
 
+    # The reduced tools client exposes no cursor at all, so the pointer rectangle alone cannot
+    # restore a window. Each window keeps its own hover state, bound to the live panel it frames,
+    # and its own idle clock; a global clock would leave every other window expanded.
+    for required in ("function enterFrame", "function leaveFrame", "function hoveredByPointer",
+                     "function bindFrameHover", "bindFrameHover(win.id, panel)",
+                     "f.lastActiveAt"):
+        if required not in script:
+            errors.append(f"script: missing per-window hover path '{required}'")
+    if "now - lastInteractionAt" in script:
+        errors.append("script: chrome idle is back on the global interaction clock")
+
     style = STYLE.read_text(encoding="utf-8")
     # The controls are hidden only by observer grade, never by ordinary chrome.
     for selector in (".LauncherBar", ".Taskbar", ".ToastStack"):

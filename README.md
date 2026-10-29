@@ -51,6 +51,37 @@ The public landing page is [the Pages site](https://alacripose.github.io/dl-open
 assets are built locally because compiling Panorama needs the game's CSDK; see
 [tools/build_release.ps1](tools/build_release.ps1).
 
+### Boot shell
+
+`launch.ps1` is the entry point when the shell is installed from a checkout. It scans the standard
+Steam-library, reduced-CSDK and tools locations, lists every game/tools tree with its mount state
+and build record, installs or updates the chosen tree through `install.ps1`, and launches it.
+
+The shell is loaded through the **CSDK10 installer shell** for development: the reduced tools
+client hosts the same Panorama shell at the tools dashboard, so the shell under test is the shell
+that ships without opening the game. The **in-game shell is the fallback**, used only when a
+mountable game package and the game itself are available; a game tree is installed through its
+tools host and then launched normally, with the shell mounting from the packaged VPK.
+
+```powershell
+./launch.ps1
+./launch.ps1 -Root 'D:\Users\me\Downloads\Reduced_CSDK_12' -Install
+./launch.ps1 -SelfTest
+```
+
+The boot surface is never a console-only install and never the installer's WinForms window:
+`-Headless`, `-NoUi` and `-List` are refused by name, and `install.ps1` is driven with
+`-BootShellHost` so the installer shell owns the surface. A bare CS2 tools tree is listed but not
+selected; it needs its own Citadel addon package first, and without a tools host the boot shell
+refuses rather than falling back. `-Grade dev|observer|player` is passed through, and the script
+watches the client's own `console.log` for the mount, shell-ready and idle-chrome lines.
+
+Before mounting, the worktree is read by `tools/axis_witness.py`: one code witness per declared
+segment and per worktree change, `held` or `absent`, with refusals named. The run is written to
+MongoDB (`openlock_axis`), read back, and then re-derived and compared with the stored run. A
+reading that cannot be recorded refuses the mount. Requirements: Python 3 with `pymongo`, and a
+local MongoDB (the script probes `127.0.0.1:27017` and `:27018`, or `OPENLOCK_MONGO_URI`).
+
 ### Build from a checkout
 
 Requirements: Deadlock, Python 3, the CSDK `resourcecompiler.exe`, and `CSDKCfgVPK.exe`. The game
@@ -222,6 +253,9 @@ generated file or a successful pack as proof that the UI drew.
 
 ## Files
 
+- [launch.ps1](launch.ps1) — boot entry: witness gate, discover installs, install/update through install.ps1, launch the installer shell or the game fallback.
+- [tools/list_installs.py](tools/list_installs.py) — discovery shared by launch.ps1 and the in-game Tools window.
+- [tools/axis_witness.py](tools/axis_witness.py) — axis code witnesses; records and verifies worktree results in MongoDB.
 - [install.ps1](install.ps1) — compile, pack and mount the UI addon.
 - [install.cmd](install.cmd) — double-click launcher for a downloaded install.ps1.
 - [clientaddon/panorama/layout/openlock_shell.xml](clientaddon/panorama/layout/openlock_shell.xml) — shell layout.
