@@ -26,15 +26,25 @@
             depth++;
         }
 
-        // The host is one per layout tree. base_hud and base_dashboard can both run this script;
-        // a second host would draw a second taskbar and two sets of frames over the same pixels,
-        // which reads as the bar flickering between two positions. Yield to the host already
-        // mounted in this tree before choosing a root.
+        // The host is one per layout tree. base_hud and base_dashboard can both run this script,
+        // and a single root can load the layout more than once in the same frame. Checking child
+        // count lost that race: the first host existed but BLoadLayout had not added its child
+        // yet, so every later script created another host. Three shells then drew three taskbars
+        // and three sets of frames over the same pixels, which reads as the bar flickering.
+        // Claim the host before loading, and treat a claim as owned even while it is empty.
         var mountedHost = null;
         try { mountedHost = top.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
-        if (mountedHost && mountedHost.GetChildCount() > 0) {
-            log("shell already mounted in this tree; yielding");
-            return;
+        if (mountedHost) {
+            var claimed = "";
+            try { claimed = mountedHost.GetAttributeString("openlock_claimed", ""); } catch (e) {}
+            var mountedChildren = 0;
+            try { mountedChildren = mountedHost.GetChildCount(); } catch (e) {}
+            if (claimed === "1" || mountedChildren > 0) {
+                log("shell already hosted at " + String(mountedHost.GetParent ? (mountedHost.GetParent().id || "root") : "root") + "; yielding");
+                return;
+            }
+            // An empty, unclaimed host is debris from a refused mount. Replace it.
+            try { mountedHost.DeleteAsync(0); } catch (e) {}
         }
 
         var hostRoot = null;
@@ -97,6 +107,10 @@
             return;
         }
 
+        // Claim before the load. A second script in the same frame now yields instead of
+        // creating a peer host whose child count is still zero.
+        try { host.SetAttributeString("openlock_claimed", "1"); } catch (e) {}
+
         host.style.width = "100%";
         host.style.height = "100%";
         host.style.zIndex = "10000";
@@ -111,6 +125,7 @@
         }
         if (!mounted) {
             try { host.RemoveAndDeleteChildren(); } catch (e) {}
+            try { host.SetAttributeString("openlock_claimed", "0"); } catch (e) {}
             log("REFUSED: openlock_shell_legacy.xml did not mount");
             return;
         }
