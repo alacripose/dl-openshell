@@ -21,19 +21,19 @@
 
         <!-- The bar (alpha-shell D-2) sits above both layers. Panorama paints siblings in order,
              and a live panel at the top of the screen was painting over the bar and its buttons. -->
-        <Panel id="Taskbar" class="Taskbar" hittest="false" hittestchildren="true">
-            <Panel id="TabStrip" class="TabStrip" hittest="false" hittestchildren="true" />
+        <Panel id="Taskbar" class="Taskbar">
+            <Panel id="TabStrip" class="TabStrip" />
             <Panel class="TaskbarSpacer" />
             <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
                 <Label class="WindowsButtonLabel" text="Windows" />
             </Panel>
-            <Label id="VersionLabel" class="VersionLabel" hittest="false" />
-            <Label id="Clock" class="Clock" text="--:--" hittest="false" />
+            <Label id="VersionLabel" class="VersionLabel" />
+            <Label id="Clock" class="Clock" text="--:--" />
         </Panel>
 
         <!-- The launcher is the one mark that is always on screen: it reopens the shell and it is
              never covered by a window. Pinned windows stay beside it while the shell is closed. -->
-        <Panel id="LauncherBar" class="LauncherBar" hittest="false" hittestchildren="true">
+        <Panel id="LauncherBar" class="LauncherBar">
             <Panel id="LauncherButton" class="LauncherButton" onmouseactivate="OpenlockToggle()">
                 <Label id="LauncherLabel" class="LauncherLabel" text="Openlock" />
             </Panel>
@@ -44,7 +44,7 @@
 
         <Panel id="DropGrid" class="DropGrid" />
 
-        <Panel id="ToastStack" class="ToastStack" hittest="false" hittestchildren="true" />
+        <Panel id="ToastStack" class="ToastStack" />
 
         <!-- The installer's live stage. It is deliberately non-interactive: it is a readout, not
              a second control surface over the game's own top bar. -->

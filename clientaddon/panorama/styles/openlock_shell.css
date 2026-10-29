@@ -767,7 +767,8 @@
     position: absolute;
     horizontal-align: right;
     vertical-align: top;
-    margin-top: 48px;
+    /* Below the game's own top bar: a notice must not cover the top-right menu. */
+    margin-top: 76px;
     margin-right: 14px;
     width: 300px;
     height: fit-children;
