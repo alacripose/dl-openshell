@@ -11598,14 +11598,14 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "1a9133b",
+    "commit": "f4250a4",
     "branch": "main",
     "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 20:52",
+    "generatedAt": "2026-10-28 20:56",
     "grade": "player",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  1a9133b+  ·  game 6821"
+    "label": "v0.7.0  ·  f4250a4+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11743,8 +11743,8 @@ var SHELL = {
     "grade": "player",
     "stage": "prepare",
     "state": "running",
-    "startedAt": "2026-10-28 20:52:45",
-    "updatedAt": "2026-10-28 20:52:45",
+    "startedAt": "2026-10-28 20:56:11",
+    "updatedAt": "2026-10-28 20:56:11",
     "finishedAt": "",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
     "vpkBytes": 0,
@@ -11754,7 +11754,7 @@ var SHELL = {
       {
         "name": "prepare",
         "state": "running",
-        "startedAt": "20:52:45",
+        "startedAt": "20:56:11",
         "finishedAt": ""
       }
     ],

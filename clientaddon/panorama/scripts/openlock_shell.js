@@ -379,15 +379,20 @@
         var t = $.CreatePanel("Panel", toastStack, "");
         t.AddClass("Toast");
         if (attention) t.AddClass("Attention");
+        // A notice is not a control surface. Only a toast that names a window needs a hit target;
+        // every other toast must pass the pointer through to the game's own top-right menu.
+        try { t.hittest = !!windowId; } catch (e) {}
 
         var h = $.CreatePanel("Label", t, "");
         h.AddClass("ToastTitle");
         h.text = title;
+        try { h.hittest = false; } catch (e) {}
 
         if (body) {
             var b = $.CreatePanel("Label", t, "");
             b.AddClass("ToastBody");
             b.text = body;
+            try { b.hittest = false; } catch (e) {}
         }
 
         if (windowId) {
