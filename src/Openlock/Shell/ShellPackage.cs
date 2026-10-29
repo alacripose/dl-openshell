@@ -32,6 +32,9 @@ public sealed class ShellPackage
         public int Line;
         public int BehaviorLine;
         public List<(string Label, string Command)> Controls = [];
+
+        /// <summary>The contextual tool layers declared beside this window.</summary>
+        public List<ShpPackage.Layer> Layers { get; } = [];
     }
 
     public sealed record Refusal(string File, int Line, string Subject, string Why);
@@ -41,6 +44,7 @@ public sealed class ShellPackage
     public string Version { get; private set; } = "";
 
     public List<Window> Windows { get; } = [];
+    public List<ShpPackage.Layer> Layers { get; } = [];
     public List<string> Tabs { get; } = [];
     public string? Bar { get; private set; }
     public List<(string Window, string Tab)> Filed { get; } = [];
@@ -97,6 +101,7 @@ public sealed class ShellPackage
 
         Format = lines[0];
         Window? current = null;
+        ShpPackage.Layer? currentLayer = null;
 
         for (var i = 1; i < lines.Length; i++)
         {
@@ -107,14 +112,24 @@ public sealed class ShellPackage
 
             if (raw.StartsWith('\t'))
             {
-                if (current is not null)
+                if (currentLayer is not null)
+                    ApplyLayerField(currentLayer, raw.TrimStart('\t').Split('\t'), line);
+                else if (current is not null)
                     ApplyWindowField(current, raw.TrimStart('\t').Split('\t'), line);
                 continue;
             }
 
             var parts = raw.Split('\t');
+            currentLayer = null;
             switch (parts[0])
             {
+                case "layer":
+                    if (parts.Length > 1)
+                    {
+                        currentLayer = new ShpPackage.Layer { Id = parts[1], Line = line };
+                        Layers.Add(currentLayer);
+                    }
+                    break;
                 case "package":
                     Name = parts.Length > 1 ? parts[1] : "";
                     Version = parts.Length > 2 ? parts[2] : "";
@@ -156,6 +171,34 @@ public sealed class ShellPackage
             }
         }
 
+        // A layer belongs to the window it names. The client already has the tool surface in
+        // the generated data; this attachment is what lets the server validate an action before
+        // it logs it as handled.
+        var layerIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in Layers)
+        {
+            if (!layerIds.Add(layer.Id))
+            {
+                Refusals.Add(new Refusal(path, layer.Line, layer.Id, "two tool layers are declared for one window"));
+                continue;
+            }
+
+            var window = WindowById(layer.Id);
+            if (window is null)
+            {
+                Refusals.Add(new Refusal(path, layer.Line, layer.Id, "a tool layer names a window that is not declared"));
+                continue;
+            }
+            window.Layers.Add(layer);
+
+            foreach (var action in layer.Actions)
+            {
+                if (action.Window.Length > 0 && WindowById(action.Window) is null)
+                    Refusals.Add(new Refusal(path, layer.Line, action.Id,
+                        $"tool action '{action.Id}' opens '{action.Window}', which is not declared"));
+            }
+        }
+
         // A declared window's behavior is delivered by the client's window manager: the title bar
         // moves it, the corner grip resizes it, and the buttons minimize, maximize and close it.
         // Nothing in `behavior` is refused, so this list holds only records the client genuinely
@@ -167,6 +210,30 @@ public sealed class ShellPackage
         {
             foreach (var (window, line, content, why) in ShellContent.Refusals(this))
                 Refusals.Add(new Refusal(path, line, window, $"content '{content}': {why}"));
+        }
+    }
+
+    private static void ApplyLayerField(ShpPackage.Layer layer, string[] fields, int line)
+    {
+        if (fields.Length < 2)
+            return;
+
+        switch (fields[0])
+        {
+            case "title": layer.Title = fields[1]; break;
+            case "surface": layer.Surface = fields[1]; break;
+            case "hint": layer.Hint = fields[1]; break;
+            case "action":
+                if (fields.Length >= 3 && fields[1].Trim().Length > 0 && fields[2].Trim().Length > 0)
+                {
+                    layer.Actions.Add(new ShpPackage.LayerAction
+                    {
+                        Id = fields[1].Trim(),
+                        Label = fields[2].Trim(),
+                        Window = fields.Length > 3 ? fields[3].Trim() : "",
+                    });
+                }
+                break;
         }
     }
 

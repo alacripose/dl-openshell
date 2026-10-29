@@ -1,0 +1,306 @@
+{
+  "format": "openlock.popit-elements/1",
+  "surface": "Popit tool surface",
+  "source": "docs/LittleBigPlanet_Popit_and_Pod_Computer_UI_Series_Comparison.pdf",
+  "source_sections": [
+    "6. Element-by-element Popit inventory",
+    "11.1 Surface geometry: the Popit panel itself",
+    "11.2 Geometric symbols inside the Popit",
+    "11.3 Motion: opening, browsing, selecting and manipulating"
+  ],
+  "elements": [
+    {
+      "id": "popit.surface",
+      "kind": "container",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "show: show",
+      "selector": ".PopitSurface",
+      "source": "11.1",
+      "acceptance": "The surface is created as a root child above the dismiss panel; it is not a ring of text rows."
+    },
+    {
+      "id": "popit.dismiss",
+      "kind": "interaction",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "dismiss",
+      "selector": ".PopitDismiss",
+      "source": "11.3",
+      "acceptance": "A click outside the frame closes the surface; the dismiss panel is the only full-screen hit-testable child."
+    },
+    {
+      "id": "popit.frame.lbp3",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Lbp3",
+      "source": "11.1",
+      "acceptance": "Default frame; rounded hexagonal outline from six edge panels plus a 53px plate whose corner radius meets the 45-degree chamfers."
+    },
+    {
+      "id": "popit.frame.lbp1",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Lbp1",
+      "source": "11.1",
+      "acceptance": "Soft bubble frame with the larger 52px plate and 30px tail."
+    },
+    {
+      "id": "popit.frame.lbp2",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Lbp2",
+      "source": "11.1",
+      "acceptance": "Flat block frame: 4px plate radius, 10px frame padding, no tail."
+    },
+    {
+      "id": "popit.frame.psp",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Psp",
+      "source": "11.1",
+      "acceptance": "Compact page frame: 10px padding, 14px plate radius, no tail."
+    },
+    {
+      "id": "popit.frame.vita",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Vita",
+      "source": "11.1",
+      "acceptance": "Tall card frame: 12px padding, 38px plate radius, no tail."
+    },
+    {
+      "id": "popit.frame.karting",
+      "kind": "shape-schema",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Karting",
+      "source": "11.1",
+      "acceptance": "Dark garage card with a 6px plate, 2px border and the green selection beam."
+    },
+    {
+      "id": "popit.frame.hex-edges",
+      "kind": "geometry",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitHexEdge.Top",
+      "source": "11.1",
+      "acceptance": "Six edges: top, upper-left, lower-left, bottom, lower-right, upper-right; visible only on the LBP3 frame."
+    },
+    {
+      "id": "popit.tail",
+      "kind": "geometry",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitTail",
+      "source": "11.1",
+      "acceptance": "Speech-bubble tail is a rotated filled square painted before the plate; LBP1 and LBP3 show it, later cards do not."
+    },
+    {
+      "id": "popit.beam",
+      "kind": "geometry",
+      "file": "shell/alpha-shell/forms/popit.form",
+      "selector": ".FormPopit .PopitFrame.Karting .PopitBeam",
+      "source": "11.3",
+      "acceptance": "Karting frame draws the green beam from the card into the world selection."
+    },
+    {
+      "id": "popit.header",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "header",
+      "selector": ".PopitHeader",
+      "source": "11.1",
+      "acceptance": "Layer title and the frame badge share the header row."
+    },
+    {
+      "id": "popit.header.title",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "title",
+      "selector": ".PopitHeaderTitle",
+      "source": "6",
+      "acceptance": "Shows the declaring layer's title, not a generic window title."
+    },
+    {
+      "id": "popit.frame-badge",
+      "kind": "interaction",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "cycleFrame",
+      "selector": ".PopitFrameBadge",
+      "source": "11.1",
+      "acceptance": "Cycles LBP3/LBP1/LBP2/PSP/Vita/Karting; shape only, no palette change."
+    },
+    {
+      "id": "popit.mode-pill",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "addMode",
+      "selector": ".PopitModePill",
+      "source": "11.2",
+      "acceptance": "CREATE and PLAY are one pill with one active segment."
+    },
+    {
+      "id": "popit.mode.create",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "setMode",
+      "selector": ".PopitMode.Active",
+      "source": "7.3",
+      "acceptance": "CREATE is the default active segment; selecting it changes only the local surface state."
+    },
+    {
+      "id": "popit.mode.play",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "setMode",
+      "selector": ".PopitMode.Active",
+      "source": "7.3",
+      "acceptance": "PLAY can be selected locally; the module does not send a game mode or change the level."
+    },
+    {
+      "id": "popit.tool-grid",
+      "kind": "layout",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "grid",
+      "selector": ".PopitGrid",
+      "source": "11.1",
+      "acceptance": "Declared actions are laid out four per row; the grid grows by row, never a text list."
+    },
+    {
+      "id": "popit.tool-tile",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "makeTile",
+      "selector": ".PopitTile",
+      "source": "11.1",
+      "acceptance": "One hit-testable tile per action with an image and a label."
+    },
+    {
+      "id": "popit.tool-icon",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "iconFor",
+      "selector": ".PopitTileIcon",
+      "source": "11.2",
+      "acceptance": "Icons are Deadlock panorama textures under s2r://panorama/images, resolved by action id and then label."
+    },
+    {
+      "id": "popit.tool-tile.hover",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "onmouseover",
+      "selector": ".PopitTile.Hover",
+      "source": "11.3",
+      "acceptance": "Pointer hover adds Hover, writes the dwell line and updates the detail label."
+    },
+    {
+      "id": "popit.tool-tile.selected",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "refreshSelection",
+      "selector": ".PopitTile.Selected",
+      "source": "11.3",
+      "acceptance": "Exactly one tile carries Selected; the initial selected tile is the first action."
+    },
+    {
+      "id": "popit.detail",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "updateDetail",
+      "selector": ".PopitDetail",
+      "source": "11.3",
+      "acceptance": "Detail names the mode, action label and whether the action opens a window or sends a layer command."
+    },
+    {
+      "id": "popit.hint",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "hint",
+      "selector": ".PopitHint",
+      "source": "6",
+      "acceptance": "The layer's declared hint is shown below the grid when present."
+    },
+    {
+      "id": "popit.action.route",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_shell.js",
+      "symbol": "showPopit",
+      "source": "11.3",
+      "acceptance": "A tile calls back into the shell's existing runPopitAction path; the module owns no server channel."
+    },
+    {
+      "id": "popit.refusal.overlap",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "place",
+      "source": "11.1",
+      "acceptance": "The surface tests every clamped candidate against open floating-window rects; when all overlap it calls onRefusal instead of drawing over another window."
+    },
+    {
+      "id": "popit.refusal.no-layer",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_shell.js",
+      "symbol": "showPopit",
+      "source": "6",
+      "acceptance": "A window with neither a declared layer nor a live panel is refused through the shell's normal refusal path."
+    },
+    {
+      "id": "popit.icon.trees",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/expand_collapse_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.picker",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/star_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.settings",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/icon_auto_style_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.performance",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/history_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.map",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/getting_started/map_lanes_icon_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.abilities",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/mod_track_tech_psd.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.icon.warning",
+      "kind": "asset",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "asset": "s2r://panorama/images/control_icons/warning_alt_png.vtex",
+      "source": "11.2"
+    },
+    {
+      "id": "popit.styles.layout",
+      "kind": "stylesheet",
+      "file": "clientaddon/panorama/styles/openlock_popit.css",
+      "source": "11.1"
+    },
+    {
+      "id": "popit.entry",
+      "kind": "module",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "OpenlockPopit",
+      "source": "11.3"
+    }
+  ]
+}

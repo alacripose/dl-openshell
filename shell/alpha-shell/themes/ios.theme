@@ -1,0 +1,25 @@
+shploingus.theme/1
+# iOS 6 SpringBoard. The palette is the SpringBoard night surface, the blue of the system
+# accent and the white ink of a HIG bar; the dock and the capsule chrome come from the separate
+# `form` row. HIG's 44 dp touch target is translated to this shell's 20 dp pointer target, which
+# is a named project translation rather than a platform value. Ink on body is 15.4:1.
+theme	ios
+	label	iOS SpringBoard
+	form	ios
+	source	Apple HIG (iOS 6 era) / SpringBoard; translation to pointer targets
+	body	#0B0F1AF2
+	panel	#161C2BF2
+	title	#2A3550F2
+	meta	#0B0F1AF2
+	border	#3B4A6B
+	borderStrong	#5B9DFF
+	ink	#F7FAFF
+	muted	#A9B7D0
+	accent	#4C9AF5
+	alert	#FF453A
+	alertBody	#2A1014F2
+# SpringBoard's own chrome is the dock bar, not the game's warm parchment.
+rule	.CitadelHudTopBar	background-color	#0B0F1AE6
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#0B0F1AE6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

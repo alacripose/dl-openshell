@@ -430,8 +430,9 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         var id = (windowId ?? "").Trim();
         if (id.Length == 0)
         {
-            var available = _shell.AddonWindows.Where(w => !string.IsNullOrEmpty(w.LayoutPath)).Take(12)
-                .Select(w => w.Id).ToArray();
+            var available = _shell.AddonWindows
+                .Where(w => !string.IsNullOrEmpty(w.LayoutPath) || w.LiveTree is { Count: > 0 })
+                .Take(12).Select(w => w.Id).ToArray();
             caller.Reply(available.Length == 0
                 ? "[dl-openshell] no package XML observer surface is loaded"
                 : "[dl-openshell] usage: openlock_observer <window-id>; available: " + string.Join(", ", available));
@@ -447,6 +448,35 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
     [Command("openlock-observer", Description = "Show a package XML observer surface on connected shells")]
     public void CmdObserverDashed(Caller caller, string windowId = "") => CmdObserver(caller, windowId);
 
+    [Command("openlock_toast", Description = "Send an observer toast to connected shells: title|body[|window]")]
+    public void CmdToast(Caller caller, string text = "")
+    {
+        var raw = (text ?? "").Trim();
+        if (raw.Length == 0)
+        {
+            caller.Reply("[dl-openshell] usage: openlock_toast <title>|<body>[|<window-id>]");
+            return;
+        }
+
+        var parts = raw.Split('|', 3);
+        var title = parts[0].Trim();
+        if (title.Length == 0)
+        {
+            caller.Reply("[dl-openshell] observer toast needs a title");
+            return;
+        }
+
+        var body = parts.Length > 1 ? parts[1].Trim() : "";
+        var windowId = parts.Length > 2 ? parts[2].Trim() : "";
+        var sent = _shell.Notify(title, body, windowId);
+        caller.Reply(sent == 0
+            ? "[dl-openshell] observer toast has no connected shell"
+            : $"[dl-openshell] observer toast '{title}' sent to {sent} shell(s)");
+    }
+
+    [Command("openlock-toast", Description = "Send an observer toast to connected shells: title|body[|window]")]
+    public void CmdToastDashed(Caller caller, string text = "") => CmdToast(caller, text);
+
     /// <summary>
     /// The live bridge. Deadworks and Deadlock cannot mount a new resource path while a client is
     /// running, so a package is read here, its XML becomes a node tree in the addon payload, and
@@ -461,10 +491,12 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             return;
         }
 
-        var added = _shell.DeliverAddon(path.Trim().Trim('"'), out var why);
-        caller.Reply(added == 0
+        var added = _shell.DeliverAddon(path.Trim().Trim('"'), out var why, out var delivered);
+        caller.Reply(!delivered
             ? $"[dl-openshell] live delivery refused: {why}"
-            : $"[dl-openshell] delivered {added} window(s) live; connected shells rebuild the payload now");
+            : added == 0
+                ? "[dl-openshell] package delivered live with no windows; the payload revision advanced"
+                : $"[dl-openshell] delivered {added} window(s) live; connected shells rebuild the payload now");
     }
 
     [Command("dl-openshell-deliver", Description = "Deliver a .shpkg or addon VPK to connected shells live")]

@@ -34,6 +34,8 @@ public sealed class ShpPackage
     private const int Head = 44;
     private const int MaxRecipeBytes = 1_048_576;
     private const int MaxWindows = 256;
+    private const int MaxLayers = 256;
+    private const int MaxActions = 16;
     private const int MaxRows = 256;
     private const int MaxValueBytes = 256;
     private const int MaxRowTextBytes = 4096;
@@ -51,7 +53,9 @@ public sealed class ShpPackage
     {
         "world-view", "readout", "table", "log", "console", "ledger", "api-viewer",
         "shaper-panel", "mods", "map-plan", "tools", "inventory", "trees", "settings",
-        "streamer", "notifications",
+        "streamer", "notifications", "performance", "picker", "abilities", "combat-log",
+        "game-settings", "hero-select", "landing", "minimap", "quickbuy", "repo",
+        "ui-tree", "updates",
     };
 
     private static readonly HashSet<string> Lanes = new(StringComparer.Ordinal)
@@ -74,6 +78,13 @@ public sealed class ShpPackage
         "drag", "resize", "maximize", "minimize", "close",
     };
 
+    private static readonly HashSet<string> LayerSurfaces = new(StringComparer.Ordinal)
+    {
+        // `grid` is the Popit tool surface. `ring`/`bar` remain accepted so an older package
+        // still loads; the client renders every declared layer as the one grid surface.
+        "grid", "ring", "bar",
+    };
+
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
     public sealed class Control
@@ -83,6 +94,46 @@ public sealed class ShpPackage
 
         [JsonPropertyName("label")]
         public string Label { get; set; } = "";
+    }
+
+    /// <summary>
+    /// A contextual tool layer attached to a window. This is the Popit surface the design
+    /// record calls for: the tools a window offers are declared beside the window, not painted
+    /// into the window's content. The shell draws the surface and routes each action back to the
+    /// server, so a package never owns a second input path.
+    /// </summary>
+    public sealed class Layer
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = "";
+
+        [JsonPropertyName("surface")]
+        public string Surface { get; set; } = "ring";
+
+        [JsonPropertyName("hint")]
+        public string Hint { get; set; } = "";
+
+        [JsonPropertyName("actions")]
+        public List<LayerAction> Actions { get; } = [];
+
+        [JsonIgnore]
+        public int Line { get; set; }
+    }
+
+    public sealed class LayerAction
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+
+        [JsonPropertyName("label")]
+        public string Label { get; set; } = "";
+
+        /// <summary>An optional window this action opens locally before the server is told.</summary>
+        [JsonPropertyName("window")]
+        public string Window { get; set; } = "";
     }
 
     public sealed class Window
@@ -187,6 +238,10 @@ public sealed class ShpPackage
         [JsonPropertyName("controls")]
         public List<Control> Controls { get; } = [];
 
+        /// <summary>The contextual tool layers declared for this window.</summary>
+        [JsonPropertyName("layers")]
+        public List<Layer> Layers { get; } = [];
+
         [JsonIgnore]
         public bool HasTitleBar => HasToken(Layout, "title-position");
 
@@ -227,6 +282,7 @@ public sealed class ShpPackage
 
     public List<Row> Rows { get; } = [];
     public List<Window> Windows { get; } = [];
+    public List<Layer> Layers { get; } = [];
     public List<string> Pins { get; } = [];
     public List<string> Tabs { get; } = [];
     public List<string> Bar { get; } = [];
@@ -454,6 +510,17 @@ public sealed class ShpPackage
                         Windows.Add(window);
                     break;
 
+                case "layer" when fields.Length == 2 && IsIdentifier(fields[1]):
+                    if (Layers.Count >= MaxLayers)
+                    {
+                        Refusals.Add(new Refusal(File, lineNumber, "layer", $"recipe declares more than {MaxLayers} layers"));
+                        break;
+                    }
+                    var layer = ReadLayer(lines, ref cursor, fields[1], lineNumber);
+                    if (layer is not null)
+                        Layers.Add(layer);
+                    break;
+
                 case "pin" when fields.Length == 2 && IsIdentifier(fields[1]):
                     Pins.Add(fields[1]);
                     break;
@@ -593,6 +660,114 @@ public sealed class ShpPackage
         return window;
     }
 
+    private Layer? ReadLayer(string[] lines, ref int cursor, string windowId, int blockLine)
+    {
+        var layer = new Layer { Id = windowId, Line = blockLine };
+        var errors = new List<Refusal>();
+        var seenActions = new HashSet<string>(StringComparer.Ordinal);
+
+        while (cursor < lines.Length)
+        {
+            var line = lines[cursor];
+            if (line.Length == 0 || IsComment(line))
+            {
+                cursor++;
+                continue;
+            }
+
+            if (!line.StartsWith('\t'))
+                break;
+
+            var fields = line.TrimStart('\t').Split('\t');
+            var key = fields[0];
+            var lineNumber = cursor + 1;
+            cursor++;
+
+            if (key == "action")
+            {
+                if (fields.Length is < 3 or > 4)
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, "an action is `action<TAB>id<TAB>label[<TAB>window]`"));
+                    continue;
+                }
+
+                var actionId = fields[1];
+                var label = fields[2].Trim();
+                var target = fields.Length == 4 ? fields[3].Trim() : "";
+                if (!IsIdentifier(actionId))
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, $"action id '{actionId}' is not a canonical identifier"));
+                    continue;
+                }
+                if (label.Length is 0 or > 64)
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, "an action label is 1..64 characters"));
+                    continue;
+                }
+                if (target.Length > 0 && !IsIdentifier(target))
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, $"action window '{target}' is not a canonical identifier"));
+                    continue;
+                }
+                if (!seenActions.Add(actionId))
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, $"action '{actionId}' is declared twice"));
+                    continue;
+                }
+                if (layer.Actions.Count >= MaxActions)
+                {
+                    errors.Add(new Refusal(File, lineNumber, windowId, $"a layer carries at most {MaxActions} actions"));
+                    continue;
+                }
+
+                layer.Actions.Add(new LayerAction { Id = actionId, Label = label, Window = target });
+                continue;
+            }
+
+            var value = fields.Length > 1 ? fields[1].Trim() : "";
+            switch (key)
+            {
+                case "title":
+                    if (value.Length is 0 or > 64)
+                        errors.Add(new Refusal(File, lineNumber, windowId, "a layer title is 1..64 characters"));
+                    else
+                        layer.Title = value;
+                    break;
+
+                case "surface":
+                    if (!LayerSurfaces.Contains(value))
+                        errors.Add(new Refusal(File, lineNumber, windowId, $"layer surface '{value}' is not grid, ring or bar"));
+                    else
+                        layer.Surface = value;
+                    break;
+
+                case "hint":
+                    if (value.Length > 160)
+                        errors.Add(new Refusal(File, lineNumber, windowId, "a layer hint is at most 160 characters"));
+                    else
+                        layer.Hint = value;
+                    break;
+
+                default:
+                    errors.Add(new Refusal(File, lineNumber, windowId, $"unexpected layer key '{key}'; expected title, surface, hint or action"));
+                    break;
+            }
+        }
+
+        if (layer.Title.Length == 0)
+            errors.Add(new Refusal(File, blockLine, windowId, "a layer needs a title"));
+        if (layer.Actions.Count == 0)
+            errors.Add(new Refusal(File, blockLine, windowId, "a layer needs at least one action"));
+
+        if (errors.Count > 0)
+        {
+            Refusals.AddRange(errors);
+            return null;
+        }
+
+        return layer;
+    }
+
     private void ReadRow(string line, int lineNumber)
     {
         var fields = line.Split('\t', 3);
@@ -686,6 +861,29 @@ public sealed class ShpPackage
         var filedWindows = Filed.Select(f => f.Window).ToArray();
         if (filedWindows.Distinct(StringComparer.Ordinal).Count() != filedWindows.Length)
             Refusals.Add(new Refusal(File, 1, "filed", "one window is filed under two tabs"));
+
+        var layerIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in Layers)
+        {
+            if (!layerIds.Add(layer.Id))
+                Refusals.Add(new Refusal(File, layer.Line, layer.Id, "two layers are declared for one window"));
+
+            var window = WindowById(layer.Id);
+            if (window is null)
+            {
+                Refusals.Add(new Refusal(File, layer.Line, layer.Id, "a layer names a window that is not declared"));
+                continue;
+            }
+
+            foreach (var action in layer.Actions)
+            {
+                if (action.Window.Length > 0 && WindowById(action.Window) is null)
+                    Refusals.Add(new Refusal(File, layer.Line, action.Id,
+                        $"action '{action.Id}' opens '{action.Window}', which is not a declared window"));
+            }
+
+            window.Layers.Add(layer);
+        }
 
         if (Windows.Count == 0 && Rows.Count == 0)
             Refusals.Add(new Refusal(File, 1, "recipe", "recipe declares no window and no row"));

@@ -32,6 +32,12 @@ public static class ShellContent
         ["map-plan"] = new(ViewType.Host, "file://{resources}/layout/hud_minimap.xml", ""),
         ["tools"] = new(ViewType.Host, "file://{resources}/layout/citadel_hud_top_bar.xml", ""),
         ["console"] = new(ViewType.Host, "file://{resources}/layout/console.xml", ""),
+        ["minimap"] = new(ViewType.Host, "file://{resources}/layout/hud_minimap.xml", ""),
+        ["abilities"] = new(ViewType.Host, "file://{resources}/layout/hud_abilities.xml", ""),
+        ["quickbuy"] = new(ViewType.Host, "file://{resources}/layout/hud_quickbuy.xml", ""),
+        ["combat-log"] = new(ViewType.Host, "file://{resources}/layout/citadel_hud_combat_log.xml", ""),
+        ["game-settings"] = new(ViewType.Host, "file://{resources}/layout/hud_escape_menu.xml", ""),
+        ["hero-select"] = new(ViewType.Host, "file://{resources}/layout/citadel_hero_grid.xml", ""),
 
         // Ours: these are built from this plugin's own state.
         ["ledger"] = new(ViewType.Own, "ledger", ""),
@@ -44,6 +50,12 @@ public static class ShellContent
         ["notifications"] = new(ViewType.Own, "notifications", ""),
         ["api-viewer"] = new(ViewType.Own, "api-viewer", ""),
         ["world-view"] = new(ViewType.Own, "world-view", ""),
+        ["performance"] = new(ViewType.Own, "performance", ""),
+        ["picker"] = new(ViewType.Own, "picker", ""),
+        ["updates"] = new(ViewType.Own, "updates", ""),
+        ["repo"] = new(ViewType.Own, "repo", ""),
+        ["landing"] = new(ViewType.Own, "landing", ""),
+        ["ui-tree"] = new(ViewType.Own, "ui-tree", ""),
 
         // Declared, but no mountable source exists on this build.
         ["streamer"] = new(

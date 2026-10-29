@@ -36,9 +36,12 @@
     var clockLabel = root.FindChildTraverse("Clock");
     var versionLabel = root.FindChildTraverse("VersionLabel");
     var schemeLabel = root.FindChildTraverse("SchemeLabel");
+    var formLabel = root.FindChildTraverse("FormLabel");
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
-    var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
+    var themes = data.themes || { default: "", defaultForm: "", order: [], schemes: [], forms: [], extensions: [] };
     var currentScheme = "";
+    var currentForm = themes.defaultForm || "";
+    var currentRenderer = "generic";
     // The idle/compact chrome is a behavior of the shell, not a grade gate. Echo the baked grade
     // beside the transition so the client's own console can show whether a grade suppressed it.
     var shellGrade = String((data.build && data.build.grade) || "dev");
@@ -105,11 +108,50 @@
 
     // Counters, not guesses: the line this logs every 30 s is the reading a performance change has
     // to move. writes are style assignments; skipped are the same value met again and not written.
-    var perf = { polls: 0, applies: 0, writes: 0, skips: 0, scans: 0, fullScans: 0, cost: {} };
+    var perf = {
+        polls: 0, applies: 0, writes: 0, skips: 0, scans: 0, fullScans: 0, cost: {},
+        // The performance window reads these three; they are bounded so the measurement can
+        // never become the reason a frame is late. 64 log lines and 72 frame samples.
+        samples: [], log: [], startedAt: Date.now()
+    };
+
+    function logPerf(kind, text) {
+        var line = { at: Date.now(), kind: String(kind || "info"), text: String(text || "") };
+        perf.log.push(line);
+        if (perf.log.length > 64) perf.log.shift();
+        if (line.kind === "warn" || line.kind === "refusal") {
+            $.Msg("[Openlock] perf ", line.kind, ": ", line.text);
+        }
+        return line;
+    }
+
+    // The audio module is loaded before this script. A missing module or a client build without
+    // PlayUISoundEvent is a silent shell, not a broken one.
+    function cue(name) {
+        return globalThis.OpenlockCue ? globalThis.OpenlockCue(name) : "";
+    }
+
+    function samplePerf(frame) {
+        perf.samples.push(Math.max(0, Number(frame) || 0));
+        if (perf.samples.length > 72) perf.samples.shift();
+    }
+
+    var perfSlowAt = 0;
+    function noteSlowApply(id, elapsed) {
+        // One line per window per two seconds: a 12 ms outlier on every apply would fill the log
+        // with the same reading and hide the event that caused it.
+        if (elapsed < 8) return;
+        var now = Date.now();
+        if (now - perfSlowAt < 2000) return;
+        perfSlowAt = now;
+        logPerf("warn", "apply " + id + " " + elapsed.toFixed(1) + " ms");
+    }
     var frameMs = 0;
     var frameClockAt = 0;
     var frameTickAt = 0;
     var frameTicks = 0;
+    var frameSampleAt = 0;
+    var perfSummaryAt = 0;
     var reportedRefusals = {};
     var runtimeRefusals = [];
 
@@ -123,9 +165,38 @@
     var geometry = {};    // id -> { x, y, w, h, init }
     var bound = {};       // id -> { panel, natural }
     var index = {};       // id -> window record
+    // findInHud is the shell's most expensive lookup: a class candidate that is absent walks the
+    // whole HUD. A successful lookup is kept while the panel is alive, and the search itself now
+    // prunes hidden branches, which is the bulk of the tree during a match.
+    var findCache = {};
+    var perfFindAt = 0;
+    // The walk can enumerate ids but not this client's panel classes: the "class" attribute is
+    // empty and HasClass is the only exposure. The index is therefore id-based, which is what the
+    // successful minimap/quickbuy/ability lookups use. A class lookup that misses is remembered
+    // for a while so a closed shop is not re-swept every six seconds.
+    var hudIdIndex = {};          // visible panel id (lower) -> panel, for token matches
+    var hudIndexAt = 0;
+    var hudTrackedTokens = {};
+    var findMissAt = {};
+    var perfFailAt = {};
+    // Per-scheme palette edits, kept out of the generated sheet: the sheet owns defaults, this
+    // owns the player's current choice. Switching back to a scheme restores its edits.
+    var paletteEdits = {};      // scheme id -> { role: #RRGGBBAA }
+    var paletteWrites = [];     // { panel, prop, prev } inline writes, restorable
+    var paletteDirty = true;
+    // Per-window experimental skin: the actual Deadlock elements are painted inline, which is
+    // the only way to override the game's own stylesheet without editing its layouts.
+    var liveSkin = {};          // window id -> { on: true, writes: [] }
 
     for (var wi = 0; wi < data.windows.length; wi++) index[data.windows[wi].id] = data.windows[wi];
     for (var pi = 0; pi < data.pins.length; pi++) pinned[data.pins[pi]] = true;
+    for (var tc = 0; tc < data.windows.length; tc++) {
+        var tcands = data.windows[tc].panelCandidates || [];
+        for (var tck = 0; tck < tcands.length; tck++) {
+            var tcc = tcands[tck];
+            if (tcc.kind === "token") hudTrackedTokens[String(tcc.name).toLowerCase()] = true;
+        }
+    }
 
     // --- small helpers -------------------------------------------------------
 
@@ -266,8 +337,10 @@
                 var child = null;
                 try { child = p.GetChild(i); } catch (e) { child = null; }
                 if (!child || !panelVisible(child)) continue;
-                var cw = num(child.actuallayoutwidth);
-                var ch = num(child.actuallayoutheight);
+                var csize = layoutSize(child);
+                if (!csize) continue;
+                var cw = csize.w;
+                var ch = csize.h;
                 var childArea = cw * ch;
                 if (cw < 32 || ch < 24 || childArea >= area * 0.94) continue;
                 if (childArea > bestArea) { bestArea = childArea; best = child; }
@@ -312,6 +385,38 @@
         });
     }
 
+    // A form is the chrome language (geometry, borders, glyph shape), not a palette. Both
+    // classes live on the same hosts, so a scheme can be composed with any form. Keep this
+    // transformation identical to scheme_class() in tools/gen_shell_theme.py.
+    function formClass(id) {
+        return "Form" + String(id || "").replace(/(^|[-_])([a-z])/g, function (_, lead, letter) {
+            return letter.toUpperCase();
+        });
+    }
+
+    function rendererClass(id) {
+        return "Renderer" + String(id || "generic").replace(/(^|[-_])([a-z])/g, function (_, lead, letter) {
+            return letter.toUpperCase();
+        });
+    }
+
+    function formById(id) {
+        var forms = themes.forms || [];
+        for (var i = 0; i < forms.length; i++) {
+            if (forms[i].id === id) return forms[i];
+        }
+        return null;
+    }
+
+    // The form asks for a surface renderer; the port advertises whether it is present. A package
+    // built without the Popit port still renders every window through the generic path.
+    function rendererFor(form) {
+        if (!form) return "generic";
+        if (form.renderer === "popit" && themes.renderers && themes.renderers.popit &&
+            themes.renderers.popit.available) return "popit";
+        return "generic";
+    }
+
     function schemeHosts() {
         // The shell root paints shell chrome. The topmost ancestor is the game HUD root, so the
         // same scheme class also scopes rules that target real Deadlock elements. Both are class
@@ -324,6 +429,10 @@
         return hosts;
     }
 
+    // Palette and shape are two selectors, not one scheme. This function changes colour only:
+    // every `.Scheme*` class is removed, the chosen palette is added, and no `.Form*` class is
+    // touched. A player can run Popit colours on the Deadlock form, or Deadlock colours on the
+    // Popit form, without either choice overwriting the other.
     function applyScheme(id, announce) {
         var scheme = schemeById(id) || schemeById(themes.default) || themes.schemes[0];
         if (!scheme) return "";
@@ -341,16 +450,58 @@
         }
 
         currentScheme = scheme.id;
+        paletteDirty = true;
+        applyPalettePaint();
+        refreshLiveSkins();
         if (schemeLabel) schemeLabel.text = String(scheme.id).charAt(0).toUpperCase();
         if (announce) {
             var ext = scheme.extensions ? scheme.extensions.length : 0;
-            globalThis.OpenlockToast("Scheme", scheme.label + " applied" + (ext ? " · " + ext + " extension(s)" : ""), "", false);
+            logPerf("info", "palette " + scheme.id);
+            cue("place");
+            globalThis.OpenlockToast("Palette", scheme.label +
+                (ext ? " · " + ext + " extension(s)" : ""), "", false);
         }
         return scheme.id;
     }
 
+    function applyForm(id, announce) {
+        var form = formById(id) || formById(themes.defaultForm) || (themes.forms && themes.forms[0]);
+        if (!form) return "";
+
+        var hosts = schemeHosts();
+        var allForms = themes.forms || [];
+        for (var h = 0; h < hosts.length; h++) {
+            for (var i = 0; i < allForms.length; i++) {
+                try { hosts[h].RemoveClass(formClass(allForms[i].id)); } catch (e) {}
+            }
+            try { hosts[h].RemoveClass("RendererPopit"); } catch (e) {}
+            try { hosts[h].RemoveClass("RendererGeneric"); } catch (e) {}
+        }
+        var renderer = rendererFor(form);
+        for (var k = 0; k < hosts.length; k++) {
+            try { hosts[k].AddClass(formClass(form.id)); } catch (e) {
+                $.Msg("[Openlock] form class REFUSED for '", form.id, "': ", String(e));
+            }
+            try { hosts[k].AddClass(rendererClass(renderer)); } catch (e) {}
+        }
+
+        currentForm = form.id;
+        currentRenderer = renderer;
+        if (formLabel) formLabel.text = String(form.id).charAt(0).toUpperCase();
+        if (announce) {
+            logPerf("info", "shape " + form.id + " / " + renderer);
+            cue("place");
+            globalThis.OpenlockToast("Shape", form.label + " · " + renderer + " renderer", "", false);
+        }
+        return form.id;
+    }
+
     globalThis.OpenlockScheme = function (id) {
         return applyScheme(String(id || "").toLowerCase(), true);
+    };
+
+    globalThis.OpenlockForm = function (id) {
+        return applyForm(String(id || "").toLowerCase(), true);
     };
 
     globalThis.OpenlockCycleScheme = function () {
@@ -366,6 +517,241 @@
         return applyScheme(next.id, true);
     };
 
+    globalThis.OpenlockCycleForm = function () {
+        var forms = themes.forms || [];
+        if (!forms.length) {
+            globalThis.OpenlockToast("Shape", "no form schema in this build", "", true);
+            return "";
+        }
+        var at = -1;
+        for (var i = 0; i < forms.length; i++) {
+            if (forms[i].id === currentForm) { at = i; break; }
+        }
+        var next = forms[(at + 1) % forms.length];
+        return applyForm(next.id, true);
+    };
+
+    // --- palette and live-panel skin ----------------------------------------
+    // The .theme schema is the source of truth. This editor changes one role at a time and writes
+    // the result inline, so a player can see the change without regenerating the stylesheet. The
+    // Export action prints a complete .theme document that can be dropped into a package.
+    function paletteEditsFor(scheme) {
+        return scheme ? (paletteEdits[scheme.id] || (paletteEdits[scheme.id] = {})) : {};
+    }
+
+    function paletteValue(scheme, role) {
+        if (!scheme || !role) return "";
+        var edits = paletteEdits[scheme.id];
+        if (edits && edits[role]) return edits[role];
+        return (scheme.roles && scheme.roles[role]) || "";
+    }
+
+    function styleProp(name) {
+        var map = {
+            "background-color": "backgroundColor",
+            "border-color": "borderColor",
+            "border-bottom-color": "borderBottomColor",
+            "border-top-color": "borderTopColor",
+            "border-left-color": "borderLeftColor",
+            "border-right-color": "borderRightColor"
+        };
+        return map[name] || String(name).replace(/-([a-z])/g, function (_, c) {
+            return c.toUpperCase();
+        });
+    }
+
+    function simpleSelector(entry) {
+        var selector = entry && entry.selector ? String(entry.selector) : "";
+        if (selector.length < 2 || selector.charAt(0) !== ".") return "";
+        return /^[A-Za-z0-9_]+$/.test(selector.substring(1)) ? selector.substring(1) : "";
+    }
+
+    function hasClass(panel, name) {
+        try { return !!(panel && name && panel.HasClass(name)); } catch (e) { return false; }
+    }
+
+    // One write owner: every inline change is recorded with the value it replaced. Restoring in
+    // reverse is what keeps a window's own style intact after a scheme or palette change.
+    function writeStyle(records, panel, prop, value) {
+        if (!panel || !prop || value === undefined || value === null || value === "") return false;
+        var key = styleProp(prop);
+        var prior = "";
+        try { prior = panel.style[key] === undefined ? "" : panel.style[key]; } catch (e) { return false; }
+        for (var i = 0; i < records.length; i++) {
+            if (records[i].panel === panel && records[i].key === key) {
+                records[i].value = value;
+                try { panel.style[key] = value; } catch (e) { return false; }
+                return true;
+            }
+        }
+        records.push({ panel: panel, key: key, prev: prior, value: value });
+        try { panel.style[key] = value; } catch (e) { return false; }
+        return true;
+    }
+
+    function restoreStyles(records) {
+        if (!records) return;
+        for (var i = records.length - 1; i >= 0; i--) {
+            try { records[i].panel.style[records[i].key] = records[i].prev; } catch (e) {}
+        }
+        records.length = 0;
+    }
+
+    function eachPanel(top, visit) {
+        var stack = [top];
+        var guard = 0;
+        while (stack.length && guard++ < 1200) {
+            var panel = stack.pop();
+            if (!panel) continue;
+            if (visit(panel) === false) continue;
+            var count = 0;
+            try { count = panel.GetChildCount(); } catch (e) { count = 0; }
+            for (var i = count - 1; i >= 0; i--) {
+                try { stack.push(panel.GetChild(i)); } catch (e) {}
+            }
+        }
+    }
+
+    function applyPalettePaint() {
+        restoreStyles(paletteWrites);
+        paletteDirty = false;
+        var scheme = schemeById(currentScheme);
+        if (!scheme) return;
+        var edits = paletteEdits[scheme.id];
+        if (!edits) return;
+        var active = false;
+        for (var role in edits) { if (edits.hasOwnProperty(role)) { active = true; break; } }
+        if (!active) return;
+
+        var paint = scheme.paint || [];
+        eachPanel(root, function (panel) {
+            for (var i = 0; i < paint.length; i++) {
+                var entry = paint[i];
+                if (!edits[entry.role]) continue;
+                var cls = simpleSelector(entry);
+                if (!cls || !hasClass(panel, cls)) continue;
+                // A framed game panel stays transparent; the live element is painted by its own
+                // experimental skin, not by the shell's frame.
+                if (entry.property === "background-color" && hasClass(panel, "PanelWindow")) continue;
+                writeStyle(paletteWrites, panel, entry.property, paletteValue(scheme, entry.role));
+            }
+            return true;
+        });
+    }
+
+    function importThemeText(scheme) {
+        var lines = ["shploingus.theme/1", "theme\t" + scheme.id];
+        lines.push("\tlabel\t" + (scheme.label || scheme.id));
+        lines.push("\tsource\t" + (scheme.source || "openlock palette editor"));
+        // Shape lives in forms/<id>.form; a palette export never carries geometry.
+        // Every .theme must carry the full required set, not just the editable subset.
+        var required = ["body", "panel", "title", "meta", "border", "borderStrong",
+            "ink", "muted", "accent", "alert", "alertBody"];
+        for (var i = 0; i < required.length; i++) {
+            lines.push("\t" + required[i] + "\t" + paletteValue(scheme, required[i]));
+        }
+        var rules = scheme.rules || [];
+        for (var r = 0; r < rules.length; r++) {
+            var value = rules[r].role ? "role:" + rules[r].role : rules[r].value;
+            if (value) lines.push("\trule\t" + rules[r].selector + "\t" + rules[r].property + "\t" + value);
+        }
+        return lines.join("\n");
+    }
+
+    function cyclePalette(scheme, entry) {
+        var steps = entry.steps || [];
+        if (!steps.length) return;
+        var current = String(paletteValue(scheme, entry.slot) || "").toUpperCase();
+        var at = -1;
+        for (var i = 0; i < steps.length; i++) {
+            if (String(steps[i]).toUpperCase() === current) { at = i; break; }
+        }
+        var next = steps[(at + 1) % steps.length];
+        paletteEditsFor(scheme)[entry.slot] = next;
+        paletteDirty = true;
+        applyPalettePaint();
+        refreshLiveSkins();
+        logPerf("info", "palette " + scheme.id + " " + entry.slot + " -> " + next);
+    }
+
+    function resetPalette(scheme) {
+        delete paletteEdits[scheme.id];
+        paletteDirty = true;
+        applyPalettePaint();
+        refreshLiveSkins();
+        logPerf("info", "palette " + scheme.id + " reset to schema");
+    }
+
+    function clearLiveSkin(id) {
+        var skin = liveSkin[id];
+        if (!skin) return;
+        restoreStyles(skin.writes);
+        delete liveSkin[id];
+    }
+
+    function applyLiveSkin(win) {
+        clearLiveSkin(win.id);
+        var b = bound[win.id];
+        if (!b || !b.panel || !alive(b.panel)) return false;
+        var scheme = schemeById(currentScheme);
+        if (!scheme) return false;
+
+        var writes = [];
+        var panel = b.panel;
+
+        // A Panorama cell is an actual drawable, not a layout slot. Walk the live subtree and
+        // paint only drawables whose classes the scheme names. The window's container is not
+        // painted: a full-width transparent HUD container would become a solid slab over the
+        // game, which is exactly the mistake this path exists to avoid.
+        var cells = 0;
+        var paint = scheme.paint || [];
+        eachPanel(panel, function (node) {
+            if (!panelVisible(node)) return true;
+            if (num(node.actuallayoutwidth) < 4 || num(node.actuallayoutheight) < 4) return true;
+            for (var i = 0; i < paint.length; i++) {
+                var entry = paint[i];
+                var cls = simpleSelector(entry);
+                if (!cls || !hasClass(node, cls)) continue;
+                if (writeStyle(writes, node, entry.property, paletteValue(scheme, entry.role))) cells++;
+            }
+            return true;
+        });
+
+        liveSkin[win.id] = { on: true, writes: writes, panel: panel, cells: cells };
+        return true;
+    }
+
+    function refreshLiveSkins() {
+        var ids = [];
+        for (var id in liveSkin) {
+            if (liveSkin.hasOwnProperty(id) && liveSkin[id].on) ids.push(id);
+        }
+        for (var i = 0; i < ids.length; i++) {
+            var win = windowById(ids[i]);
+            if (win) applyLiveSkin(win);
+        }
+    }
+
+    function toggleLiveSkin(win) {
+        if (!win || !isPanelWindow(win)) return;
+        if (liveSkin[win.id] && liveSkin[win.id].on) {
+            clearLiveSkin(win.id);
+            logPerf("info", "live skin off: " + win.id);
+            globalThis.OpenlockToast("Live skin", "Restored " + (win.title || win.id) + " to the game's rendering.", "", false);
+            return;
+        }
+        if (applyLiveSkin(win)) {
+            var cells = (liveSkin[win.id] && liveSkin[win.id].cells) || 0;
+            logPerf("info", "live skin on: " + win.id + " with " + currentScheme + " (" + cells + " cell(s))");
+            globalThis.OpenlockToast("Live skin (experimental)",
+                "Painted " + (win.title || win.id) + " with " + currentScheme + " · " + cells +
+                " drawable cell(s). The game's own rules are overridden for this panel only.", "", false);
+        } else {
+            globalThis.OpenlockToast("Live skin refused",
+                "The panel is not on screen; open it in the game first.", "", true);
+        }
+    }
+
     // --- toast / update ------------------------------------------------------
 
     globalThis.OpenlockToast = function (title, body, windowId, attention) {
@@ -374,15 +760,29 @@
         var t = $.CreatePanel("Panel", toastStack, "");
         t.AddClass("Toast");
         if (attention) t.AddClass("Attention");
+        // The toast is created after the shell layout is mounted, so its class sheet is not the
+        // only thing keeping it legible. Inline the surface and text colours the same way the
+        // observer host is inlined; a missing class sheet must not turn a notice into an
+        // invisible black-on-black panel.
+        try {
+            toastStack.style.width = "300px";
+            t.style.width = "100%";
+            t.style.padding = "7px 10px";
+            t.style.backgroundColor = "#1a140df2";
+            t.style.border = "1px solid #8a6f42";
+            t.style.borderLeft = "3px solid #e0b56a";
+        } catch (e) {}
 
         var h = $.CreatePanel("Label", t, "");
         h.AddClass("ToastTitle");
         h.text = title;
+        try { h.style.color = "#f4e6c8"; h.style.fontSize = "12px"; h.style.fontWeight = "bold"; } catch (e) {}
 
         if (body) {
             var b = $.CreatePanel("Label", t, "");
             b.AddClass("ToastBody");
             b.text = body;
+            try { b.style.color = "#c9b89c"; b.style.fontSize = "11px"; } catch (e) {}
         }
 
         if (windowId) {
@@ -395,6 +795,44 @@
 
         return t;
     };
+
+    // An observer notice is a toast that can also carry a live XML surface. The package path is
+    // the same one a mounted addon uses; the toast owns the panel, so closing it removes the
+    // surface without touching the game's HUD.
+    function showObserver(payload) {
+        if (!payload || (!payload.title && !payload.body && !payload.layout && !(payload.tree && payload.tree.length))) return;
+        try {
+            $.Msg("[Openlock] observer toast: ", payload.title || "notice", " tree=",
+                payload.tree ? payload.tree.length : 0, " layout=", payload.layout ? "yes" : "no");
+        } catch (e) {}
+        var t = globalThis.OpenlockToast(
+            payload.title || "Observer", payload.body || "", payload.window || "", !!payload.attention);
+        if (!t) return;
+        cue("notify");
+        logPerf("info", "observer " + (payload.title || "notice"));
+        if ((payload.tree && payload.tree.length) || payload.layout) {
+            t.AddClass("ObserverXmlToast");
+            var surface = $.CreatePanel("Panel", t, "");
+            surface.AddClass("ObserverXmlHost");
+            if (payload.tree && payload.tree.length && globalThis.OpenlockDelivery) {
+                globalThis.OpenlockDelivery.renderTree(surface, payload.tree, "observer:" + Date.now());
+            } else if (payload.layout) {
+                try {
+                    surface.BLoadLayout(String(payload.layout), false, false);
+                } catch (e) {
+                    refuseFeature("Observer XML refused", String(e));
+                }
+            }
+            var close = $.CreatePanel("Panel", t, "");
+            close.AddClass("ObserverXmlClose");
+            close.SetPanelEvent("onmouseactivate", function () {
+                try { t.DeleteAsync(0); } catch (e) {}
+            });
+            var x = $.CreatePanel("Label", close, "");
+            x.text = "×";
+            x.hittest = false;
+        }
+    }
 
     function quitForUpdate() {
         try {
@@ -576,7 +1014,10 @@
         function tick() {
             opacity -= 0.1;
             if (taskbar) {
-                taskbar.style.opacity = String(Math.max(0, opacity));
+                // Panorama rejects scientific notation in inline opacity; a float that has
+                // decayed to 1e-16 is not "0" to its parser either.
+                var shown = Math.max(0, opacity);
+                taskbar.style.opacity = shown < 0.001 ? "0" : shown.toFixed(2);
                 if (opacity <= 0 && !expanded && !preloadActive) {
                     taskbar.style.visibility = "collapse";
                     taskbar.style.opacity = "1";
@@ -628,6 +1069,10 @@
                     if (win) {
                         createFrame(win);
                         ok = !!frames[id];
+                        // A preloaded frame is warmed, not opened. Binding it with the full class
+                        // sweep at shell open was the 150-270 ms stall; it binds cheaply until
+                        // the player selects it.
+                        if (frames[id]) frames[id].preloaded = true;
                     }
                 } catch (e) {
                     $.Msg("[Openlock] preload REFUSED '", id, "': ", String(e));
@@ -745,6 +1190,40 @@
         perf.writes++;
     }
 
+    // A class written with the value it already has still invalidates style and hit-testing on
+    // this client. The poll re-applies every live window twice a second, so each of those writes
+    // is skipped unless the state actually changed.
+    function setFrameClass(record, name, want) {
+        var cache = record.frameClasses || (record.frameClasses = {});
+        if (cache[name] === want) {
+            perf.skips++;
+            return;
+        }
+        cache[name] = want;
+        record.frame.SetHasClass(name, want);
+        perf.writes++;
+    }
+
+    function setMetaText(record, text) {
+        if (record.lastMeta === text) {
+            perf.skips++;
+            return;
+        }
+        record.lastMeta = text;
+        record.meta.text = text;
+        perf.writes++;
+    }
+
+    function setFrameBackground(record, colour) {
+        if (record.lastBackground === colour) {
+            perf.skips++;
+            return;
+        }
+        record.lastBackground = colour;
+        record.frame.style.backgroundColor = colour;
+        perf.writes++;
+    }
+
     // A top-row HUD element (the game's own top bar is the common one) must not have its chrome
     // clipped by the shell bar. Rather than jumping the panel down by the missing pixels, keep
     // the player's geometry and ease a display offset onto the panel and its frame. The offset is
@@ -795,9 +1274,40 @@
         // the pixels the player sees, not the layout from the moment the window was framed.
         var sampled = Date.now();
         if (!b.sampledAt || sampled - b.sampledAt > 500) {
+            var previous = b.sampledRect || b.natural;
             var fresh = naturalOf(b.panel);
             if (fresh) b.natural = fresh;
-            b.content = contentBounds(b.panel) || b.natural;
+            var kids = childCountOf(b.panel);
+            var structural = b.childCount !== undefined && b.childCount !== kids;
+            var moved = !b.content || !previous || !fresh ||
+                Math.abs(fresh.x - previous.x) > 0.5 || Math.abs(fresh.y - previous.y) > 0.5 ||
+                Math.abs(fresh.w - previous.w) > 0.5 || Math.abs(fresh.h - previous.h) > 0.5;
+            // An idle HUD panel keeps its rect and its children, so its content rectangle is
+            // still valid. A pure move (the HUD slides without resizing) carries the measured
+            // rectangle with it; nothing is re-walked. A resize or a child change queues the
+            // chunked measurement, which never blocks a frame.
+            var sameSize = fresh && previous &&
+                Math.abs(fresh.w - previous.w) < 1 && Math.abs(fresh.h - previous.h) < 1;
+            if (fresh && b.contentMeasured && b.content && sameSize) {
+                b.content = {
+                    x: b.content.x + (fresh.x - previous.x),
+                    y: b.content.y + (fresh.y - previous.y),
+                    w: b.content.w,
+                    h: b.content.h
+                };
+            } else if (moved || structural) {
+                var cached = cachedContent(b.panel, b.natural, kids);
+                if (cached) {
+                    b.content = cached;
+                    b.contentMeasured = true;
+                } else {
+                    b.contentMeasured = false;
+                    b.content = b.natural;
+                    queueContentScan(win.id);
+                }
+                b.sampledRect = { x: b.natural.x, y: b.natural.y, w: b.natural.w, h: b.natural.h };
+            }
+            b.childCount = kids;
             b.sampledAt = sampled;
         }
 
@@ -831,7 +1341,9 @@
         // A live HUD panel is never shifted for chrome. Moving the game's own abilities/top-bar
         // container made the game re-layout it on the next frame, which is the flicker between
         // two positions; the chrome now yields to the panel instead.
-        var needShift = framePanel ? 0 : Math.max(0, dockTop - g.y);
+        // This path only draws chrome around a live game panel. It is never shifted for the
+        // shell's title row: the panel belongs to the game and the chrome yields to it.
+        var needShift = 0;
         if (record.shiftY === undefined) record.shiftY = 0;
         record.targetShiftY = needShift;
         if (Math.abs(record.shiftY - needShift) > 0.5) startShiftAnimation(win.id);
@@ -876,7 +1388,7 @@
         }
         setFrameVisible(record, expanded && !minimized[win.id]);
         var titleTop = Math.max(0, top - chrome);
-        record.frame.SetHasClass("Narrow", (right - left) < 260);
+        setFrameClass(record, "Narrow", (right - left) < 260);
         setRect(record, left, titleTop, right - left, bottom - titleTop);
         return true;
     }
@@ -893,9 +1405,12 @@
 
     function noteWindowCost(id, started) {
         var elapsed = Math.max(0, nowMs() - started);
-        if (!perf.cost[id]) perf.cost[id] = { total: 0, samples: 0 };
+        if (!perf.cost[id]) perf.cost[id] = { total: 0, samples: 0, last: 0, max: 0 };
         perf.cost[id].total += elapsed;
         perf.cost[id].samples++;
+        perf.cost[id].last = elapsed;
+        perf.cost[id].max = Math.max(perf.cost[id].max || 0, elapsed);
+        noteSlowApply(id, elapsed);
     }
 
     function updateCost(f, id) {
@@ -991,15 +1506,44 @@
         return out;
     }
 
-    // The engine's UI frame interval, measured between two scheduled callbacks. This is the
-    // only real frame cadence a Panorama addon can observe; it is shown as "ui" beside each
-    // window's own measured apply cost.
+    function noteFailure(label, error) {
+        var now = Date.now();
+        if (perfFailAt[label] && now - perfFailAt[label] < 5000) return;
+        perfFailAt[label] = now;
+        logPerf("warn", label + " refused: " + String(error));
+    }
+
+    function noteSlowFrame() {
+        if (frameMs > 24 && Date.now() - perfSlowAt > 5000) {
+            perfSlowAt = Date.now();
+            logPerf("warn", "ui frame " + frameMs.toFixed(1) + " ms");
+        }
+    }
+
+    // The engine's UI frame interval, shown as "ui" beside each window's own apply cost. A 1 ms
+    // schedule is the only way to observe the interval, so it runs only while the Performance
+    // window is the active reading. Everywhere else one sample a second comes from the client's
+    // own frame API: the shell must not add a callback to every frame just to draw a number.
     function frameTick() {
-        // The interval only matters while chrome is on screen. Collapsed: one wake a second,
-        // no per-frame callback added to the game's own loop.
         if (!expanded) {
             frameTickAt = 0;
+            frameTicks = 0;
+            frameSampleAt = 0;
             frameMs = 0;
+            $.Schedule(1, frameTick);
+            return;
+        }
+        if (activeId !== "performance") {
+            frameTickAt = 0;
+            frameTicks = 0;
+            frameSampleAt = 0;
+            var sampled = sampleFrameMs();
+            if (sampled > 0) {
+                frameMs = frameMs ? (frameMs * 0.85 + sampled * 0.15) : sampled;
+                samplePerf(frameMs);
+                noteSlowFrame();
+            }
+            logPerfSummary();
             $.Schedule(1, frameTick);
             return;
         }
@@ -1012,7 +1556,36 @@
         }
         frameTickAt = at;
         frameTicks++;
+        if (!frameSampleAt) frameSampleAt = at;
+        // One bar per second, measured by time rather than by a 60-tick assumption: a 30 fps
+        // client would otherwise produce a bar every two seconds.
+        if (frameMs && at - frameSampleAt >= 1000) {
+            frameSampleAt = at;
+            samplePerf(frameMs);
+            noteSlowFrame();
+            logPerfSummary();
+        }
         $.Schedule(0.001, frameTick);
+    }
+
+    // One checkable reading every 30 s while the shell is open. The Performance window shows
+    // this live; the log keeps the same number so a before/after comparison survives the session.
+    function logPerfSummary() {
+        var now = Date.now();
+        if (!expanded || !perf.samples.length || now - perfSummaryAt < 30000) return;
+        perfSummaryAt = now;
+        var sum = 0, peak = 0, over = 0;
+        for (var i = 0; i < perf.samples.length; i++) {
+            var v = perf.samples[i];
+            sum += v;
+            if (v > peak) peak = v;
+            if (v > 16.7) over++;
+        }
+        var mean = sum / perf.samples.length;
+        $.Msg("[Openlock] perf summary: ui mean ", mean.toFixed(1), " ms  peak ", peak.toFixed(1),
+            " ms  over 16.7 ms ", Math.round((over / perf.samples.length) * 100), "%  samples ",
+            perf.samples.length, "  polls ", perf.polls, "  applies ", perf.applies,
+            "  full scans ", perf.fullScans);
     }
 
     function easeInOut(t) {
@@ -1181,7 +1754,12 @@
                 f.loggedIdle = false;
                 $.Msg("[Openlock] chrome restore: ", id, " grade=", shellGrade);
             }
-            f.frame.SetHasClass("IdleCompact", idle);
+            // SetHasClass on an unchanged class still invalidates the frame's style and hit-test
+            // tree, which is what re-fired mouseover/mouseout on an idle window every tick.
+            if (f.idleCompact !== idle) {
+                f.idleCompact = idle;
+                f.frame.SetHasClass("IdleCompact", idle);
+            }
             var target = idle ? 1 : 0;
             if (Math.abs((num(f.idleMix) || 0) - target) > 0.001 || f.idleTarget !== target) {
                 animateCompact(f, target);
@@ -1191,16 +1769,15 @@
 
     function frameClock() {
         frameClockAt = Date.now();
-        if (!frameTicks) {
-            var sampled = sampleFrameMs();
-            if (sampled > 0) frameMs = sampled;
-        }
         if (pointerProbe) {
             var p = cursorPoint();
             pointerProbe.text = "ptr " + (p ? (Math.round(p.x) + "," + Math.round(p.y)) : "NONE") +
                 " | ev " + lastPointerEvent + " | " + apiProbe();
         }
         updateCompactChrome();
+        // New windows and scheme changes mark the palette dirty; repainting here coalesces a
+        // burst of opens into one traversal instead of restyling every panel on every apply.
+        if (paletteDirty) applyPalettePaint();
         // A hover has to be noticed before the next second ticks, or the controls feel dead.
         // When the shell is closed there is no chrome to restore, so keep the idle wake at 1 s.
         $.Schedule(expanded ? 0.1 : 1, frameClock);
@@ -1210,7 +1787,7 @@
         var f = frames[win.id];
         if (!f) return;
         perf.applies++;
-        var started = Date.now();
+        var started = nowMs();
 
         var g = ensureGeometry(win);
         var framePanel = isPanelWindow(win);
@@ -1222,10 +1799,10 @@
         // the pointer over the panel: only its title bar and grip are interactive.
         f.frame.hittest = !!expanded && !framePanel;
         f.frame.hittestchildren = true;
-        f.frame.SetHasClass("Pinned", !!pinned[win.id]);
-        f.frame.SetHasClass("ShellClosed", !expanded);
-        f.frame.SetHasClass("Focused", focused === win.id);
-        f.frame.SetHasClass("PanelWindow", isPanelWindow(win));
+        setFrameClass(f, "Pinned", !!pinned[win.id]);
+        setFrameClass(f, "ShellClosed", !expanded);
+        setFrameClass(f, "Focused", focused === win.id);
+        setFrameClass(f, "PanelWindow", !!framePanel);
 
         if (!expanded) {
             if (framePanel && pinned[win.id]) {
@@ -1239,7 +1816,10 @@
         }
 
         if (framePanel) {
-            var resolved = ensureBound(win);
+            // A warmed or automatic frame binds cheaply: id/token lookups and the discovery id
+            // index, never a whole-HUD class sweep. Choosing the window clears `preloaded`, so a
+            // player who asks for it explicitly still gets the exhaustive bind.
+            var resolved = ensureBound(win, !!f.auto || !!f.preloaded);
             // A pinned window whose game panel is not on screen draws nothing: an empty frame
             // around nothing is worse than the game's own HUD. Poll re-shows it when the panel
             // appears. A window the player just opened shows a compact refusal instead of a
@@ -1252,21 +1832,25 @@
             }
             if (!resolved) {
                 setRect(f, g.x, g.y, 360, CHROME_DP + 34);
-                f.meta.text = (win.panelCandidates[0].name || win.panelCandidates[0].kind) + "  ·  not on screen";
+                setMetaText(f, (win.panelCandidates[0].name || win.panelCandidates[0].kind) + "  ·  not on screen");
                 f.refusal.text = "This game panel is not on screen right now. Open it in the game and the window will frame it.";
                 setChildVisibility(f, "refusal", f.refusal, true);
                 setChildVisibility(f, "body", f.body, false);
-                f.frame.style.backgroundColor = "transparent";
+                setFrameBackground(f, "transparent");
                 updateCost(f, win.id);
                 return;
             }
             var ok = applyPanelRect(win, f, g);
+            // A skin belongs to the element it was written on. If the game rebuilt the panel, the
+            // old writes are gone with it and the new one is painted once, not on every poll.
+            var skin = liveSkin[win.id];
+            if (skin && skin.on && skin.panel !== bound[win.id].panel) applyLiveSkin(win);
             noteWindowCost(win.id, started);
-            f.meta.text = (win.panelCandidates[0].name || win.panelCandidates[0].kind) +
-                (ok ? "  ·  scale " + Math.round((g.w / bound[win.id].natural.w) * 100) + "%" : "  ·  not on screen");
+            setMetaText(f, (win.panelCandidates[0].name || win.panelCandidates[0].kind) +
+                (ok ? "  ·  scale " + Math.round((g.w / bound[win.id].natural.w) * 100) + "%" : "  ·  not on screen"));
             setChildVisibility(f, "refusal", f.refusal, !ok);
             setChildVisibility(f, "body", f.body, false);
-            f.frame.style.backgroundColor = "transparent";
+            setFrameBackground(f, "transparent");
             updateCost(f, win.id);
             return;
         }
@@ -1290,14 +1874,14 @@
         setChildVisibility(f, "body", f.body, true);
         setChildVisibility(f, "refusal", f.refusal, false);
         noteWindowCost(win.id, started);
-        f.meta.text = win.content + "  ·  " + Math.round(g.x) + " " + Math.round(g.y) + "  " +
-            Math.round(g.w) + "×" + Math.round(g.h) + "  ·  " + (win.lane || "shell");
+        setMetaText(f, win.content + "  ·  " + Math.round(g.x) + " " + Math.round(g.y) + "  " +
+            Math.round(g.w) + "×" + Math.round(g.h) + "  ·  " + (win.lane || "shell"));
         updateCost(f, win.id);
     }
 
     // --- live panels ---------------------------------------------------------
 
-    function findInHud(candidate) {
+    function findInHud(candidate, cheap) {
         var top = hudRoot();
         if (!top) return null;
 
@@ -1305,11 +1889,48 @@
             return alive(candidate.panel) ? candidate.panel : null;
         }
 
+        var cacheKey = candidate.kind + ":" + candidate.name;
+        var cached = findCache[cacheKey];
+        if (cached && alive(cached) && panelVisible(cached)) return cached;
+        // A class candidate is usually also the panel's id. The discovery index is one lookup,
+        // while the class sweep below reads every visible HUD panel; consult it first.
+        if (candidate.kind === "class") {
+            var indexHit = hudIdIndex[String(candidate.name).toLowerCase()];
+            if (indexHit && !isShellPanel(indexHit) && alive(indexHit) && panelVisible(indexHit)) {
+                findCache[cacheKey] = indexHit;
+                return indexHit;
+            }
+        }
+        // autoFrame retries a closed shop or map every few seconds. Probing a class that is not on
+        // screen is the expensive path, so the retry asks for a cheap lookup; discovery frames a
+        // surface when it actually becomes visible.
+        if (cheap && candidate.kind === "class") return null;
+        var missKey = candidate.kind + ":" + candidate.name;
+        if (findMissAt[missKey] && Date.now() - findMissAt[missKey] < 30000) return null;
+        var findStarted = nowMs();
+
         if (candidate.kind === "id") {
             var found = null;
             try { found = top.FindChildTraverse(candidate.name); } catch (e) {}
-            if (found && !isShellPanel(found)) return found;
+            if (found && !isShellPanel(found)) {
+                findCache[cacheKey] = found;
+                return found;
+            }
             return null;
+        }
+
+        // Most Panorama HUD panels use the class name as their id too. Trying the id traversal
+        // first turns a common class hit into an O(depth) lookup instead of a whole-HUD sweep.
+        if (candidate.kind === "class") {
+            var byId = null;
+            try { byId = top.FindChildTraverse(candidate.name); } catch (e) {}
+            // FindChildTraverse returns a host value on some builds; calling a panel method on it
+            // threw out of the whole bind and turned every apply into a refusal log line.
+            if (byId && !isShellPanel(byId) && panelVisible(byId) &&
+                typeof byId.HasClass === "function" && byId.HasClass(candidate.name)) {
+                findCache[cacheKey] = byId;
+                return byId;
+            }
         }
 
         // Class search: the game builds most HUD components without an id. A token search is the
@@ -1317,14 +1938,54 @@
         // containing the token and prefers a class match, then the largest panel (the container,
         // not one of its rows).
         var token = candidate.kind === "token" ? String(candidate.name).toLowerCase() : "";
+        if (token) {
+            // The ids this HUD uses are the candidate words with the usual prefixes. Trying those
+            // traversals is depth-bounded and avoids both the sweep and an index miss on a name
+            // that is present but spelled with a prefix.
+            var base = String(candidate.name);
+            var cap = base.charAt(0).toUpperCase() + base.slice(1);
+            var variants = [base, cap, "Hud" + cap, "CitadelHud" + cap];
+            for (var vi = 0; vi < variants.length; vi++) {
+                var vp = null;
+                try { vp = top.FindChildTraverse(variants[vi]); } catch (e) { vp = null; }
+                if (vp && !isShellPanel(vp) && panelVisible(vp)) {
+                    findCache[cacheKey] = vp;
+                    return vp;
+                }
+            }
+
+            var tokenMatch = null;
+            var tokenScore = -1;
+            for (var ikey in hudIdIndex) {
+                if (!hudIdIndex.hasOwnProperty(ikey) || ikey.indexOf(token) < 0) continue;
+                var ip = hudIdIndex[ikey];
+                if (!ip || !alive(ip) || !panelVisible(ip)) continue;
+                var iscore = layoutArea(ip);
+                if (iscore > tokenScore) { tokenScore = iscore; tokenMatch = ip; }
+            }
+            if (tokenMatch) {
+                findCache[cacheKey] = tokenMatch;
+                return tokenMatch;
+            }
+            // An automatic bind (preload, pinned materialization, auto-frame retry) must not walk
+            // the whole HUD for a fuzzy token. It gets the index and the id variants above; once
+            // discovery has rebuilt the index the next poll finds the panel without a sweep.
+            if (cheap) return null;
+            if (hudTrackedTokens[token] && hudIndexAt && Date.now() - hudIndexAt < 5000) return null;
+        }
         var stack = [top];
         var guard = 0;
         var best = null;
         var bestScore = -1;
 
-        while (stack.length && guard++ < 6000) {
+        while (stack.length) {
             var p = stack.pop();
             if (!p || p === root) continue;
+            // A hidden branch cannot be framed (naturalOf refuses it later), and on this HUD it
+            // is most of the tree: walking its thousands of children for a class that is not
+            // there is what made the first live-panel bind take most of a second.
+            if (!panelVisible(p)) continue;
+            if (guard++ > 6000) break;
 
             if (token) {
                 var idText = "";
@@ -1332,7 +1993,7 @@
                 var classText = classesOf(p);
                 var haystack = (idText + " " + classText).toLowerCase();
                 if (haystack.indexOf(token) >= 0) {
-                    var area = num(p.actuallayoutwidth) * num(p.actuallayoutheight);
+                    var area = layoutArea(p);
                     if (area >= 400) {
                         var score = area;
                         if (classText.toLowerCase().indexOf(token) >= 0) score += 100000000;
@@ -1356,15 +2017,25 @@
                 if (child) stack.push(child);
             }
         }
-        return token ? best : null;
+        var result = token ? best : null;
+        if (result) findCache[cacheKey] = result;
+        else findMissAt[missKey] = Date.now();
+        var findElapsed = nowMs() - findStarted;
+        if (findElapsed > 8 && Date.now() - perfFindAt > 2000) {
+            perfFindAt = Date.now();
+            logPerf("warn", "find " + cacheKey + " " + findElapsed.toFixed(1) + " ms  guard " + guard);
+        }
+        return result;
     }
 
-    function naturalOf(panel) {
-        // A hidden shop or map still has a layout size; framing it would draw chrome around
-        // nothing and transform a screen the game is not showing.
-        if (!panelVisible(panel)) return null;
-        var w = num(panel.actuallayoutwidth);
-        var h = num(panel.actuallayoutheight);
+    // measureOf reads a panel's rect without a visibility check. contentBounds already carries
+    // the visibility/opacity state down its own traversal, so re-reading it per leaf is a second
+    // native call per node for an answer it already has.
+    function measureOf(panel) {
+        var size = layoutSize(panel);
+        if (!size) return null;
+        var w = size.w;
+        var h = size.h;
         if (w < 8 || h < 8) return null;
 
         var x = 0;
@@ -1380,6 +2051,34 @@
         return { x: x, y: y, w: w, h: h };
     }
 
+    function naturalOf(panel) {
+        // A hidden shop or map still has a layout size; framing it would draw chrome around
+        // nothing and transform a screen the game is not showing.
+        if (!panelVisible(panel)) return null;
+        return measureOf(panel);
+    }
+
+    function childCountOf(panel) {
+        try { return panel.GetChildCount(); } catch (e) { return -1; }
+    }
+
+    // Panorama throws "Underlying panel is deleted!" on any property read after the game tears a
+    // panel down. The HUD rebuilds while the shell polls it, so every layout read is guarded and
+    // a dead panel is skipped rather than allowed to kill the shell's poll loop.
+    function layoutSize(panel) {
+        if (!panel) return null;
+        try {
+            return { w: num(panel.actuallayoutwidth), h: num(panel.actuallayoutheight) };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function layoutArea(panel) {
+        var size = layoutSize(panel);
+        return size ? size.w * size.h : 0;
+    }
+
     // Deadlock HUD containers reserve large transparent rectangles for fade/position math. The
     // AbilitiesContainer, for example, is a full-width 400 dp panel whose actual buttons are a
     // few hundred pixels at the bottom. Framing the container drew chrome around empty space.
@@ -1387,85 +2086,171 @@
     // their text width; that is the part of the panel the player can actually see.
     // A HUD branch can be laid out and IsVisible while an ancestor fades it to zero. Reading the
     // opacity chain is what keeps a scoreboard card out of the top bar's content rectangle.
-    function ancestorPaints(panel, stop) {
-        var p = panel;
-        var depth = 0;
-        while (p && p !== stop && depth++ < 12) {
-            try { if (p.IsVisible && !p.IsVisible()) return false; } catch (e) {}
-            try {
-                if (typeof p.GetOpacity === "function" && p.GetOpacity() < 0.01) return false;
-            } catch (e) {}
-            try {
-                var style = p.style;
-                if (style && style.opacity !== undefined && style.opacity !== null && style.opacity !== "") {
-                    var value = parseFloat(String(style.opacity));
-                    if (!isNaN(value) && value < 0.01) return false;
-                }
-            } catch (e) {}
-            try { p = p.GetParent(); } catch (e) { return true; }
-        }
+    function paintsAt(panel) {
+        try {
+            if (typeof panel.GetOpacity === "function" && panel.GetOpacity() < 0.01) return false;
+        } catch (e) {}
+        try {
+            var style = panel.style;
+            if (style && style.opacity !== undefined && style.opacity !== null && style.opacity !== "") {
+                var value = parseFloat(String(style.opacity));
+                if (!isNaN(value) && value < 0.01) return false;
+            }
+        } catch (e) {}
         return true;
     }
 
-    function contentBounds(panel) {
-        var whole = naturalOf(panel);
-        if (!whole) return null;
+    // Content bounds is the expensive part of framing: it reads several native properties on
+    // every node of a subtree that can reach 700 panels, which measured 100-330 ms on the UI
+    // thread for one window and was paid again on every bind and every HUD move. The same walk
+    // now runs in ~4 ms slices, and the answer is cached per panel shape so an idle HUD is never
+    // walked twice. Frames draw with their natural rect first and refine when the slice finishes.
+    var contentCache = {};      // panelKey -> { rect, at }
+    var contentJobs = [];       // window ids whose content is being measured
+    var contentPumping = false;
+    var contentCacheCount = 0;
 
-        var left = 1e9, top = 1e9, right = -1e9, bottom = -1e9;
-        var found = false;
-        var stack = [panel];
-        var visited = 0;
+    function contentPanelKey(panel, natural, kids) {
+        var id = "";
+        try { id = panel.id || ""; } catch (e) { return ""; }
+        if (!id) return "";
+        return id + "|" + Math.round(natural.w) + "x" + Math.round(natural.h) + "|" + kids;
+    }
 
-        while (stack.length && visited++ < 700) {
-            var p = stack.pop();
-            var count = 0;
-            try { count = p.GetChildCount(); } catch (e) { continue; }
+    function cachedContent(panel, natural, kids) {
+        var key = contentPanelKey(panel, natural, kids);
+        if (!key) return null;
+        var hit = contentCache[key];
+        if (!hit) return null;
+        // A panel can rebuild its children without changing its id or its rect (a shop page, a
+        // scoreboard row). Five seconds follows that and still leaves an idle panel untouched.
+        if (Date.now() - hit.at > 5000) return null;
+        return { x: hit.rect.x, y: hit.rect.y, w: hit.rect.w, h: hit.rect.h };
+    }
 
-            var visibleChildren = 0;
-            for (var i = 0; i < count; i++) {
-                var child = null;
-                try { child = p.GetChild(i); } catch (e) { child = null; }
-                if (child && panelVisible(child)) {
-                    visibleChildren++;
-                    stack.push(child);
-                }
+    function rememberContent(panel, natural, kids, rect) {
+        var key = contentPanelKey(panel, natural, kids);
+        if (!key) return;
+        if (!contentCache[key]) contentCacheCount++;
+        contentCache[key] = { rect: { x: rect.x, y: rect.y, w: rect.w, h: rect.h }, at: Date.now() };
+        if (contentCacheCount > 128) {
+            contentCache = {};
+            contentCacheCount = 0;
+            contentCache[key] = { rect: { x: rect.x, y: rect.y, w: rect.w, h: rect.h }, at: Date.now() };
+            contentCacheCount = 1;
+        }
+    }
+
+    function queueContentScan(id) {
+        var b = bound[id];
+        if (!b || !b.panel || b.contentJob) return;
+        var kids = b.childCount;
+        if (kids === undefined) { kids = childCountOf(b.panel); b.childCount = kids; }
+        var cached = cachedContent(b.panel, b.natural, kids);
+        if (cached) {
+            b.content = cached;
+            b.contentMeasured = true;
+            return;
+        }
+        b.content = b.content || b.natural;
+        b.contentJob = {
+            panel: b.panel,
+            natural: { x: b.natural.x, y: b.natural.y, w: b.natural.w, h: b.natural.h },
+            kids: kids,
+            stack: [b.panel],
+            visited: 0,
+            left: 1e9, top: 1e9, right: -1e9, bottom: -1e9,
+            found: false
+        };
+        contentJobs.push(id);
+        contentPump();
+    }
+
+    function contentScanNode(job) {
+        var p = job.stack.pop();
+        if (!p) return;
+        job.visited++;
+        var count = 0;
+        try { count = p.GetChildCount(); } catch (e) { return; }
+
+        var visibleChildren = 0;
+        for (var i = 0; i < count; i++) {
+            var child = null;
+            try { child = p.GetChild(i); } catch (e) { child = null; }
+            // Visibility and opacity are checked once, on the way down, instead of walking
+            // twelve ancestors again for every leaf the traversal reaches.
+            if (child && panelVisible(child) && paintsAt(child)) {
+                visibleChildren++;
+                job.stack.push(child);
             }
-            if (visibleChildren > 0) continue;
-            if (p === panel) continue;
-            if (!ancestorPaints(p, panel)) continue;
+        }
+        if (visibleChildren > 0) return;
+        if (p === job.panel) return;
 
-            var n = naturalOf(p);
-            if (!n || n.w < 8 || n.h < 8) continue;
+        var n = measureOf(p);
+        if (!n || n.w < 8 || n.h < 8) return;
 
-            // A full-screen transparent image or fade cover is not the content of the window.
-            if (n.w > screenW * 0.85 && n.h > screenH * 0.85) continue;
+        // A full-screen transparent image or fade cover is not the content of the window.
+        if (n.w > screenW * 0.85 && n.h > screenH * 0.85) return;
 
-            var x = n.x;
-            var y = n.y;
-            var w = n.w;
-            var h = n.h;
-            var text = null;
-            try { text = p.text; } catch (e) { text = null; }
-            if (typeof text === "string") {
-                if (!text.replace(/\s+/g, "")) continue;
-                // A Label reports its parent's assigned width, not the width of its glyphs.
-                w = Math.min(w, Math.max(12, text.length * 7 + 8));
-            }
-
-            found = true;
-            if (x < left) left = x;
-            if (y < top) top = y;
-            if (x + w > right) right = x + w;
-            if (y + h > bottom) bottom = y + h;
+        var x = n.x;
+        var y = n.y;
+        var w = n.w;
+        var h = n.h;
+        var text = null;
+        try { text = p.text; } catch (e) { text = null; }
+        if (typeof text === "string") {
+            if (!text.replace(/\s+/g, "")) return;
+            // A Label reports its parent's assigned width, not the width of its glyphs.
+            w = Math.min(w, Math.max(12, text.length * 7 + 8));
         }
 
-        if (!found) return whole;
+        job.found = true;
+        if (x < job.left) job.left = x;
+        if (y < job.top) job.top = y;
+        if (x + w > job.right) job.right = x + w;
+        if (y + h > job.bottom) job.bottom = y + h;
+    }
+
+    function finishContentScan(job) {
+        var whole = job.natural;
+        if (!job.found) return { x: whole.x, y: whole.y, w: whole.w, h: whole.h };
         return {
-            x: Math.max(whole.x, left),
-            y: Math.max(whole.y, top),
-            w: Math.max(8, Math.min(whole.x + whole.w, right) - Math.max(whole.x, left)),
-            h: Math.max(8, Math.min(whole.y + whole.h, bottom) - Math.max(whole.y, top))
+            x: Math.max(whole.x, job.left),
+            y: Math.max(whole.y, job.top),
+            w: Math.max(8, Math.min(whole.x + whole.w, job.right) - Math.max(whole.x, job.left)),
+            h: Math.max(8, Math.min(whole.y + whole.h, job.bottom) - Math.max(whole.y, job.top))
         };
+    }
+
+    function contentPump() {
+        if (contentPumping) return;
+        if (!contentJobs.length) return;
+        contentPumping = true;
+        var started = nowMs();
+        while (contentJobs.length && nowMs() - started < 4) {
+            var id = contentJobs[0];
+            var b = bound[id];
+            var job = b && b.contentJob;
+            if (!b || !job) { contentJobs.shift(); continue; }
+            // One node at a time: a node with many children can already cost a few native
+            // round-trips, so the slice budget is checked after each one rather than per batch.
+            contentScanNode(job);
+            if (job.stack.length && job.visited < 700) continue;
+            contentJobs.shift();
+            b.contentJob = null;
+            var content = finishContentScan(job);
+            rememberContent(job.panel, job.natural, job.kids, content);
+            if (bound[id] !== b) continue;
+            b.content = content;
+            b.contentMeasured = true;
+            var win = windowById(id);
+            if (win && frames[id]) {
+                try { applyWindow(win); } catch (e) { noteFailure("content apply", e); }
+            }
+        }
+        contentPumping = false;
+        if (contentJobs.length) $.Schedule(0.016, contentPump);
     }
 
     function overlapsFramedContent(rect, id) {
@@ -1494,13 +2279,13 @@
         return false;
     }
 
-    function ensureBound(win) {
+    function ensureBound(win, cheap) {
         if (bound[win.id] && alive(bound[win.id].panel)) return bound[win.id];
 
         bound[win.id] = null;
         var candidates = win.panelCandidates || [];
         for (var i = 0; i < candidates.length; i++) {
-            var panel = findInHud(candidates[i]);
+            var panel = findInHud(candidates[i], cheap);
             if (!panel) continue;
             // HUD controls can sit inside a transparent full-screen container; a declared screen
             // (shop, map, hero select) is the window itself and must keep its full rect.
@@ -1510,18 +2295,29 @@
             if (ownedByAnother(panel, win.id)) continue;
             var natural = naturalOf(panel);
             if (!natural) continue;
-            var content = contentBounds(panel) || natural;
-            bound[win.id] = { panel: panel, natural: natural, content: content };
+            var kids = childCountOf(panel);
+            var content = cachedContent(panel, natural, kids);
+            // The frame draws with the panel's own rect immediately; the chunked scan refines it
+            // to the visible content once it has a few milliseconds to spend, so binding ten
+            // windows can no longer hold the UI thread for seconds.
+            bound[win.id] = {
+                panel: panel, natural: natural, content: content || natural,
+                contentMeasured: !!content, childCount: kids,
+                sampledAt: Date.now(), sampledRect: { x: natural.x, y: natural.y, w: natural.w, h: natural.h }
+            };
             bindFrameHover(win.id, panel);
+            queueContentScan(win.id);
             $.Msg("[Openlock] shell framed '", win.id, "' → ",
                 candidates[i].name || candidates[i].kind, " ", Math.round(natural.w), "×",
-                Math.round(natural.h), " content ", Math.round(content.w), "×", Math.round(content.h));
+                Math.round(natural.h), " content ", Math.round(bound[win.id].content.w), "×",
+                Math.round(bound[win.id].content.h), content ? "" : " (measuring)");
             return bound[win.id];
         }
         return null;
     }
 
     function releasePanel(id) {
+        clearLiveSkin(id);
         var record = frames[id];
         if (record) {
             record.shiftY = undefined;
@@ -1595,8 +2391,10 @@
 
             var id = "";
             try { id = p.id || ""; } catch (e) { id = ""; }
-            var w = num(p.actuallayoutwidth);
-            var h = num(p.actuallayoutheight);
+            var size = layoutSize(p);
+            if (!size) continue;
+            var w = size.w;
+            var h = size.h;
             var visible = true;
             try { visible = p.IsVisible ? p.IsVisible() : true; } catch (e) { visible = true; }
 
@@ -1701,8 +2499,14 @@
     // containers that are too large to be a window.
     function hudWindowCandidates() {
         var container = hudRoot();
-        if (!container) return [];
+        if (!container) {
+            hudIdIndex = {};
+            hudIndexAt = 0;
+            return [];
+        }
+        var started = nowMs();
 
+        hudIdIndex = {};
         var found = [];
         var visited = 0;
         function walk(parent, depth) {
@@ -1719,10 +2523,13 @@
                 var id = "";
                 try { id = child.id || ""; } catch (e) { id = ""; }
                 var cls = classesOf(child);
+                if (id) hudIdIndex[id.toLowerCase()] = child;
                 if (isTransientHud(id, cls)) continue;
 
-                var w = num(child.actuallayoutwidth);
-                var h = num(child.actuallayoutheight);
+                var size = layoutSize(child);
+                if (!size) continue;
+                var w = size.w;
+                var h = size.h;
                 // A HUD window is a region with room for a title bar. Icons, team-score
                 // counters and reticles are controls inside a region, not windows of their own.
                 if (w < 80 || h < 40) continue;
@@ -1761,7 +2568,12 @@
         }
 
         walk(container, 0);
-        $.Msg("[Openlock] hud walk: ", found.length, " surface(s) of ", visited, " panel(s) visited");
+        hudIndexAt = Date.now();
+        var walkMs = nowMs() - started;
+        if (found.length || walkMs > 4) {
+            $.Msg("[Openlock] hud walk: ", found.length, " surface(s) of ", visited,
+                " panel(s) visited  ", walkMs.toFixed(1), " ms  ids ", Object.keys(hudIdIndex).length);
+        }
         return found;
     }
 
@@ -1845,10 +2657,13 @@
                 var item = queue.pop();
                 var p = item && item.panel;
                 if (!p || p === root || guard++ > 12000) continue;
+                perf.scans++;
                 var id = "";
                 try { id = p.id || ""; } catch (e) { id = ""; }
-                var w = num(p.actuallayoutwidth);
-                var h = num(p.actuallayoutheight);
+                var size = layoutSize(p);
+                if (!size) continue;
+                var w = size.w;
+                var h = size.h;
                 var visible = true;
                 try { visible = p.IsVisible ? p.IsVisible() : true; } catch (e) { visible = true; }
                 var skip = id.indexOf("DWHost_") === 0 || id.indexOf("Openlock") === 0 || id === "Hud" || isShellPanel(p);
@@ -1972,8 +2787,10 @@
         if (!popupRoot || !alive(popupRoot)) {
             if (now - popupFindAt < 8000) return;
             popupFindAt = now;
-            popupRoot = findInHud({ kind: "id", name: "PopupManager" }) ||
-                findInHud({ kind: "class", name: "PopupManager" });
+            // The class fallback walked ~1400 HUD panels every 8 s whenever this client's
+            // PopupManager is anonymous. The manager carries the id in every observed build, and
+            // a missing one is a feature that does not exist here, not a reason to sweep.
+            popupRoot = findInHud({ kind: "id", name: "PopupManager" });
         }
         if (!popupRoot) return;
 
@@ -1981,12 +2798,15 @@
         // frame the matching visible surface itself, not the transparent manager or wrapper.
         var found = [];
         var queue = [{ panel: popupRoot, depth: 0 }];
-        while (queue.length) {
+        var guard = 0;
+        while (queue.length && guard++ < 240) {
             var item = queue.shift();
             var p = item.panel;
             if (!p || item.depth > 4 || isShellPanel(p)) continue;
-            var w = num(p.actuallayoutwidth);
-            var h = num(p.actuallayoutheight);
+            var size = layoutSize(p);
+            if (!size) continue;
+            var w = size.w;
+            var h = size.h;
             var cls = classesOf(p);
             var id = p.id || "";
             var text = (id + " " + cls).toLowerCase();
@@ -2031,20 +2851,55 @@
     // hang, not a rendering cost.
     var discoveringHud = false;
     var hudDiscoverAt = 0;
+    var hudScanSig = "";
+
+    // A cheap shape of the HUD: the identity and visibility of the panels directly under the HUD
+    // root, with transient surfaces excluded so a chat line or damage number cannot trigger a
+    // scan. A full walk only pays off when this changes; the old code walked 130-170 panels every
+    // four seconds while the HUD was idle and then framed nothing new.
+    function hudStructureSignature(container) {
+        var parts = [];
+        var count = 0;
+        try { count = container.GetChildCount(); } catch (e) { return ""; }
+        parts.push(count);
+        for (var i = 0; i < count; i++) {
+            var child = null;
+            try { child = container.GetChild(i); } catch (e) { child = null; }
+            if (!child || isShellPanel(child)) continue;
+            var id = "";
+            try { id = child.id || ""; } catch (e) { id = ""; }
+            var cls = classesOf(child);
+            if (isTransientHud(id, cls)) continue;
+            parts.push((panelVisible(child) ? "v" : "h") + id + "/" + String(cls).split(" ")[0]);
+        }
+        return parts.join(":");
+    }
 
     function discoverHudWindows() {
         if (discoveringHud) return;
-        discoveringHud = true;
-        hudDiscoverAt = Date.now();
+        var container = hudRoot();
+        var sig = container ? hudStructureSignature(container) : "";
+        // An idle HUD has the same top-level shape from scan to scan. Walking it every 3.5 s
+        // only to reach the same surfaces was the periodic cost the poll was paying; the walk
+        // now runs when the shape changes, and the declared hot windows are still retried by
+        // autoFrameOpen with cheap lookups.
+        if (sig && sig === hudScanSig) {
+            hudDiscoverAt = Date.now();
+            hudIndexAt = Date.now();
+            return;
+        }
         var candidates = hudWindowCandidates();
-        candidates.sort(function (a, b) {
-            return (num(b.actuallayoutwidth) * num(b.actuallayoutheight)) -
-                (num(a.actuallayoutwidth) * num(a.actuallayoutheight));
-        });
+        hudScanSig = sig;
+        findCache = {};
+        findMissAt = {};
+        discoveringHud = true;
+        perf.fullScans++;
+        hudDiscoverAt = Date.now();
+        candidates.sort(function (a, b) { return layoutArea(b) - layoutArea(a); });
         candidates = candidates.filter(function (panel) {
             var id = hudPanelName(panel, 0);
             var cls = classesOf(panel);
-            var area = num(panel.actuallayoutwidth) * num(panel.actuallayoutheight);
+            var area = layoutArea(panel);
             var screenish = /(select|dashboard|screen|lobby|hideout|match|hero)/.test(
                 (id + " " + cls).toLowerCase());
             if (area > screenW * screenH * 0.45 && !screenish) return false;
@@ -2054,6 +2909,7 @@
         var at = 0;
 
         function step() {
+            try {
             if (!expanded || at >= candidates.length) {
                 discoveringHud = false;
                 hudDiscoverAt = Date.now();
@@ -2068,8 +2924,11 @@
                 !isTransientHud(hudPanelName(panel, ordinal), classesOf(panel))) {
                 var key = "hud:" + hudPanelName(panel, ordinal).replace(/[^A-Za-z0-9_]/g, "_");
                 var nat = naturalOf(panel);
-                var content = nat ? contentBounds(panel) : null;
-                if (content && overlapsFramedContent(content, key)) {
+                // A cached content rect is exact; without one the panel's own rect is the
+                // conservative answer. Looking for the subtree's leaves here was a 100-300 ms
+                // synchronous walk per candidate, which is what stalled the UI at shell open.
+                var content = nat ? cachedContent(panel, nat, childCountOf(panel)) : null;
+                if (overlapsFramedContent(content || nat, key)) {
                     $.Schedule(0.02, step);
                     return;
                 }
@@ -2097,12 +2956,17 @@
                     data.windows.push(win);
                     index[key] = win;
                     geometry[key] = { x: nat.x, y: nat.y, w: nat.w, h: nat.h, init: true };
-                    bound[key] = { panel: panel, natural: nat };
+                    bound[key] = {
+                        panel: panel, natural: nat, content: content || nat,
+                        contentMeasured: !!content, childCount: childCountOf(panel),
+                        sampledAt: Date.now(), sampledRect: { x: nat.x, y: nat.y, w: nat.w, h: nat.h }
+                    };
 
                     var f = createFrame(win);
                     f.auto = true;
                     open[key] = true;
                     applyWindow(win);
+                    queueContentScan(key);
                 }
             }
 
@@ -2111,8 +2975,13 @@
                 discoveringHud = false;
                 hudDiscoverAt = Date.now();
             }
+            } catch (e) {
+                discoveringHud = false;
+                hudIndexAt = 0;
+                noteFailure("hud scan", e);
+            }
         }
-        step();
+        try { step(); } catch (e) { discoveringHud = false; noteFailure("hud scan", e); }
     }
 
     // --- frames --------------------------------------------------------------
@@ -2156,6 +3025,90 @@
         return item;
     }
 
+    // --- popit contextual tool surface ---------------------------------------
+    // The package declares the tools; the shell owns the window geometry, the open-window
+    // rectangles and the action route. The surface itself is openlock_popit.js: version frame,
+    // Deadlock-art icon tiles, hover/selection and the overlap refusal live in that module.
+    function closePopit() {
+        if (globalThis.OpenlockPopit) globalThis.OpenlockPopit.close();
+    }
+
+    function runPopitAction(win, action) {
+        closePopit();
+        // A skin action is package-declared like every other layer action, but it is a local
+        // surface change: the live panel is painted inline, not sent to the server.
+        if (action.id === "skin") {
+            toggleLiveSkin(win);
+            cue("place");
+            return;
+        }
+        if (action.window && windowById(action.window)) openWindow(action.window);
+        else cue("place");
+        send("layer", win.id + ":" + action.id);
+        logPerf("info", "popit " + win.id + "/" + action.id);
+        globalThis.OpenlockToast("Popit", win.title + "  ·  " + action.label, "", false);
+    }
+
+    function showPopit(win) {
+        closePopit();
+        var layer = win.layers && win.layers[0];
+        if (!layer && isPanelWindow(win)) {
+            // A live panel has no package layer unless one was declared. The Popit surface still
+            // exists for it: its one action skins the actual drawable cells inside that panel.
+            layer = {
+                title: "Popit surface",
+                surface: "grid",
+                hint: "Theme the actual drawable cells in this window; the game keeps its layout.",
+                actions: [{ id: "skin", label: "Theme drawable cells" }]
+            };
+        }
+        if (!layer) {
+            refuseFeature("Popit refused", "this window declares no tool layer");
+            return;
+        }
+        if (!globalThis.OpenlockPopit || typeof globalThis.OpenlockPopit.show !== "function") {
+            refuseFeature("Popit refused", "the surface module is not in this build");
+            return;
+        }
+
+        cue("select");
+        var g = ensureGeometry(win);
+        measureScreen();
+        var openRects = [];
+        for (var id in open) {
+            if (!open.hasOwnProperty(id) || id === win.id || minimized[id]) continue;
+            var other = geometry[id];
+            if (!other) continue;
+            openRects.push({
+                id: id,
+                title: (windowById(id) || {}).title || id,
+                x: other.x, y: other.y, w: other.w, h: other.h
+            });
+        }
+
+        var result = globalThis.OpenlockPopit.show({
+            root: root,
+            window: { id: win.id, title: win.title || win.id },
+            geometry: { x: g.x, y: g.y, w: g.w, h: g.h },
+            screen: { w: screenW, h: screenH, top: SHELL_TOP_DP },
+            openRects: openRects,
+            form: currentForm,
+            layer: layer,
+            actions: layer.actions || [],
+            onAction: function (action) { runPopitAction(win, action); },
+            onRefusal: function (title, why) { refuseFeature(title, why); },
+            onHover: function (panel, label, body) {
+                try { dwellAt(label, body, panel); } catch (e) {}
+                try { enterFrame(win.id, "dwell"); } catch (e) {}
+            },
+            onHoverEnd: function () {
+                hideDwell();
+                try { leaveFrame(win.id, "dwell"); } catch (e) {}
+            }
+        });
+        if (result && result.ok) logPerf("info", "popit open " + win.id + " " + result.frame);
+    }
+
     function showContextMenu(win, x, y) {
         closeContextMenu();
         if (!win) return;
@@ -2181,6 +3134,9 @@
         title.text = win.title || win.id;
 
         contextAction(contextMenu, "Open", function () { openWindow(win.id); });
+        if (win.layers && win.layers.length) {
+            contextAction(contextMenu, win.layers[0].title || "Tools", function () { showPopit(win); });
+        }
         contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
         contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
         if (isPanelWindow(win)) contextAction(contextMenu, "Launch layout", function () {
@@ -2188,6 +3144,9 @@
             if (path) openLayout(path);
             else globalThis.OpenlockToast("Layout refused", win.title + " has no declared layout", "", true);
         });
+        if (isPanelWindow(win)) contextAction(contextMenu,
+            (liveSkin[win.id] && liveSkin[win.id].on ? "Remove live skin" : "Theme live panel (experimental)"),
+            function () { toggleLiveSkin(win); });
         contextAction(contextMenu, "Inspect in UI tree", function () {
             uiSelected = win.id;
             uiCss.selector = "";
@@ -2280,6 +3239,10 @@
         reportedRefusals[key] = true;
         runtimeRefusals.push({ file: "client", subject: title, why: why });
         if (runtimeRefusals.length > 40) runtimeRefusals.shift();
+        // Every refusal also enters the performance ring, so the Refusals window and the
+        // performance log cannot disagree about what the shell refused.
+        logPerf("refusal", title + " — " + why);
+        cue("refuse");
         globalThis.OpenlockToast(title, why, "", true);
     }
 
@@ -2287,6 +3250,23 @@
         // Move is a drag handle; the rest act on press. A press is also what the pointer probe
         // records, so a refused control is visible in the log instead of silently doing nothing.
         var b = addControl(parent, "WindowButton", "", onClick, icon !== "Move");
+        if (icon === "Popit") {
+            b.AddClass("WindowPopit");
+            var dots = $.CreatePanel("Panel", b, "");
+            dots.AddClass("IconPopit");
+            dots.hittest = false;
+            dots.hittestchildren = false;
+            for (var d = 0; d < 3; d++) {
+                var dot = $.CreatePanel("Panel", dots, "");
+                dot.AddClass("IconPopitDot");
+                dot.hittest = false;
+            }
+            if (!b || b.hittest === false) {
+                refuseFeature("Window control refused", "Popit has no hit-testable button; the title bar would swallow the click");
+            }
+            bindDwell(b, "Tools", "Open this window's declared tool layer. Actions are sent to the server.", winId);
+            return b;
+        }
         var i = $.CreatePanel("Panel", b, "");
         i.AddClass("WindowIcon");
         i.AddClass("Icon" + icon);
@@ -2331,6 +3311,7 @@
 
         var help = {
             Move: ["Move window", "Drag to reposition. Capture follows the pointer without snapping to a grid."],
+            Popit: ["Tools", "Open this window's declared contextual tool layer."],
             Minimize: ["Minimize", "Hide this window's chrome; its tab stays on the bar."],
             Maximize: ["Maximize / restore", "Fill the working area; click again to return to the saved rectangle."],
             Pin: ["Pin", "Keep this window visible while the shell is closed."],
@@ -2430,6 +3411,12 @@
         // a small shape instead of a typed codepoint.
         var moveButton = titleButton(title, "Move", function () { focusWindow(win.id); }, win.id);
         makeDraggable(moveButton, win.id, "move");
+        // The Popit tool surface is a window control, not a second title-bar hit area: the
+        // button presses, the surface opens, and the title bar still only drags from empty space.
+        var popitButton = null;
+        if ((win.layers && win.layers.length) || isPanelWindow(win)) {
+            popitButton = titleButton(title, "Popit", function () { showPopit(win); }, win.id);
+        }
         var minButton = titleButton(title, "Minimize", function () { minimizeWindow(win.id); }, win.id);
         var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); }, win.id);
         var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); }, win.id);
@@ -2475,11 +3462,12 @@
             grips.push(grip);
         }
 
+        paletteDirty = true;
         var record = {
             frame: frame,
             title: titleLabel,
             titleBar: title,
-            buttons: [moveButton, minButton, maxButton, pinButton, closeButton],
+            buttons: [moveButton, popitButton, minButton, maxButton, pinButton, closeButton],
             meta: metaLabel,
             cost: costLabel,
             body: body,
@@ -2488,6 +3476,7 @@
             minButton: minButton,
             maxButton: maxButton,
             pinButton: pinButton,
+            popitButton: popitButton,
             win: win,
             lastVisible: "collapse",
             bodyVisible: "collapse",
@@ -2500,6 +3489,7 @@
             " grade=", shellGrade);
         if (win.autoFrame || win.discovered) {
             record.idleMix = 0;
+            record.idleCompact = false;
             paintCompact(record);
         }
         return record;
@@ -2518,7 +3508,7 @@
         }
     }
 
-    function openWindow(id) {
+    function openWindow(id, quiet) {
         var win = windowById(id);
         if (!win) {
             $.Msg("[Openlock] shell open REFUSED: no window '", id, "'");
@@ -2532,6 +3522,7 @@
         }
 
         expanded = true;
+        hudScanSig = "";
         activeId = id;
         open[id] = true;
         delete dismissed[id];
@@ -2539,13 +3530,16 @@
         freeCursor(true);
 
         var f = createFrame(win);
+        f.preloaded = false;
         setFrameVisible(f, true);
+        paletteDirty = true;
 
         if (!isPanelWindow(win)) renderOwn(win, f.body);
 
         render();
         focusWindow(id);
         send("view", id);
+        if (!quiet) cue("select");
     }
 
     // --- arbitrary Panorama layouts -----------------------------------------
@@ -2627,6 +3621,7 @@
         }
 
         expanded = true;
+        hudScanSig = "";
         activeId = id;
         open[id] = true;
         delete dismissed[id];
@@ -2659,7 +3654,7 @@
             // walks most of the HUD for nothing, so each surface gets one attempt per interval.
             if (autoRetryAt[win.id] && now - autoRetryAt[win.id] < 6000) continue;
             autoRetryAt[win.id] = now;
-            if (!ensureBound(win)) continue;
+            if (!ensureBound(win, true)) continue;
             var f = createFrame(win);
             f.auto = true;
             open[win.id] = true;
@@ -2717,6 +3712,7 @@
         var f = frames[id];
         if (f && f.pinButton) f.pinButton.SetHasClass("PinOn", !!pinned[id]);
 
+        cue("place");
         globalThis.OpenlockToast(
             pinned[id] ? "Pinned" : "Unpinned",
             (windowById(id) && windowById(id).title ? windowById(id).title : id) +
@@ -2763,7 +3759,11 @@
                 if (!pinned.hasOwnProperty(pid) || open[pid]) continue;
                 var pinWin = index[pid];
                 if (!pinWin || !isPanelWindow(pinWin)) continue;
-                createFrame(pinWin);
+                var pinFrame = createFrame(pinWin);
+                // A pinned frame is materialized by opening the shell, not by the player choosing
+                // that window. Bind it cheaply until it is selected; ids and tokens still bind,
+                // only the whole-HUD class sweep is deferred.
+                if (pinFrame) pinFrame.preloaded = true;
                 open[pid] = true;
             }
             // Hot live panels are retried by the poll, not by every render. Discovery frames the
@@ -2817,7 +3817,9 @@
     globalThis.OpenlockToggle = function () {
         skipPreload();
         expanded = !expanded;
+        hudScanSig = "";
         if (expanded) showTaskbar();
+        if (expanded) cue("select");
         freeCursor(expanded);
         if (expanded && !activeId) activeId = data.tabs.length ? data.tabs[0] : WINDOWS_ID;
         render();
@@ -2833,6 +3835,7 @@
     // adds dozens of frames; this is the always-visible index into all of them.
     globalThis.OpenlockWindows = function () {
         expanded = true;
+        hudScanSig = "";
         freeCursor(true);
         choose(WINDOWS_ID);
         render();
@@ -3209,7 +4212,10 @@
         while (p && depth < 30) {
             var id = "";
             try { id = p.id || ""; } catch (e) {}
-            if (id.indexOf("DWHost_") === 0) return p;
+            // A server-mounted shell is bridged onto OpenlockStandaloneHost; the DWHost_ panel
+            // owns the layout but is never the shell's ancestor. Accept either, or every server
+            // attribute would read as its default and delivery would look like a client bug.
+            if (id.indexOf("DWHost_") === 0 || id === "OpenlockStandaloneHost") return p;
             try { p = p.GetParent(); } catch (e) { break; }
             depth++;
         }
@@ -3671,6 +4677,588 @@
         return runConsole(String(text || ""));
     };
 
+    // --- live packages -------------------------------------------------------
+    // Delivery state, payload validation, version checks, atomic window-set replacement and
+    // node creation live in openlock_delivery.js. The poll only hands over the host attribute;
+    // parsing and panel work happen on that module's scheduled ticks with a small budget, so a
+    // large package or observer XML cannot stall the poll frame.
+    function renderAddonLayout(win, body) {
+        headingXd(body, "package layout  ·  " + (win.addonName || win.addon || "addon"));
+        if (win.liveTree && win.liveTree.length) {
+            rowXd(body, win.liveTree.length + " source node(s)  ·  built by the shell, not mounted", "ViewMuted");
+            var surface = $.CreatePanel("Panel", body, "");
+            surface.AddClass("AddonHost");
+            if (globalThis.OpenlockDelivery) {
+                globalThis.OpenlockDelivery.renderTree(surface, win.liveTree, "addon:" + win.id);
+            } else {
+                rowXd(body, "delivery module is not in this build", "ViewMuted");
+            }
+            return;
+        }
+        if (win.layoutPath) {
+            rowXd(body, win.layoutPath, "ViewMuted");
+            var layoutHost = $.CreatePanel("Panel", body, "");
+            layoutHost.AddClass("LayoutHost");
+            var loaded = false;
+            try { loaded = layoutHost.BLoadLayout(win.layoutPath, false, false); } catch (e) {
+                refuseFeature("Package layout refused", String(e));
+            }
+            if (!loaded) {
+                layoutHost.RemoveAndDeleteChildren();
+                rowXd(body, "the mounted layout did not load; the package's live tree is the fallback", "ViewMuted");
+                refuseFeature("Package layout refused", win.id + " carries no readable source tree or mounted layout");
+            }
+            return;
+        }
+        rowXd(body, "this window has no source XML and no mounted layout", "ViewMuted");
+    }
+
+    function closeAddonWindow(id) {
+        if (frames[id]) closeWindow(id);
+        delete index[id];
+        delete geometry[id];
+        delete bound[id];
+    }
+
+    function pollAddons() {
+        if (globalThis.OpenlockDelivery) globalThis.OpenlockDelivery.offerAddons(attr("addons", ""));
+    }
+
+    function pollObserver() {
+        if (globalThis.OpenlockDelivery) globalThis.OpenlockDelivery.offerObserver(attr("observer", ""));
+    }
+
+    if (globalThis.OpenlockDelivery) {
+        globalThis.OpenlockDelivery.configure({
+            windows: data.windows,
+            index: index,
+            closeWindow: closeAddonWindow,
+            rebuild: function (win) {
+                var f = frames[win.id];
+                if (!f) return;
+                f.win = win;
+                if (!isPanelWindow(win)) renderOwn(win, f.body);
+                applyWindow(win);
+            },
+            observer: showObserver,
+            applied: function (stats) {
+                if (!stats.added && !stats.updated && !stats.removed) return;
+                logPerf("info", "packages " + stats.packages + "  ·  +" + stats.added +
+                    " ~" + stats.updated + " -" + stats.removed + " rev=" + stats.revision);
+                if (Date.now() - perf.startedAt > 2500) cue("notify");
+                globalThis.OpenlockToast("Packages updated",
+                    stats.packages + " package(s)  ·  " + stats.added + " added  ·  " +
+                    stats.updated + " updated  ·  " + stats.removed + " removed",
+                    stats.windowId || "", false);
+            },
+            refuse: refuseFeature,
+            log: logPerf,
+            cue: cue,
+            bindDwell: function (panel, title, body) { bindDwell(panel, title, body, ""); }
+        });
+    }
+
+    // --- picker --------------------------------------------------------------
+    // The picker is the Popit tool for the live panorama tree. It captures the pointer with a
+    // transparent overlay (so scrubbing cannot click through into the game), finds the smallest
+    // measured HUD panel under the cursor, and records its real style values before an edit. The
+    // overlay is created only for the scrub and removed on commit or cancel.
+    var pickerActive = false;
+    var pickerOverlay = null;
+    var pickerHighlight = null;
+    var pickerBadge = null;
+    var pickerBadgeLabel = null;
+    var pickerTarget = null;
+    var pickerOffset = { x: 0, y: 0 };
+    var pickerOriginal = null;
+
+    function pickerName(entry) {
+        return (entry && (entry.id || entry.cls)) || "panel";
+    }
+
+    function pickerAtCursor() {
+        if (!pickerTarget) return null;
+        var p = pickerTarget.panel;
+        if (!p || !alive(p)) return null;
+        return p;
+    }
+
+    function pickerPaintTarget() {
+        if (!pickerHighlight) return;
+        if (!pickerTarget) {
+            pickerHighlight.style.visibility = "collapse";
+            return;
+        }
+        pickerHighlight.style.visibility = "visible";
+        pickerHighlight.style.marginLeft = Math.round(pickerTarget.x) + "px";
+        pickerHighlight.style.marginTop = Math.round(pickerTarget.y) + "px";
+        pickerHighlight.style.width = Math.round(pickerTarget.w) + "px";
+        pickerHighlight.style.height = Math.round(pickerTarget.h) + "px";
+    }
+
+    function pickerEventPoint(event) {
+        if (!event) return null;
+        var candidates = [event, event.cursor, event.mouse];
+        for (var i = 0; i < candidates.length; i++) {
+            var p = candidates[i];
+            if (!p) continue;
+            var x = p.x !== undefined ? p.x : (p.cursorX !== undefined ? p.cursorX : p.mouseX);
+            var y = p.y !== undefined ? p.y : (p.cursorY !== undefined ? p.cursorY : p.mouseY);
+            if (x !== undefined && y !== undefined && isFinite(Number(x)) && isFinite(Number(y))) {
+                return { x: Number(x), y: Number(y) };
+            }
+        }
+        return null;
+    }
+
+    function pickerHover(event) {
+        if (!pickerActive) return;
+        var at = cursorPoint() || pickerEventPoint(event);
+        if (!at) {
+            if (pickerBadgeLabel) pickerBadgeLabel.text = "pointer API unavailable on this build";
+            return;
+        }
+
+        var best = null;
+        var bestArea = 0;
+        for (var i = 0; i < hudStreamNodes.length; i++) {
+            var entry = hudStreamNodes[i];
+            if (!entry || !entry.panel || !alive(entry.panel)) continue;
+            if (at.x < entry.x || at.y < entry.y || at.x > entry.x + entry.w || at.y > entry.y + entry.h) continue;
+            var area = entry.w * entry.h;
+            if (!best || area < bestArea) {
+                best = entry;
+                bestArea = area;
+            }
+        }
+
+        pickerTarget = best;
+        pickerPaintTarget();
+        if (pickerBadgeLabel) {
+            pickerBadgeLabel.text = best
+                ? "PICK  " + pickerName(best) + "  ·  " + Math.round(best.w) + "×" + Math.round(best.h) +
+                    "  ·  click to select"
+                : "PICK  no element under the pointer";
+        }
+    }
+
+    function stopPicker(quiet) {
+        if (!pickerActive) return;
+        pickerActive = false;
+        if (pickerOverlay) {
+            try { pickerOverlay.DeleteAsync(0); } catch (e) {}
+            pickerOverlay = null;
+        }
+        if (pickerHighlight) {
+            try { pickerHighlight.DeleteAsync(0); } catch (e) {}
+            pickerHighlight = null;
+        }
+        pickerBadge = null;
+        pickerBadgeLabel = null;
+        freeCursor(false);
+        if (!quiet) {
+            globalThis.OpenlockToast("Picker", "scrub ended", "", false);
+            logPerf("info", "picker stopped");
+        }
+    }
+
+    function pickerCapture(entry) {
+        if (!entry || !entry.panel || !alive(entry.panel)) {
+            refuseFeature("Picker refused", "the selected panel is no longer on screen");
+            return false;
+        }
+        var p = entry.panel;
+        pickerTarget = entry;
+        pickerOffset = { x: 0, y: 0 };
+        pickerOriginal = {
+            transform: p.style.transform || "",
+            width: p.style.width || "",
+            height: p.style.height || "",
+            opacity: p.style.opacity || "",
+            backgroundColor: p.style.backgroundColor || "",
+            borderColor: p.style.borderColor || "",
+            color: p.style.color || "",
+            borderRadius: p.style.borderRadius || "",
+            visibility: p.style.visibility || ""
+        };
+        uiSelected = entry.id || entry.cls || "";
+        uiCss.selector = entry.cls ? "." + String(entry.cls).split(" ")[0] : "#" + (entry.id || "");
+        return true;
+    }
+
+    function pickerCommit() {
+        if (!pickerActive) return;
+        if (!pickerTarget || !pickerTarget.panel) {
+            globalThis.OpenlockToast("Picker", "no element under the pointer; move over the HUD and click", "", true);
+            return;
+        }
+        var name = pickerName(pickerTarget);
+        if (!pickerCapture(pickerTarget)) return;
+        stopPicker(true);
+        send("pick", name);
+        logPerf("info", "picker selected " + name);
+        cue("place");
+        globalThis.OpenlockToast("Picked", name + "  ·  edit it in the Picker window", "picker", false);
+        openWindow("picker", true);
+    }
+
+    function pickerApply(property, raw) {
+        var p = pickerAtCursor();
+        if (!p) {
+            refuseFeature("Picker edit refused", "no live panel is selected");
+            return false;
+        }
+        var value = String(raw === undefined ? "" : raw).trim();
+        if (property === "x" || property === "y") {
+            var n = parseInt(value, 10);
+            if (!isFinite(n)) n = 0;
+            pickerOffset[property] = n;
+            var base = pickerOriginal ? pickerOriginal.transform : "";
+            try {
+                p.style.transform = "translate3d(" + pickerOffset.x + "px," + pickerOffset.y + "px,0)" +
+                    (base ? " " + base : "");
+            } catch (e) {}
+        } else if (property === "width" || property === "height") {
+            var size = parseInt(value, 10);
+            if (!isFinite(size) || size < 1) {
+                refuseFeature("Picker edit refused", property + " needs a positive pixel value");
+                return false;
+            }
+            try { p.style[property] = size + "px"; } catch (e) {}
+        } else if (property === "opacity") {
+            var op = Number(value);
+            if (!isFinite(op) || op < 0 || op > 1) {
+                refuseFeature("Picker edit refused", "opacity is 0..1");
+                return false;
+            }
+            try { p.style.opacity = String(op); } catch (e) {}
+        } else if (property === "visibility") {
+            try { p.style.visibility = value === "hidden" ? "collapse" : "visible"; } catch (e) {}
+        } else if (property === "background-color") {
+            try { p.style.backgroundColor = value; } catch (e) {}
+        } else if (property === "border-color") {
+            try { p.style.borderColor = value; } catch (e) {}
+        } else if (property === "color") {
+            try { p.style.color = value; } catch (e) {}
+        } else if (property === "border-radius") {
+            try { p.style.borderRadius = value; } catch (e) {}
+        } else {
+            refuseFeature("Picker edit refused", property + " is not an editable field");
+            return false;
+        }
+        logPerf("info", "picker edit " + pickerName(pickerTarget) + " " + property + "=" + value);
+        return true;
+    }
+
+    function pickerRestore() {
+        var p = pickerAtCursor();
+        if (!p || !pickerOriginal) return;
+        try {
+            p.style.transform = pickerOriginal.transform;
+            p.style.width = pickerOriginal.width;
+            p.style.height = pickerOriginal.height;
+            p.style.opacity = pickerOriginal.opacity;
+            p.style.backgroundColor = pickerOriginal.backgroundColor;
+            p.style.borderColor = pickerOriginal.borderColor;
+            p.style.color = pickerOriginal.color;
+            p.style.borderRadius = pickerOriginal.borderRadius;
+            p.style.visibility = pickerOriginal.visibility;
+        } catch (e) {}
+        pickerOffset = { x: 0, y: 0 };
+        logPerf("info", "picker restored " + pickerName(pickerTarget));
+        globalThis.OpenlockToast("Picker", "selected panel restored", "", false);
+    }
+
+    function pickerValue(property) {
+        var p = pickerAtCursor();
+        if (!p) return "";
+        if (property === "x") return String(pickerOffset.x);
+        if (property === "y") return String(pickerOffset.y);
+        if (property === "width") return String(Math.round(num(p.actuallayoutwidth)));
+        if (property === "height") return String(Math.round(num(p.actuallayoutheight)));
+        if (property === "opacity") return String(p.style.opacity || "");
+        if (property === "background-color") return String(p.style.backgroundColor || "");
+        if (property === "border-color") return String(p.style.borderColor || "");
+        if (property === "color") return String(p.style.color || "");
+        if (property === "border-radius") return String(p.style.borderRadius || "");
+        return "";
+    }
+
+    function startPicker() {
+        if (pickerActive) return;
+        if (!windowById("picker")) {
+            refuseFeature("Picker refused", "this package declares no picker window");
+            return;
+        }
+
+        pickerActive = true;
+        hideDwell();
+        closePopit();
+        freeCursor(true);
+        if (!hudStreamNodes.length || hudStreamActive) {
+            streamHudPanels(function () { pickerHover(); });
+        }
+
+        pickerOverlay = $.CreatePanel("Panel", root, "OpenlockPicker");
+        pickerOverlay.AddClass("PickerOverlay");
+        pickerOverlay.hittest = true;
+        pickerOverlay.SetPanelEvent("onmousemove", pickerHover);
+        pickerOverlay.SetPanelEvent("onmouseactivate", pickerCommit);
+        pickerOverlay.SetPanelEvent("oncontextmenu", function () { stopPicker(false); });
+
+        pickerHighlight = $.CreatePanel("Panel", root, "OpenlockPickerHighlight");
+        pickerHighlight.AddClass("PickerHighlight");
+        pickerHighlight.hittest = false;
+        pickerHighlight.hittestchildren = false;
+        pickerHighlight.style.visibility = "collapse";
+
+        pickerBadge = $.CreatePanel("Panel", pickerOverlay, "");
+        pickerBadge.AddClass("PickerBadge");
+        pickerBadgeLabel = $.CreatePanel("Label", pickerBadge, "");
+        pickerBadgeLabel.AddClass("PickerBadgeLabel");
+        pickerBadgeLabel.text = "PICK  move over a Deadlock element";
+        var cancel = $.CreatePanel("Panel", pickerBadge, "");
+        cancel.AddClass("PickerCancel");
+        cancel.SetPanelEvent("onmouseactivate", function () { stopPicker(false); });
+        var cancelLabel = $.CreatePanel("Label", cancel, "");
+        cancelLabel.text = "Cancel scrub";
+        cancelLabel.hittest = false;
+
+        logPerf("info", "picker started");
+        cue("select");
+        globalThis.OpenlockToast("Picker", "Move over a HUD element and click. Right-click or Cancel stops.", "", false);
+    }
+
+    function renderPicker(body, win) {
+        headingXd(body, "scrub the live panorama");
+        rowXd(body, "The picker reads the panels the HUD actually built, not the package's catalog. " +
+            "The overlay owns the pointer only while scrubbing, so a click cannot leak into the game.", "ViewMuted");
+        actionXd(body, pickerActive ? "Scrubbing…" : "Start scrub", function () { startPicker(); });
+
+        if (pickerTarget) {
+            var p = pickerAtCursor();
+            headingXd(body, "selected  ·  " + pickerName(pickerTarget));
+            rowXd(body, (pickerTarget.id || "(no id)") + "  ·  " + (pickerTarget.cls || "(no class)") +
+                "  ·  " + Math.round(pickerTarget.w) + "×" + Math.round(pickerTarget.h), "PickerTarget");
+            if (!p) {
+                rowXd(body, "the panel is no longer alive; start a new scrub", "ViewMuted");
+            } else {
+                rowXd(body, "x / y use a transform offset; width, height, opacity, colours and radius " +
+                    "write that one panel's style. Restore puts the captured values back.", "PickerHint");
+                uiField(body, "x offset", pickerValue("x"), function (v) { pickerApply("x", v); });
+                uiField(body, "y offset", pickerValue("y"), function (v) { pickerApply("y", v); });
+                uiField(body, "width", pickerValue("width"), function (v) { pickerApply("width", v); });
+                uiField(body, "height", pickerValue("height"), function (v) { pickerApply("height", v); });
+                uiField(body, "opacity 0..1", pickerValue("opacity"), function (v) { pickerApply("opacity", v); });
+                uiField(body, "background-color", pickerValue("background-color"), function (v) { pickerApply("background-color", v); });
+                uiField(body, "border-color", pickerValue("border-color"), function (v) { pickerApply("border-color", v); });
+                uiField(body, "color", pickerValue("color"), function (v) { pickerApply("color", v); });
+                uiField(body, "border-radius", pickerValue("border-radius"), function (v) { pickerApply("border-radius", v); });
+                actionXd(body, "Hide selected panel", function () { pickerApply("visibility", "hidden"); });
+                actionXd(body, "Show selected panel", function () { pickerApply("visibility", "visible"); });
+                actionXd(body, "Restore selected panel", function () { pickerRestore(); });
+                actionXd(body, "Rescrub", function () { startPicker(); });
+                actionXd(body, "Inspect in UI tree", function () {
+                    uiSelected = pickerTarget.id || pickerTarget.cls || "";
+                    openWindow("uitree");
+                });
+            }
+        } else {
+            rowXd(body, "No element selected. Start a scrub, then click a HUD element.", "ViewMuted");
+        }
+    }
+
+    // --- performance surface -------------------------------------------------
+    // One window that measures the shell itself. The graph is the same `frameMs` reading the
+    // title bars use, sampled every second while the shell is open; the log is the bounded ring
+    // that every refusal, live package and Popit action writes to. Nothing here is a spinner or
+    // a guessed number: an unavailable reading says so.
+    var perfRenderToken = 0;
+
+    function perfGraph(parent, values) {
+        var graph = $.CreatePanel("Panel", parent, "");
+        graph.AddClass("PerfGraph");
+        var ceiling = 24;
+        for (var c = 0; c < values.length; c++) ceiling = Math.max(ceiling, values[c]);
+        ceiling = Math.ceil(ceiling / 8) * 8;
+        if (!values.length) {
+            var empty = $.CreatePanel("Label", graph, "");
+            empty.AddClass("PerfMuted");
+            empty.text = "no samples yet; open a window or move the shell";
+            return graph;
+        }
+        for (var i = 0; i < values.length; i++) {
+            var bar = $.CreatePanel("Panel", graph, "");
+            bar.AddClass("PerfBar");
+            if (values[i] > 24) bar.AddClass("Slow");
+            bar.style.height = Math.max(2, Math.round((values[i] / ceiling) * 46)) + "px";
+        }
+        return graph;
+    }
+
+    function perfCostRows() {
+        var rows = [];
+        for (var id in perf.cost) {
+            if (!perf.cost.hasOwnProperty(id)) continue;
+            var c = perf.cost[id];
+            if (!c.samples) continue;
+            rows.push({ id: id, mean: c.total / c.samples, max: c.max || 0, samples: c.samples });
+        }
+        rows.sort(function (a, b) { return b.mean - a.mean; });
+        return rows;
+    }
+
+    function renderPerf(body, win) {
+        var samples = perf.samples || [];
+        headingXd(body, "ui frame interval  ·  one bar per second");
+        perfGraph(body, samples);
+        var last = samples.length ? samples[samples.length - 1] : 0;
+        var sum = 0, peak = 0;
+        for (var s = 0; s < samples.length; s++) {
+            sum += samples[s];
+            peak = Math.max(peak, samples[s]);
+        }
+        var mean = samples.length ? (sum / samples.length) : 0;
+        rowXd(body, "last " + (last ? last.toFixed(1) : "--") + " ms  ·  mean " +
+            (mean ? mean.toFixed(1) : "--") + " ms  ·  peak " + (peak ? peak.toFixed(1) : "--") +
+            " ms  ·  " + samples.length + " sample(s)", "PerfValue");
+        if (frameMs) rowXd(body, "title-bar reading " + frameMs.toFixed(1) + " ms  ·  clock " +
+            (clockIsPrecise ? "performance.now" : "Date.now (1 ms)"), "PerfMuted");
+
+        headingXd(body, "counters");
+        rowXd(body, "polls " + perf.polls + "  ·  applies " + perf.applies + "  ·  scans " +
+            perf.scans + "  ·  full scans " + perf.fullScans, "PerfValue");
+        rowXd(body, "style writes " + perf.writes + "  ·  skipped writes " + perf.skips +
+            "  ·  frames " + Object.keys(frames).length + "  ·  shell " + (expanded ? "open" : "closed"), "PerfMuted");
+
+        headingXd(body, "per-window apply cost");
+        var costs = perfCostRows();
+        if (!costs.length) {
+            rowXd(body, "no measurement yet; the next window apply records one", "PerfMuted");
+        }
+        for (var c = 0; c < costs.length && c < 14; c++) {
+            (function (row) {
+                var label = "mean " + row.mean.toFixed(2) + " ms  ·  max " + row.max.toFixed(2) +
+                    " ms  ·  " + row.samples + " sample(s)";
+                if (windowById(row.id)) {
+                    actionXd(body, windowById(row.id).title + "  ·  " + row.id + "  ·  " + label,
+                        function () { openWindow(row.id); });
+                } else {
+                    rowXd(body, row.id + "  ·  " + label, "PerfMuted");
+                }
+            })(costs[c]);
+        }
+
+        headingXd(body, "log  ·  " + perf.log.length + " / 64");
+        if (!perf.log.length) {
+            rowXd(body, "the ring is empty; refusals, live packages and slow applies land here", "PerfMuted");
+        }
+        var start = Math.max(0, perf.log.length - 12);
+        for (var l = perf.log.length - 1; l >= start; l--) {
+            var entry = perf.log[l];
+            var age = Math.max(0, Math.round((Date.now() - entry.at) / 1000));
+            rowXd(body, "[" + age + "s] " + entry.kind + "  " + entry.text, "PerfLogRow");
+        }
+        actionXd(body, "Clear log", function () {
+            perf.log.length = 0;
+            renderOwn(win, body);
+        });
+
+        // One refresh in flight, and only while this window is the visible one. The token is
+        // what stops a closed window from re-scheduling itself forever.
+        var token = ++perfRenderToken;
+        $.Schedule(1.0, function () {
+            if (token !== perfRenderToken) return;
+            var f = frames[win.id];
+            if (!f || !open[win.id] || activeId !== win.id || !f.body) return;
+            renderOwn(win, f.body);
+        });
+    }
+
+    function renderPalette(body, win) {
+        var scheme = schemeById(currentScheme) || schemeById(themes.default);
+        headingXd(body, "palette  ·  " + (scheme ? scheme.label : "no scheme"));
+        if (!scheme) {
+            rowXd(body, "No scheme data in this build.", "ViewMuted");
+            return;
+        }
+
+        var form = formById(currentForm);
+        var renderer = rendererFor(form);
+        rowXd(body, "palette " + scheme.id + "  ·  shape " + (form ? form.label : "none") +
+            "  ·  " + renderer + " renderer" +
+            (form && form.renderer === "popit" && renderer !== "popit" ? " (port absent; generic fallback)" : ""),
+            "ViewMuted");
+        rowXd(body, "Each row is one slot from this scheme's .theme schema. Click a row to cycle " +
+            "its colour; the game and every shell surface follow.", "PaletteNote");
+
+        var slots = scheme.palette || [];
+        for (var i = 0; i < slots.length; i++) {
+            (function (entry) {
+                var value = paletteValue(scheme, entry.slot);
+                var row = $.CreatePanel("Panel", body, "");
+                row.AddClass("PaletteRow");
+                row.hittest = true;
+                var swatch = $.CreatePanel("Panel", row, "");
+                swatch.AddClass("PaletteSwatch");
+                swatch.hittest = false;
+                swatch.style.backgroundColor = value;
+                var name = $.CreatePanel("Label", row, "");
+                name.AddClass("PaletteName");
+                name.text = entry.label + "  ·  " + entry.slot;
+                name.hittest = false;
+                var hex = $.CreatePanel("Label", row, "");
+                hex.AddClass("PaletteValue");
+                hex.text = value;
+                hex.hittest = false;
+                bindDwell(row, entry.label, "Cycle the " + entry.slot + " slot. " +
+                    "The current value is " + value + ".", win.id);
+                row.SetPanelEvent("onmouseactivate", function () {
+                    cyclePalette(scheme, entry);
+                    renderOwn(win, body);
+                });
+            })(slots[i]);
+        }
+
+        actionXd(body, "Reset palette to schema", function () {
+            resetPalette(scheme);
+            renderOwn(win, body);
+        });
+
+        headingXd(body, "live-panel skin  ·  experimental");
+        rowXd(body, "Deadlock owns these elements' styles. A skin writes this scheme's roles inline " +
+            "on the actual panel, which overrides the game for that window only. Turning it off restores " +
+            "the captured values.", "PaletteNote");
+        var panelWindows = 0;
+        for (var w = 0; w < data.windows.length; w++) {
+            (function (pw) {
+                if (!isPanelWindow(pw)) return;
+                var b = bound[pw.id];
+                if (!b || !b.panel || !alive(b.panel)) return;
+                panelWindows++;
+                var on = !!(liveSkin[pw.id] && liveSkin[pw.id].on);
+                actionXd(body, (on ? "● " : "○ ") + "Skin " + (pw.title || pw.id) + "  ·  " +
+                    (pw.panelCandidates[0].name || pw.panelCandidates[0].kind), function () {
+                    toggleLiveSkin(pw);
+                    renderOwn(win, body);
+                });
+            })(data.windows[w]);
+        }
+        if (!panelWindows) {
+            rowXd(body, "No framed game panel is on screen. Open one from the Windows browser, or " +
+                "right-click any panel window and choose Theme live panel.", "ViewMuted");
+        }
+
+        headingXd(body, "schema  ·  " + scheme.id + ".theme");
+        var themeLines = importThemeText(scheme).split("\n");
+        for (var t = 0; t < themeLines.length; t++) rowXd(body, themeLines[t], "PaletteValue");
+        actionXd(body, "Export .theme to console", function () {
+            $.Msg("[Openlock] exported theme ", scheme.id, "\n" + importThemeText(scheme));
+            logPerf("info", "theme exported: " + scheme.id);
+            globalThis.OpenlockToast("Theme exported", "The complete .theme document is in the client console.", "", false);
+        });
+    }
+
     function renderOwn(win, body) {
         body.RemoveAndDeleteChildren();
 
@@ -3685,6 +5273,26 @@
         }
 
         var kind = win.view || win.content;
+
+        if (kind === "performance") {
+            renderPerf(body, win);
+            return;
+        }
+
+        if (kind === "picker") {
+            renderPicker(body, win);
+            return;
+        }
+
+        if (kind === "palette") {
+            renderPalette(body, win);
+            return;
+        }
+
+        if (kind === "addon-layout") {
+            renderAddonLayout(win, body);
+            return;
+        }
 
         if (kind === "layout") {
             headingXd(body, "panorama layout");
@@ -3752,9 +5360,12 @@
         }
 
         if (kind === "settings") {
-            headingXd(body, "scheme");
+            // Colour and shape are separate selectors. These two lists never call each other:
+            // picking a palette leaves the form class alone, and picking a shape leaves every
+            // scheme class alone.
+            headingXd(body, "palette");
             if (!themes.schemes.length) {
-                rowXd(body, "no schemes in this build", "ViewMuted");
+                rowXd(body, "no palettes in this build", "ViewMuted");
             }
             for (var sc = 0; sc < themes.schemes.length; sc++) {
                 (function (scheme) {
@@ -3769,6 +5380,26 @@
                         });
                 })(themes.schemes[sc]);
             }
+
+            headingXd(body, "shape");
+            var forms = themes.forms || [];
+            if (!forms.length) {
+                rowXd(body, "no form schema in this build", "ViewMuted");
+            }
+            for (var fi = 0; fi < forms.length; fi++) {
+                (function (form) {
+                    actionXd(
+                        body,
+                        (form.id === currentForm ? "● " : "○ ") + form.label +
+                            "  ·  " + (form.renderer || "generic") + " renderer",
+                        function () {
+                            applyForm(form.id, true);
+                            renderOwn(win, body);
+                        });
+                })(forms[fi]);
+            }
+
+            actionXd(body, "Open palette editor", function () { openWindow("palette"); });
 
             var extensions = themes.extensions || [];
             headingXd(body, "scheme extensions (load order)");
@@ -3973,14 +5604,19 @@
 
     var lastSig = "";
     var pollCount = 0;
-    function poll() {
+    function pollOnce() {
         pollCount++;
+        perf.polls++;
+        // Live package and observer payloads arrive on the same host the panel properties use.
+        // Comparing the payload string first means an unchanged payload costs one attribute read.
+        pollAddons();
+        pollObserver();
         var want = attr("active", "");
         var sig = want + "|" + attr("view", "") + "|" + attr("refusal", "") + "|" + attr("body", "").length;
 
         if (want && windowById(want) && (want !== activeId || sig !== lastSig)) {
             lastSig = sig;
-            openWindow(want);
+            openWindow(want, true);
         } else if (sig !== lastSig && activeId) {
             lastSig = sig;
             var f = frames[activeId];
@@ -3997,25 +5633,41 @@
             if (!isPanelWindow(win)) continue;
             if (bound[id] && (!alive(bound[id].panel) || (!panelVisible(bound[id].panel) && !pinned[id]))) releasePanel(id);
             if (!bound[id] && (pollCount % 4) !== 0) continue;
-            applyWindow(win);
+            try { applyWindow(win); } catch (e) {
+                try { releasePanel(id); } catch (err) {}
+                noteFailure("window apply", e);
+            }
+        }
+
+        // The id index has to be current before autoFrameOpen asks it whether the shop or the
+        // map is on screen. The walk itself is gated by the HUD's shape, so an idle shell pays
+        // one cheap signature read here, not a full sweep.
+        if (expanded && !discoveringHud && Date.now() - hudIndexAt > 3500) {
+            try { discoverHudWindows(); } catch (e) {
+                discoveringHud = false;
+                noteFailure("hud scan", e);
+            }
         }
 
         // Screens that came on screen after the shell opened (shop, map, escape menu) join the
         // layout while the shell is open. The check is every other second, not every poll.
         // Only the small autoFrame set is retried here.
-        if (expanded && (pollCount % 4) === 0) autoFrameOpen();
-        if (expanded && (pollCount % 4) === 2) scanPopups();
-
-        // HUD panels are added and removed by the game while a match runs (the health bar moves,
-        // the ability bar appears, the top bar rebuilds). Re-run the bounded surface walk every
-        // few seconds so chrome follows what is actually visible, not only what existed at open.
-        if (expanded && (pollCount % 8) === 4 && !discoveringHud &&
-            Date.now() - hudDiscoverAt > 4000) {
-            discoverHudWindows();
+        if (expanded && (pollCount % 4) === 0) {
+            try { autoFrameOpen(); } catch (e) { noteFailure("auto frame", e); }
+        }
+        if (expanded && (pollCount % 4) === 2) {
+            try { scanPopups(); } catch (e) { noteFailure("popup scan", e); }
         }
 
         if (expanded && !preloadActive && Date.now() - lastInteractionAt > 5000) hideTaskbar();
+    }
 
+    // A live HUD deletes and rebuilds panels while this poll reads them (the shop does it on every
+    // open). A single "Underlying panel is deleted!" used to end the callback before its next
+    // schedule, which is why the shell went quiet; the poll now survives its own scan and keeps
+    // its cadence.
+    function poll() {
+        try { pollOnce(); } catch (e) { noteFailure("poll", e); }
         $.Schedule(0.5, poll);
     }
 
@@ -4079,10 +5731,17 @@
     frameClock();
     setLauncherName();
     $.Schedule(2.0, setLauncherName);
+    applyForm(themes.defaultForm, false);
     applyScheme(themes.default, false);
     renderBar();
     startPreload();
     startClock();
+    // Toasts are the operator/package notice surface and must sit above every frame, including
+    // a window opened at high z. The stylesheet already orders them; this makes the intent
+    // explicit for a client whose frame stack grew past the CSS value.
+    if (toastStack) {
+        try { toastStack.style.zIndex = "100000"; } catch (e) {}
+    }
 
     // The version notice is the shell telling the player what it read from the install: the
     // package, the git build it was generated from, and the game build in steam.inf.
@@ -4100,7 +5759,9 @@
             "",
             false);
         $.Msg("[Openlock] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
-            " commit=", (build.commit || "unknown"), " game=", (build.gameVersion || "unknown"),
+            " commit=", (build.commit || "unknown"),
+            " src=", String(build.sourceDigest || "unknown").substring(0, 12),
+            " game=", (build.gameVersion || "unknown"),
             " windows=", data.windows.length, " refusals=", data.refusals.length,
             " grade=", shellGrade, " chrome=idle3.2s");
     });

@@ -1,5 +1,10 @@
-# Picker order. The game's own palette stays first and remains an option even when a mod adds
-# more schemes. Extensions are applied to their base by load-order, not by this file.
+# Picker order. Popit is the default shell package; the game's own palette stays available as an
+# option. Extensions are applied to their base by load-order, not by this file. Each scheme
+# carries colour slots only; its geometry comes from forms/<form>.form.
+popit
 deadlock
 alpha
 holo
+material
+ios
+touchwiz

@@ -1,10 +1,14 @@
 <root>
     <styles>
         <include src="file://{resources}/styles/openlock_shell.css" />
+        <include src="file://{resources}/styles/openlock_popit.css" />
         <include src="file://{resources}/styles/openlock_schemes.css" />
     </styles>
     <scripts>
         <include src="file://{resources}/scripts/openlock_shell_data.js" />
+        <include src="file://{resources}/scripts/openlock_audio.js" />
+        <include src="file://{resources}/scripts/openlock_popit.js" />
+        <include src="file://{resources}/scripts/openlock_delivery.js" />
         <include src="file://{resources}/scripts/openlock_shell.js" />
     </scripts>
 
@@ -45,7 +49,12 @@
                 <Label id="LauncherLabel" class="LauncherLabel" text="dl-openshell" />
             </Panel>
             <Panel id="SchemeButton" class="SchemeButton" onmouseactivate="OpenlockCycleScheme()">
-                <Label id="SchemeLabel" class="SchemeLabel" text="D" />
+                <Label id="SchemeLabel" class="SchemeLabel" text="P" />
+            </Panel>
+            <!-- Colour and shape are independent selectors: this button cycles forms and never
+                 changes the palette class. -->
+            <Panel id="FormButton" class="SchemeButton" onmouseactivate="OpenlockCycleForm()">
+                <Label id="FormLabel" class="SchemeLabel" text="F" />
             </Panel>
         </Panel>
 

@@ -1,0 +1,136 @@
+/* Popit surface: placement, flow and typography only.
+   The silhouette (frame width, padding, radii, tail, hex edges, tile footprint) lives in
+   shell/alpha-shell/forms/popit.form. Colour lives in the active .theme palette, emitted as
+   .Scheme<Id> rules by tools/gen_shell_theme.py. No colour or shape is declared here. */
+
+.PopitDismiss {
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+    z-index: 640;
+    opacity: 0.28;
+}
+
+.PopitSurface {
+    z-index: 641;
+    flow-children: down;
+}
+
+.PopitTail {
+    z-index: 0;
+}
+
+.PopitFrame {
+    flow-children: down;
+    horizontal-align: center;
+}
+
+.PopitPlate {
+    z-index: 0;
+}
+
+.PopitHex {
+    z-index: 1;
+}
+
+.PopitHexEdge {
+    z-index: 2;
+}
+
+.PopitBeam {
+    z-index: 0;
+}
+
+.PopitBody {
+    width: 100%;
+    flow-children: down;
+    z-index: 3;
+}
+
+.PopitHeader {
+    width: 100%;
+    flow-children: right;
+}
+
+.PopitHeaderTitle {
+    vertical-align: center;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.PopitHeaderSpacer {
+    width: fill-parent-flow(1);
+    height: 1px;
+}
+
+.PopitFrameBadge {
+    vertical-align: center;
+    flow-children: right;
+    border: 1px solid transparent;
+}
+
+.PopitFrameBadge Label {
+    width: 100%;
+    horizontal-align: center;
+    vertical-align: center;
+    text-align: center;
+}
+
+.PopitModeRow {
+    width: 100%;
+    flow-children: right;
+}
+
+.PopitModePill {
+    flow-children: right;
+    border: 1px solid transparent;
+}
+
+.PopitMode {
+    flow-children: right;
+}
+
+.PopitMode Label {
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.PopitGrid {
+    width: 100%;
+    flow-children: down;
+}
+
+.PopitRow {
+    width: 100%;
+    flow-children: right;
+    horizontal-align: center;
+}
+
+.PopitTile {
+    flow-children: down;
+    horizontal-align: center;
+    border: 1px solid transparent;
+}
+
+.PopitTileIcon {
+    horizontal-align: center;
+}
+
+.PopitTileLabel {
+    width: 100%;
+    horizontal-align: center;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.PopitDetail {
+    width: 100%;
+}
+
+.PopitHint {
+    width: 100%;
+    white-space: normal;
+}

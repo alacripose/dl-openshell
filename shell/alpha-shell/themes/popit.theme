@@ -1,0 +1,25 @@
+shploingus.theme/1
+# The LittleBigPlanet Popit scheme: the suite's cream cardboard, its green confirm and its
+# orange alert, on the rounded LBP3 slab. `renderer popit` asks the shell for the port's
+# surface renderer; `form popit` is the geometry axis. Either can be swapped without
+# touching the other, and the generic renderer remains the fallback when the port is absent.
+theme	popit
+	label	Popit
+	source	LittleBigPlanet Popit suite (LBP3 window form)
+	body	#E8D9B8F2
+	panel	#F4E7C8F2
+	title	#D8C49AF2
+	meta	#DCCDAEF2
+	border	#4A3F38
+	borderStrong	#231F1B
+	ink	#231F1B
+	muted	#5A4E40
+	accent	#3F7D24
+	alert	#D95B2B
+	alertBody	#F0D2C4F2
+# The Popit palette reaches the game surfaces the shell frames. The HUD bar becomes the
+# cream card edge; the shop keeps the same card with the green accent border.
+rule	.CitadelHudTopBar	background-color	role:body
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	role:body
+rule	.CitadelHudHeroShop	border-color	role:accent

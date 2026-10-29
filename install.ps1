@@ -759,6 +759,20 @@ $contentScripts = Join-Path $build 'panorama\scripts'
 $contentStyles = Join-Path $build 'panorama\styles'
 New-Item -ItemType Directory -Force -Path $contentLayout, $contentScripts, $contentStyles | Out-Null
 
+# The shell's four procedural UI cues are rendered from tools/gen_shell_audio.py.
+# They are generated into the build tree, never checked in as binary assets, so the
+# WAVs and the soundevent manifest cannot drift from the synthesis table.
+$audioGenerator = Join-Path $repoRoot 'tools\gen_shell_audio.py'
+if (-not (Test-Path $audioGenerator)) { throw "audio generator not found at '$audioGenerator'." }
+& $Python $audioGenerator --self-test
+if ($LASTEXITCODE -ne 0) {
+    throw "gen_shell_audio.py self-test failed with exit code $LASTEXITCODE; refusing to pack uncertified audio."
+}
+& $Python $audioGenerator $build
+if ($LASTEXITCODE -ne 0) {
+    throw "gen_shell_audio.py failed with exit code $LASTEXITCODE; refusing to pack a silent shell."
+}
+
 Copy-Item (Join-Path $source 'panorama\layout\*.xml') $contentLayout -Force
 Copy-Item (Join-Path $source 'panorama\scripts\*.js') $contentScripts -Force
 Copy-Item (Join-Path $source 'panorama\styles\*.css') $contentStyles -Force
@@ -848,8 +862,10 @@ if (Test-Path $compiler) {
     Write-BuildRecord -Stage 'compile' -State 'running' -Message 'compiling Panorama resources'
     if (Test-Path $sdkContent) { Remove-Item $sdkContent -Recurse -Force }
     if (Test-Path $sdkBuilt) { Remove-Item $sdkBuilt -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path (Join-Path $sdkContent 'panorama') | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $sdkContent 'panorama'), (Join-Path $sdkContent 'sounds'), (Join-Path $sdkContent 'soundevents') | Out-Null
     Copy-Item (Join-Path $build 'panorama\*') (Join-Path $sdkContent 'panorama') -Recurse -Force
+    Copy-Item (Join-Path $build 'sounds\*') (Join-Path $sdkContent 'sounds') -Recurse -Force
+    Copy-Item (Join-Path $build 'soundevents\*') (Join-Path $sdkContent 'soundevents') -Recurse -Force
 
     # Absolute inputs: the compiler resolves a relative one against its own start directory, and
     # Start-Process does not always hand it the one this script set.
@@ -859,6 +875,9 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_hud.xml',
         'panorama\layout\base_hud.xml',
         'panorama\scripts\openlock_shell.js',
+        'panorama\scripts\openlock_audio.js',
+        'panorama\scripts\openlock_delivery.js',
+        'panorama\scripts\openlock_popit.js',
         'panorama\scripts\openlock_server_mount.js',
         'panorama\scripts\openlock_hud.js',
         'panorama\scripts\openlock_shell_data.js',
@@ -886,7 +905,33 @@ if (Test-Path $compiler) {
         throw "resourcecompiler failed with exit code $($process.ExitCode)."
     }
 
-    $compiled = Get-ChildItem $sdkBuilt -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c
+    # Sound is a two-pass compile: the WAVs become .vsnd_c first, then the manifest
+    # resolves those names. A single pass would emit the manifest before its samples
+    # exist and resourcecompiler would report "Couldn't read asset".
+    # Compile from the SDK's addon tree, not the checkout's dist tree. resourcecompiler
+    # resolves a resource's mod from the path under content/citadel_addons; a source path
+    # in the checkout is reported as "unknown mod ''" and the WAV compile fails.
+    $soundWavs = @(Get-ChildItem (Join-Path $sdkContent 'sounds\openlock') -Filter *.wav -File |
+        ForEach-Object { $_.FullName.Replace('\', '/') })
+    if ($soundWavs.Count -eq 0) { throw 'gen_shell_audio.py wrote no WAVs under sounds/openlock.' }
+    $soundManifest = (Join-Path $sdkContent 'soundevents\openlock_ui.vsndevts').Replace('\', '/')
+    if (-not (Test-Path $soundManifest)) { throw "audio manifest not generated at '$soundManifest'." }
+
+    $soundArgs = '-f -nop4 -DANGER_MODE_ignore_schema_mismatches -game "' +
+        (Join-Path $SdkRoot 'game\citadel') + '" -i ' + ($soundWavs -join ' ')
+    $soundProcess = Start-Process -FilePath $compiler -ArgumentList $soundArgs -WorkingDirectory $SdkRoot -Wait -PassThru -NoNewWindow
+    if ($soundProcess.ExitCode -ne 0) {
+        throw "resourcecompiler failed on the shell WAVs with exit code $($soundProcess.ExitCode)."
+    }
+
+    $manifestArgs = '-f -nop4 -DANGER_MODE_ignore_schema_mismatches -game "' +
+        (Join-Path $SdkRoot 'game\citadel') + '" -i ' + $soundManifest
+    $manifestProcess = Start-Process -FilePath $compiler -ArgumentList $manifestArgs -WorkingDirectory $SdkRoot -Wait -PassThru -NoNewWindow
+    if ($manifestProcess.ExitCode -ne 0) {
+        throw "resourcecompiler failed on the shell soundevent manifest with exit code $($manifestProcess.ExitCode)."
+    }
+
+    $compiled = Get-ChildItem $sdkBuilt -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c, *.vsnd_c, *.vsndevts_c
     if (-not $compiled) { throw "resourcecompiler reported success but wrote no compiled resource under '$sdkBuilt'." }
     $compiledCount = @($compiled).Count
     foreach ($file in $compiled) {
@@ -901,8 +946,16 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_shell.vxml_c',
         'panorama\layout\openlock_shell_server.vxml_c',
         'panorama\scripts\openlock_server_mount.vjs_c',
+        'panorama\scripts\openlock_audio.vjs_c',
+        'panorama\scripts\openlock_delivery.vjs_c',
+        'panorama\scripts\openlock_popit.vjs_c',
         'panorama\scripts\openlock_boot.vjs_c',
-        'panorama\styles\openlock_schemes.vcss_c'
+        'panorama\styles\openlock_schemes.vcss_c',
+        'sounds\openlock\select.vsnd_c',
+        'sounds\openlock\place.vsnd_c',
+        'sounds\openlock\refuse.vsnd_c',
+        'sounds\openlock\notify.vsnd_c',
+        'soundevents\openlock_ui.vsndevts_c'
     )
     if ($toolsTarget) {
         $required += @(
@@ -942,6 +995,14 @@ if ($Live) {
         New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
         Copy-Item -LiteralPath $file.FullName -Destination $target -Force
         $liveCount++
+    }
+    foreach ($sub in @('sounds', 'soundevents')) {
+        $from = Join-Path $build $sub
+        $to = Join-Path $toolsAddon $sub
+        if (-not (Test-Path $from)) { continue }
+        if (Test-Path $to) { Remove-Item $to -Recurse -Force }
+        Copy-Item $from $to -Recurse -Force
+        $liveCount += @(Get-ChildItem $to -Recurse -File).Count
     }
     if ($liveCount -lt 1) { throw 'Live install compiled no resources to copy.' }
     Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
@@ -1056,6 +1117,13 @@ Write-BuildRecord -Stage 'install' -State 'running' -VpkBytes $archiveBytes -Mes
 $builtHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
 New-Item -ItemType Directory -Force -Path $addonRoot | Out-Null
 $installedArchive = Join-Path $addonRoot 'pak01_dir.vpk'
+# The first archive this installer replaces is kept beside it once. A later install must not
+# overwrite that original with another generated build: `.pre-openlock` is the player's way back.
+$installedBackup = "$installedArchive.pre-openlock"
+if ((Test-Path -LiteralPath $installedArchive) -and -not (Test-Path -LiteralPath $installedBackup)) {
+    Copy-Item -LiteralPath $installedArchive -Destination $installedBackup -Force
+    Write-Host "Backed up the existing archive to $installedBackup"
+}
 try {
     Copy-Item $archive $installedArchive -Force
 } catch {

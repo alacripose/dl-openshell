@@ -58,6 +58,19 @@ REQUIRED = [
     "alertBody",
 ]
 
+# Slots the Palette window lets a player repaint one at a time, with the values each click
+# steps through. Popit's five are the suite's own tool colours; the wheel's seven are the
+# spectral primaries. Every theme exposes the same slot names, so one editor covers all forms.
+PALETTE_SLOTS = [
+    ("body", "Window body", ["#F4E7C8", "#EADBB4", "#CFE6E4", "#FFD9CE", "#2A2422"]),
+    ("panel", "Panel", ["#FFF8E8", "#E8DCC0", "#BFD8E8", "#F6C8B8", "#3A312D"]),
+    ("accent", "Accent", ["#6FBF3F", "#4F9E2F", "#8FD95A", "#2E7DFF", "#FF8A00"]),
+    ("alert", "Alert", ["#E0452F", "#FF8A00", "#FFD500", "#FF2300", "#C0362A"]),
+    ("ink", "Ink", ["#2A2422", "#3A312D", "#121212", "#4A3F38", "#FFF8E8"]),
+    ("border", "Rule", ["#2A2422", "#4A3F38", "#8A7F70", "#6FBF3F", "#FFD500"]),
+    ("muted", "Muted ink", ["#7A6F62", "#8A7F70", "#5A5148", "#B8A894", "#CFC4B4"]),
+]
+
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
 DEFINE = re.compile(r"@define\s+([A-Za-z0-9_]+)\s*:\s*(#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\s*;")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -88,6 +101,8 @@ class ThemeFile:
         self.id = ""
         self.label = ""
         self.source = ""
+        self.form = ""
+        self.renderer = ""
         self.extends = ""
         self.load_order: int | None = None
         self.slots: dict[str, str] = {}
@@ -118,7 +133,9 @@ def parse_theme_text(
         # too, so a theme that loses its indentation in an editor still paints instead of being
         # silently ignored. `theme` is the only column-zero header.
         top_key = raw.split("\t", 1)[0].strip()
-        if raw.startswith("\t") or top_key in ("rule", "extends", "load-order", "label", "source", *REQUIRED):
+        if raw.startswith("\t") or top_key in (
+            "rule", "extends", "load-order", "label", "source", "form", "renderer", *REQUIRED,
+        ):
             parts = [part.strip() for part in raw.strip().split("\t")]
             if not parts or not parts[0]:
                 continue
@@ -146,6 +163,17 @@ def parse_theme_text(
             if key == "source":
                 theme.source = value
                 continue
+            if key == "form":
+                # The form is the chrome language (geometry, borders, glyph shape). It is a
+                # separate axis from the palette: any form composes with any colour theme.
+                theme.form = value
+                continue
+            if key == "renderer":
+                # Which surface renderer the shell uses for this scheme. `popit` is the LBP
+                # suite port; `generic` is the fallback that keeps working if the port is
+                # unavailable. It is independent of the chrome form and the palette.
+                theme.renderer = value
+                continue
             if key not in REQUIRED:
                 # An unknown slot is ignored rather than guessed at; the generator only paints
                 # roles it knows, and a typo must not silently become a colour.
@@ -166,6 +194,10 @@ def parse_theme_text(
         raise ValueError(f"{display}:{theme.line}: theme id {theme.id!r} is not a lowercase slug")
     if theme.extends and not SLUG.match(theme.extends):
         raise ValueError(f"{display}:{theme.line}: extends {theme.extends!r} is not a lowercase slug")
+    if theme.form and not SLUG.match(theme.form):
+        raise ValueError(f"{display}:{theme.line}: form {theme.form!r} is not a lowercase slug")
+    if theme.renderer and theme.renderer not in ("generic", "popit"):
+        raise ValueError(f"{display}:{theme.line}: renderer {theme.renderer!r} is not generic or popit")
     if not theme.label:
         theme.label = theme.id
     if not theme.source:
@@ -473,7 +505,258 @@ RULES: list[tuple[str, list[tuple[str, str]]]] = [
     (".SchemeButton", [("background-color", "panel"), ("border-color", "border")]),
     (".SchemeButton:hover", [("border-color", "borderStrong")]),
     (".SchemeLabel", [("color", "accent")]),
+    # The Popit contextual tool surface: the tools belong to the window, so they paint with the
+    # same roles as its chrome. Shape rules live in forms/popit.form; these are colour only, so a
+    # frame variant can change its silhouette without a theme being able to override it.
+    (".PopitDismiss", [("background-color", "borderStrong")]),
+    (".PopitPlate", [("background-color", "body"), ("border-color", "border")]),
+    (".PopitTail", [("background-color", "body"), ("border-color", "borderStrong")]),
+    (".PopitHexEdge", [("background-color", "border")]),
+    (".PopitHeaderTitle", [("color", "ink")]),
+    (".PopitFrameBadge", [("background-color", "panel"), ("border-color", "border")]),
+    (".PopitFrameBadge Label", [("color", "muted")]),
+    (".PopitModePill", [("background-color", "panel"), ("border-color", "border")]),
+    (".PopitMode", [("color", "muted")]),
+    (".PopitMode.Active", [("background-color", "accent"), ("color", "ink")]),
+    (".PopitTile", [("background-color", "panel"), ("border-color", "border")]),
+    (".PopitTile.Hover", [("background-color", "title"), ("border-color", "borderStrong")]),
+    (".PopitTile.Selected", [("background-color", "title"), ("border-color", "accent")]),
+    (".PopitTileLabel", [("color", "ink")]),
+    (".PopitTile.Selected .PopitTileLabel", [("color", "accent")]),
+    (".PopitDetail", [("color", "ink")]),
+    (".PopitHint", [("color", "muted")]),
+    (".PopitBeam", [("background-color", "accent")]),
+    (".IconPopitDot", [("background-color", "accent")]),
+    (".PerfGraph", [("background-color", "meta"), ("border-color", "border")]),
+    (".PerfBar", [("background-color", "accent")]),
+    (".PerfBar.Slow", [("background-color", "alert")]),
+    (".PerfValue", [("color", "ink")]),
+    (".PerfMuted", [("color", "muted")]),
+    (".PickerHighlight", [("border-color", "borderStrong")]),
+    (".PickerBadge", [("background-color", "body"), ("border-color", "border")]),
+    (".PickerBadgeLabel", [("color", "ink")]),
+    (".PickerCancel", [("background-color", "panel"), ("border-color", "border")]),
+    (".PickerCancel Label", [("color", "accent")]),
+    # The Palette editor is a schema view: one row per editable role, with the scheme's own
+    # value on the row. The swatch's fill is inline (the chosen colour), not a scheme role.
+    (".PaletteRow", [("background-color", "meta"), ("border-color", "border")]),
+    (".PaletteName", [("color", "ink")]),
+    (".PaletteValue", [("color", "muted")]),
+    (".PaletteNote", [("color", "muted")]),
+    (".PaletteReset", [("background-color", "panel"), ("border-color", "border")]),
+    (".PaletteReset Label", [("color", "accent")]),
+    (".PickerTarget", [("color", "accent")]),
+    (".PickerHint", [("color", "muted")]),
 ]
+
+
+
+# The chrome form is the second axis. A scheme names one form; the client puts both classes on
+# the shell root, so palette and geometry compose without a second copy of every rule. Values
+# below are bucket-labelled the way `voxel-ui` labels its constants: an MD1 rule is cited to MD1,
+# a platform translation is ours (the pointer target is 20 dp, not the platform's 44/48 dp touch
+# target), and a project extension is named as one rather than passed off as a platform value.
+# No form here paints a colour: `openlock_schemes.css` above owns colour for every form.
+FORM_LABELS = {
+    "material": "Material Design 1",
+    "ios": "iOS 6 SpringBoard",
+    "touchwiz": "TouchWiz Nature UX",
+    "popit": "Popit (LBP3)",
+}
+
+FORM_CSS: dict[str, list[str]] = {
+    # MD1: 2 dp radius, 8 dp grid, 48 dp row. The desktop shell keeps 30 dp chrome (project
+    # extension: a pointer bar is not a 48 dp touch row), but the 2 dp radius and the 8 dp
+    # rhythm are the spec's own values.
+    "material": [
+        ".FormMaterial .WindowFrame { border-radius: 2px; }",
+        ".FormMaterial .WindowTitle { height: 30px; padding-left: 8px; padding-right: 4px; }",
+        ".FormMaterial .WindowTitleLabel { margin-left: 26px; font-size: 13px; }",
+        ".FormMaterial .WindowButton { width: 20px; height: 20px; margin-right: 4px; border-radius: 10px; }",
+        ".FormMaterial .WindowButton Label { font-size: 12px; }",
+        ".FormMaterial .WindowMeta { height: 16px; padding-left: 8px; }",
+        ".FormMaterial .WindowBody { padding: 8px; }",
+        ".FormMaterial .Taskbar { height: 30px; }",
+        ".FormMaterial .TabStrip { margin-left: 96px; }",
+        ".FormMaterial .PreloadStrip { margin-left: 96px; }",
+        ".FormMaterial .ShellTab { margin-right: 4px; padding: 3px 10px; border-radius: 0px; border-bottom-width: 2px; }",
+        ".FormMaterial .ShellTab.Active { border-bottom-width: 2px; }",
+        ".FormMaterial .LauncherButton { border-radius: 0px; padding: 4px 8px; }",
+        ".FormMaterial .SchemeButton { width: 20px; height: 20px; border-radius: 10px; }",
+        ".FormMaterial .ViewAction { border-radius: 2px; padding: 6px 12px; }",
+        ".FormMaterial .ContextMenu { border-radius: 2px; }",
+        ".FormMaterial .Toast { border-radius: 2px; border-left-width: 2px; }",
+        ".FormMaterial .DwellInfo { border-radius: 2px; }",
+        ".FormMaterial .UpdateModal { border-radius: 2px; }",
+        ".FormMaterial .PickerBadge { border-radius: 2px; }",
+        ".FormMaterial .PickerCancel { border-radius: 2px; }",
+    ],
+    # iOS 6 SpringBoard: the chrome is a rounded capsule, the tab strip is a dock. HIG's 44 dp
+    # touch target is translated to a 20 dp pointer target; that translation is ours and is
+    # named rather than presented as a platform value.
+    "ios": [
+        ".FormIos .WindowFrame { border-radius: 6px; border-width: 1px; }",
+        ".FormIos .WindowTitle { height: 30px; padding-left: 8px; padding-right: 4px; }",
+        ".FormIos .WindowTitleLabel { margin-left: 24px; font-size: 12px; letter-spacing: 0.2px; }",
+        ".FormIos .WindowButton { width: 18px; height: 16px; margin-right: 5px; border-radius: 8px; }",
+        ".FormIos .WindowButton Label { font-size: 11px; }",
+        ".FormIos .WindowMeta { height: 14px; padding-left: 8px; }",
+        ".FormIos .WindowBody { padding: 8px; }",
+        ".FormIos .Taskbar { height: 30px; }",
+        ".FormIos .TabStrip { margin-left: 168px; width: 60%; }",
+        ".FormIos .PreloadStrip { margin-left: 168px; width: 60%; }",
+        ".FormIos .ShellTab { margin-right: 4px; padding: 3px 10px; border-radius: 12px; }",
+        ".FormIos .ShellTab.Active { border-radius: 12px; }",
+        ".FormIos .LauncherButton { border-radius: 12px; padding: 4px 10px; }",
+        ".FormIos .SchemeButton { width: 20px; height: 20px; border-radius: 9px; }",
+        ".FormIos .ViewAction { border-radius: 10px; padding: 6px 12px; }",
+        ".FormIos .ContextMenu { border-radius: 8px; }",
+        ".FormIos .Toast { border-radius: 8px; border-left-width: 3px; }",
+        ".FormIos .DwellInfo { border-radius: 6px; }",
+        ".FormIos .UpdateModal { border-radius: 8px; }",
+        ".FormIos .PickerBadge { border-radius: 8px; }",
+        ".FormIos .PickerCancel { border-radius: 10px; }",
+    ],
+    # TouchWiz Nature UX: a 2 dp frame, 8 dp rounded chips, a brighter 2 dp active edge. The
+    # radii and the 2 dp edge are TouchWiz's form; chrome height remains this shell's 30 dp.
+    "touchwiz": [
+        ".FormTouchwiz .WindowFrame { border-radius: 8px; border-width: 2px; }",
+        ".FormTouchwiz .WindowTitle { height: 30px; padding-left: 8px; padding-right: 4px; }",
+        ".FormTouchwiz .WindowTitleLabel { margin-left: 26px; font-size: 12px; letter-spacing: 0.3px; }",
+        ".FormTouchwiz .WindowButton { width: 22px; height: 18px; margin-right: 5px; border-radius: 3px; }",
+        ".FormTouchwiz .WindowButton Label { font-size: 12px; }",
+        ".FormTouchwiz .WindowMeta { height: 16px; padding-left: 8px; }",
+        ".FormTouchwiz .WindowBody { padding: 8px; }",
+        ".FormTouchwiz .Taskbar { height: 30px; }",
+        ".FormTouchwiz .TabStrip { margin-left: 96px; }",
+        ".FormTouchwiz .PreloadStrip { margin-left: 96px; }",
+        ".FormTouchwiz .ShellTab { margin-right: 3px; padding: 4px 10px; border-radius: 4px; border-bottom-width: 2px; }",
+        ".FormTouchwiz .ShellTab.Active { border-bottom-width: 2px; }",
+        ".FormTouchwiz .LauncherButton { border-radius: 4px; border-width: 2px; padding: 3px 9px; }",
+        ".FormTouchwiz .SchemeButton { width: 20px; height: 20px; border-radius: 4px; }",
+        ".FormTouchwiz .ViewAction { border-radius: 4px; padding: 6px 12px; }",
+        ".FormTouchwiz .ContextMenu { border-radius: 4px; }",
+        ".FormTouchwiz .Toast { border-radius: 4px; border-left-width: 3px; }",
+        ".FormTouchwiz .DwellInfo { border-radius: 4px; }",
+        ".FormTouchwiz .UpdateModal { border-radius: 4px; }",
+        ".FormTouchwiz .PickerBadge { border-radius: 4px; }",
+        ".FormTouchwiz .PickerCancel { border-radius: 4px; }",
+    ],
+    # Popit: LBP3's rounded slab (the shape people call the Nexus 5 window), 10 dp corners,
+    # a 2 dp card edge and circular tool buttons. The proportions are the suite's; the
+    # pointer-sized 30 dp chrome is this shell's translation and is named as such.
+    "popit": [
+        ".FormPopit.RendererPopit .WindowFrame { border-radius: 34px 34px 12px 12px; border-width: 2px; }",
+        ".FormPopit .WindowFrame { border-radius: 10px; border-width: 2px; }",
+        ".FormPopit .WindowTitle { height: 30px; padding-left: 10px; padding-right: 6px; border-top-left-radius: 8px; border-top-right-radius: 8px; }",
+        ".FormPopit .WindowTitleLabel { margin-left: 24px; font-size: 13px; letter-spacing: 0.4px; }",
+        ".FormPopit .WindowButton { width: 20px; height: 20px; margin-right: 4px; border-radius: 10px; border-width: 2px; }",
+        ".FormPopit .WindowButton Label { font-size: 12px; }",
+        ".FormPopit .WindowMeta { height: 16px; padding-left: 10px; border-bottom-width: 2px; }",
+        ".FormPopit .WindowBody { padding: 8px; }",
+        ".FormPopit .Taskbar { height: 30px; }",
+        ".FormPopit .TabStrip { margin-left: 96px; }",
+        ".FormPopit .PreloadStrip { margin-left: 96px; }",
+        ".FormPopit .ShellTab { margin-right: 4px; padding: 4px 12px; border-radius: 10px; border-width: 2px; }",
+        ".FormPopit .ShellTab.Active { border-radius: 10px; }",
+        ".FormPopit .LauncherButton { border-radius: 10px; border-width: 2px; padding: 3px 9px; }",
+        ".FormPopit .SchemeButton { width: 20px; height: 20px; border-radius: 10px; border-width: 2px; }",
+        ".FormPopit .ViewAction { border-radius: 10px; padding: 6px 12px; }",
+        ".FormPopit .ContextMenu { border-radius: 10px; }",
+        ".FormPopit .Toast { border-radius: 10px; border-left-width: 4px; }",
+        ".FormPopit .DwellInfo { border-radius: 10px; }",
+        ".FormPopit .UpdateModal { border-radius: 10px; }",
+        ".FormPopit .PopitNode { border-radius: 50%; }",
+        ".FormPopit .PickerBadge { border-radius: 8px; }",
+        ".FormPopit .PickerCancel { border-radius: 10px; }",
+    ],
+}
+
+
+# Window geometry is a schema, not a palette property. A form file declares shape rows only;
+# the .theme file declares colour slots only. Popit is the default form, so its shape can be
+# edited without touching any palette, and a colour scheme can be swapped without changing it.
+FORM_HEADER = "shploingus.form/1"
+FORM_SAFE_PROPERTIES = {
+    "border-radius", "border-width", "border-top-left-radius", "border-top-right-radius",
+    "border-bottom-left-radius", "border-bottom-right-radius", "height", "width",
+    "padding", "padding-left", "padding-right", "padding-top", "padding-bottom",
+    "margin", "margin-left", "margin-right", "margin-top", "margin-bottom", "font-size",
+    "letter-spacing", "min-width",
+    "min-height", "max-width", "max-height", "background-color", "border-color",
+    "border-bottom-width", "border-top-width", "border-left-width", "border-right-width",
+    "horizontal-align", "vertical-align", "flow-children", "text-align", "font-weight",
+    # Frame schemas need a silhouette, not just a rounded rectangle. Panorama has no
+    # `position: absolute`; overlay segments use ignore-parent-flow plus one of the normal
+    # alignment properties. These remain shape properties: a form can move or rotate one of
+    # its own Popit frame segments, but it cannot paint with a palette role or load a resource.
+    "ignore-parent-flow", "transform", "pre-transform-rotate2d", "visibility",
+}
+
+
+def form_class(form: str) -> str:
+    return "Form" + str(form).replace("-", " ").replace("_", " ").title().replace(" ", "")
+
+
+def load_forms(directory: Path) -> tuple[dict[str, dict], list[dict]]:
+    forms: dict[str, dict] = {}
+    refusals: list[dict] = []
+    if not directory.is_dir():
+        return forms, refusals
+
+    for path in sorted(directory.glob("*.form")):
+        display = f"forms/{path.name}"
+        rows = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        if not rows or rows[0].strip() != FORM_HEADER:
+            refusals.append({"file": display, "line": 1, "subject": path.stem,
+                             "why": f"expected {FORM_HEADER}"})
+            continue
+        form_id = ""
+        label = ""
+        renderer = "generic"
+        rules: list[dict] = []
+        for index, raw in enumerate(rows[1:], start=2):
+            if not raw.strip() or raw.lstrip().startswith("#"):
+                continue
+            parts = [part.strip() for part in raw.strip().split("\t")]
+            if not parts:
+                continue
+            if parts[0] == "form" and len(parts) > 1:
+                form_id = parts[1]
+                continue
+            if parts[0] == "label" and len(parts) > 1:
+                label = parts[1]
+                continue
+            if parts[0] == "renderer" and len(parts) > 1:
+                renderer = parts[1]
+                continue
+            if parts[0] != "rule" or len(parts) < 4:
+                continue
+            selector, prop, value = parts[1], parts[2], parts[3]
+            when = parts[4] if len(parts) > 4 else ""
+            if when not in ("", "popit", "generic"):
+                refusals.append({"file": display, "line": index, "subject": form_id or path.stem,
+                                 "why": f"renderer condition '{when}' is not popit or generic"})
+                continue
+            if not SELECTOR.match(selector) or prop not in FORM_SAFE_PROPERTIES:
+                refusals.append({"file": display, "line": index, "subject": form_id or path.stem,
+                                 "why": f"rule '{selector} / {prop}' is not a shape property"})
+                continue
+            if any(token in value.lower() for token in ("url(", "expression", "@")):
+                refusals.append({"file": display, "line": index, "subject": form_id or path.stem,
+                                 "why": "a form value cannot load a resource"})
+                continue
+            rules.append({"selector": selector, "property": prop, "value": value, "when": when})
+        if not form_id or not SLUG.match(form_id):
+            refusals.append({"file": display, "line": 1, "subject": path.stem,
+                             "why": "form id is missing or not a lowercase slug"})
+            continue
+        if renderer not in ("generic", "popit"):
+            refusals.append({"file": display, "line": 1, "subject": form_id,
+                             "why": f"renderer '{renderer}' is not generic or popit"})
+            continue
+        forms[form_id] = {"id": form_id, "label": label or form_id, "renderer": renderer, "rules": rules}
+    return forms, refusals
 
 
 def css_comment(text: str) -> str:
@@ -528,6 +811,30 @@ def write_css(schemes: list[dict], output: Path | None = None) -> None:
             lines.append(f"    {rule['property']}: {value};")
             lines.append("}")
         lines.append("")
+
+    # Shape schema first, legacy table second. The .form files are the default package's own
+    # geometry; the table remains only so an older package without forms/ still renders.
+    schemas, _form_refusals = load_forms(PACKAGE_DIR / "forms")
+    for form, schema in schemas.items():
+        lines.append(f"/* {css_comment(schema['label'])} chrome form (forms/{form}.form). */")
+        for rule in schema["rules"]:
+            host = f".{form_class(form)}"
+            # A renderer-conditioned row only exists when that renderer is active. The base row
+            # above it is the generic fallback, so a package without the Popit port still draws a
+            # usable window instead of an unstyled one.
+            if rule.get("when") == "popit":
+                host += ".RendererPopit"
+            lines.append(
+                f"{host} {rule['selector']} {{ {rule['property']}: {rule['value']}; }}"
+            )
+        lines.append("")
+    if not schemas:
+        # Older package without forms/: keep the legacy table as a fallback only.
+        for form, block in FORM_CSS.items():
+            lines.append(f"/* {FORM_LABELS.get(form, form)} chrome form. */")
+            lines.extend(block)
+            lines.append("")
+
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -842,9 +1149,32 @@ def generate(
                 "id": base.id,
                 "label": base.label,
                 "source": base.source,
+                # Colour only. Shape is a separate selector read from forms/<id>.form; no palette
+                # carries a form or a renderer, so the two axes cannot silently re-couple.
                 "roles": roles,
                 "rules": rules,
                 "extensions": applied,
+                # One editable slot per clickable swatch in the Palette window. Values start at
+                # the scheme's own colours, so a player can repaint a single role without
+                # rewriting the whole .theme file.
+                "palette": [
+                    {"slot": slot, "label": label, "value": roles[slot], "steps": steps}
+                    for slot, label, steps in PALETTE_SLOTS
+                    if slot in roles
+                ],
+                # Inline repaint targets. Only simple class selectors can be addressed on a
+                # live panel; descendant and pseudo rules stay in the generated sheet.
+                "paint": [
+                    {"selector": selector, "property": prop, "role": role}
+                    for selector, props in RULES
+                    if re.fullmatch(r"\.[A-Za-z0-9_]+", selector)
+                    for prop, role in props
+                ]
+                + [
+                    {"selector": rule["selector"], "property": rule["property"], "role": rule["role"]}
+                    for rule in rules
+                    if "role" in rule and re.fullmatch(r"\.[A-Za-z0-9_]+", rule["selector"])
+                ],
             }
         )
 
@@ -893,9 +1223,37 @@ def generate(
         by_id = {scheme["id"]: scheme for scheme in schemes}
         schemes = [by_id[theme_id] for theme_id in order if theme_id in by_id]
 
+    form_schemas, form_refusals = load_forms(package_dir / "forms")
+    refusals.extend(form_refusals)
+    default_form_path = package_dir / "forms" / "default"
+    default_form = ""
+    if default_form_path.exists():
+        declared = default_form_path.read_text(encoding="utf-8", errors="replace").strip()
+        if declared in form_schemas:
+            default_form = declared
+    if not default_form and form_schemas:
+        default_form = "popit" if "popit" in form_schemas else sorted(form_schemas)[0]
+    form_rows = [
+        {"id": form["id"], "label": form["label"], "renderer": form["renderer"]}
+        for form in sorted(form_schemas.values(), key=lambda item: (item["id"] != default_form, item["id"]))
+    ]
+
     write_css(schemes, output) if schemes else output.unlink(missing_ok=True)
     return {
         "default": default,
+        # Colour and shape are independent selectors. The shell reads defaultForm separately
+        # and adds `.Form*` without touching `.Scheme*`.
+        "defaultForm": default_form,
+        "forms": form_rows,
+        # The shell reads this before it applies a form. A form may ask for the Popit surface
+        # port, but the generic renderer is always present as the fallback.
+        "renderers": {
+            "default": "generic",
+            "popit": {
+                "available": "popit" in form_schemas,
+                "label": "Popit suite port",
+            },
+        },
         "order": [scheme["id"] for scheme in schemes],
         "schemes": schemes,
         "extensions": extension_rows,
