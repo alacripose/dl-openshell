@@ -267,6 +267,50 @@ window	log
 	layout	minimize,maximize,close,title-position
 	behavior	drag,resize,maximize,minimize,close
 	record-id	window-log
+# The motd addon's three small package windows: updates, the repository and the landing page.
+# They are filed under existing tabs rather than becoming new tabs of their own.
+window	updates
+	title	Updates
+	content	updates
+	lane	control
+	extent	square-pixels
+	geometry	744 96 420 300
+	min-size	280 180
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-updates
+window	repo
+	title	Repository
+	content	repo
+	lane	frame
+	extent	square-pixels
+	geometry	768 128 420 260
+	min-size	280 160
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-repo
+window	landing
+	title	Landing page
+	content	landing
+	lane	frame
+	extent	square-pixels
+	geometry	792 160 420 260
+	min-size	280 160
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-landing
 window	api-viewer
 	title	API viewer
 	content	api-viewer
@@ -391,6 +435,9 @@ filed	abilities	map-plan
 filed	quickbuy	map-plan
 filed	combat-log	docs
 filed	game-settings	settings
+filed	updates	settings
+filed	repo	docs
+filed	landing	docs
 # Pinning is a layer move, declared here and not baked into a spec (UI-SPEC §4):
 # a pinned window keeps the player's placement while the shell is hidden. The two live
 # HUD elements are pinned by default; the record views are pinned where a player put them.
