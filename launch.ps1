@@ -249,7 +249,11 @@ function Invoke-ParityGate($Chosen) {
     # reading: the installed VPK is hashed again and the commit baked into it is compared with the
     # worktree, origin/main and the live Steam client. A stale or copied install refuses here.
     Write-Boot 'parity'
-    $run = Invoke-Python @($parity, '--install', $Chosen.path, '--json')
+    $parityArgs = @($parity, '--install', $Chosen.path, '--json')
+    # The CSDK10 server slot is development; its gate refuses unless the live Steam player client
+    # already carries the same build. A change that only reached the tools shell is not delivered.
+    if ($Chosen.kind -eq 'tools') { $parityArgs += '--require-live' }
+    $run = Invoke-Python $parityArgs
     $payload = $null
     try { $payload = $run.Text | ConvertFrom-Json } catch { }
     if (-not $payload) {

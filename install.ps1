@@ -927,11 +927,16 @@ if (Test-Path $compiler) {
 #     archive below. The fallback in step 5 can replace a held archive in place; the client still
 #     needs a map reload, never a restart.
 if ($Live) {
-    $liveRoot = Join-Path $addonRoot 'panorama'
+    # The CSDK10 tools client mounts `AddonRoot citadel_addons`, so its live slot is
+    # game/citadel_addons/openlock_ui, not the shipping game's citadel/addons/mods archive. The
+    # server tools slot reads the loose compiled resources and the layout XML beside them; a VPK
+    # written into the game addon directory is not this slot's authority.
+    $toolsAddon = Join-Path $game 'citadel_addons\openlock_ui'
+    $liveRoot = Join-Path $toolsAddon 'panorama'
     $compiledRoot = Join-Path $build 'panorama'
     if (Test-Path -LiteralPath $liveRoot) { Remove-Item -LiteralPath $liveRoot -Recurse -Force }
     $liveCount = 0
-    foreach ($file in @(Get-ChildItem $compiledRoot -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c)) {
+    foreach ($file in @(Get-ChildItem $compiledRoot -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c, *.xml)) {
         $relative = $file.FullName.Substring($compiledRoot.Length + 1)
         $target = Join-Path $liveRoot $relative
         New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
@@ -939,8 +944,23 @@ if ($Live) {
         $liveCount++
     }
     if ($liveCount -lt 1) { throw 'Live install compiled no resources to copy.' }
-    Write-Host "Live install: $liveCount compiled resource(s) in $liveRoot."
-    Write-Host 'Live install: packing and replacing the mounted archive; the client reads the archive first.'
+    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
+        -Message "live tools slot $liveCount resources for the next map reload"
+    Write-Host "Live install: $liveCount resource(s) in $liveRoot (server tools slot)."
+    Write-Host 'The shipping game archive and gameinfo.gi were not touched.'
+
+    # A CSDK10 change is not complete until the live Steam client also carries it. Refuse the
+    # tools install explicitly instead of reporting a successful development mount.
+    $parityTool = Join-Path $PSScriptRoot 'tools\parity_check.py'
+    if (Test-Path -LiteralPath $parityTool) {
+        $parityOut = & $Python $parityTool --install $DeadlockRoot --require-live 2>&1
+        $parityCode = $LASTEXITCODE
+        $parityOut | ForEach-Object { Write-Host $_ }
+        if ($parityCode -ne 0) {
+            throw "Live tools install refused: the CSDK10 slot was written, but the live Steam client did not receive this build. Deliver the signed shell package to the player client before continuing (exit $parityCode)."
+        }
+    }
+    return
 }
 
 # 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
@@ -1076,8 +1096,22 @@ if ($installedError) {
 }
 Write-Host "Installed VPK SHA-256 $builtHash matches the built archive."
 Write-BuildRecord -Stage 'install' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount -Message "installed $archiveBytes bytes"
+# The CSDK10 layout manager opens the source XML as well as the compiled resource. A VPK-only
+# addon leaves `file://{resources}/layout/base_hud.xml` unreadable and the HUD asserts before the
+# shell can mount. Keep only the layout sources beside the archive; compiled resources stay in
+# the VPK, so there is one compiled authority and one readable source tree.
 $legacy = Join-Path $addonRoot 'panorama'
 if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force }
+$sourcePanorama = Join-Path $build 'panorama'
+$sourceLayouts = Join-Path $sourcePanorama 'layout'
+if (Test-Path $sourceLayouts) {
+    $liveLayouts = Join-Path $legacy 'layout'
+    New-Item -ItemType Directory -Force -Path $liveLayouts | Out-Null
+    foreach ($xml in @(Get-ChildItem $sourceLayouts -File -Filter *.xml)) {
+        Copy-Item -LiteralPath $xml.FullName -Destination (Join-Path $liveLayouts $xml.Name) -Force
+    }
+    Write-Host "Kept $((Get-ChildItem $liveLayouts -File -Filter *.xml).Count) layout source file(s) beside the archive."
+}
 
 $flat = Join-Path $citadel 'addons\panorama'
 if (Test-Path $flat) {
