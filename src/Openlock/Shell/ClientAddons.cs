@@ -91,15 +91,31 @@ public sealed class ClientAddons
         // Only the directory archive indexes files; the numbered shards beside it hold data.
         foreach (var archive in Directory.EnumerateFiles(root, "*_dir.vpk", SearchOption.TopDirectoryOnly))
         {
-            var index = VpkIndex.Read(archive);
-            if (index.Contains($"panorama/layout/{name}.xml") || index.Contains($"panorama/layout/{name}.vxml_c"))
+            if (!VpkReader.TryEntries(archive, out var entries, out _))
+                continue;
+
+            var wanted = $"panorama/layout/{name}";
+            if (entries.Any(entry => entry.Equals(wanted + ".xml", StringComparison.OrdinalIgnoreCase)
+                || entry.Equals(wanted + ".vxml_c", StringComparison.OrdinalIgnoreCase)))
                 return true;
         }
 
         return false;
     }
 
-    private static string? ResolvePath(string gameDir, string raw)
+    internal static string GameDirectory
+    {
+        get
+        {
+            var named = Environment.GetEnvironmentVariable("OPENLOCK_GAME_DIR");
+            if (!string.IsNullOrWhiteSpace(named))
+                return Path.GetFullPath(named);
+
+            return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", ".."));
+        }
+    }
+
+    internal static string? ResolvePath(string gameDir, string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
             return null;
@@ -109,7 +125,7 @@ public sealed class ClientAddons
     }
 
     /// <summary>Reads the game's own <c>Game</c>/<c>addonroot</c> search paths from gameinfo.gi.</summary>
-    private static IEnumerable<(string Path, string Source)> GameSearchPaths(string gameDir)
+    internal static IEnumerable<(string Path, string Source)> GameSearchPaths(string gameDir)
     {
         var gameinfo = Path.Combine(gameDir, "citadel", "gameinfo.gi");
         if (!File.Exists(gameinfo))
@@ -162,94 +178,4 @@ public sealed class ClientAddons
         return slash >= 0 ? line[..slash] : line;
     }
 
-    /// <summary>
-    /// The file list of a VPK directory archive. Only names are needed: a search path that carries
-    /// the layout is a candidate whether the file is loose or packed, and the archive is written by
-    /// the same tool the install script uses.
-    /// </summary>
-    private static class VpkIndex
-    {
-        private static readonly Dictionary<string, (DateTime Stamp, HashSet<string> Names)> Cache = [];
-
-        public static HashSet<string> Read(string path)
-        {
-            try
-            {
-                var stamp = File.GetLastWriteTimeUtc(path);
-                if (Cache.TryGetValue(path, out var cached) && cached.Stamp == stamp)
-                    return cached.Names;
-
-                var names = Parse(path);
-                Cache[path] = (stamp, names);
-                return names;
-            }
-            catch (Exception ex)
-            {
-                // An archive this reader cannot index is simply not a candidate; a search path that
-                // carries no readable layout is reported by the path, once, above.
-                Log.Write($"[Openlock] addon ignored archive '{path}': unreadable VPK index ({ex.Message})");
-                return [];
-            }
-        }
-
-        private static HashSet<string> Parse(string path)
-        {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            using var stream = File.OpenRead(path);
-            using var reader = new BinaryReader(stream);
-
-            if (reader.ReadUInt32() != 0x55aa1234)
-                throw new InvalidDataException("not a VPK");
-
-            var version = reader.ReadUInt32();
-            var treeSize = reader.ReadUInt32();
-            if (version == 2)
-            {
-                reader.ReadUInt32(); // file data section size
-                reader.ReadUInt32(); // archive md5 section size
-                reader.ReadUInt32(); // other md5 section size
-                reader.ReadUInt32(); // signature section size
-            }
-
-            var tree = reader.ReadBytes((int)treeSize);
-            var pos = 0;
-
-            while (pos < tree.Length)
-            {
-                var ext = ReadString(tree, ref pos);
-                if (ext.Length == 0)
-                    break;
-
-                while (true)
-                {
-                    var dir = ReadString(tree, ref pos);
-                    if (dir.Length == 0)
-                        break;
-
-                    while (true)
-                    {
-                        var name = ReadString(tree, ref pos);
-                        if (name.Length == 0)
-                            break;
-
-                        pos += 18; // crc, preload, archive index, offset, length, terminator
-                        names.Add($"{dir.TrimEnd('/')}/{name}.{ext}");
-                    }
-                }
-            }
-
-            return names;
-        }
-
-        private static string ReadString(byte[] tree, ref int pos)
-        {
-            var end = Array.IndexOf(tree, (byte)0, pos);
-            if (end < 0)
-                end = tree.Length;
-
-            var value = System.Text.Encoding.UTF8.GetString(tree, pos, end - pos);
-            pos = end + 1;
-            return value;
-        }
-    }
 }

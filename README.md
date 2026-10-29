@@ -15,12 +15,32 @@ server-side plugin or custom game mode.
   game's tree, so the shop's parent assertion is never violated.
 - Keeps a taskbar, pinned windows, a drop grid for moving and resizing, and toast notifications
   that can open the window they name.
-- Exposes a Tools window fed by the install: build state, update state, VPK/tool presence and the
-  mounted search paths, plus the generated refusals list.
+- Exposes a Tools window fed by the install: live build stage and VPK size when the server bridge
+  is connected, the last baked record otherwise, update state, tool presence and the mounted search
+  paths, plus the generated refusals list. A small non-interactive strip shows the running stage.
+- Mounts windows declared by Deadworks addon packages. A package is a real shploingus
+  `SHPKG002`/`SHPKG003` frame (`.shpkg`), loose or inside a VPK; the frame's digest is checked
+  before its `shploingus.recipe/3` source is read. Each window's title-bar controls are the
+  package's own `layout`/`behavior` projection, including whether it may be pinned.
 - Includes a console that opens any declared window or loads any Panorama layout present in the
   installed game, including layouts contributed by mounted addons.
 
 ## Install
+
+### Release install
+
+Download `install.ps1` from the [latest release](https://github.com/alacripose/dl-openshell/releases/latest),
+put it in `game/bin/win64` beside `deadlock.exe`, close Deadlock, and run it. The release script
+downloads `openlock-player.vpk`, verifies its published SHA-256, installs it under
+`game/citadel/addons/mods`, and adds that directory to `SearchPaths`. It does not require a
+checkout, Python, or the CSDK, and it never overwrites a `pak01_dir.vpk` owned by another mod
+manager.
+
+The public landing page is [the Pages site](https://alacripose.github.io/dl-openshell/). Release
+assets are built locally because compiling Panorama needs the game's CSDK; see
+[tools/build_release.ps1](tools/build_release.ps1).
+
+### Build from a checkout
 
 Requirements: Deadlock, Python 3, the CSDK `resourcecompiler.exe`, and `CSDKCfgVPK.exe`. The game
 must be closed while the search path changes, because `gameinfo.gi` is read at launch.
@@ -33,9 +53,16 @@ The script first runs `tools/gen_shell_data.py` against the `gameinfo.gi` and VP
 it is targeting, so the layout catalog, game palette, tools and build record describe that game
 copy rather than a developer's checkout. A minimal install simply produces a smaller catalog. It
 then assembles `clientaddon/`, compiles the Panorama resources, packs
-`dist/openlock_ui/pak01_dir.vpk`, installs it under `game/citadel/addons/openlock_ui`, and adds
-that directory to the game's `SearchPaths`. It removes an older loose-file copy so exactly one
-source is mounted.
+`dist/openlock_ui/pak01_dir.vpk`, installs it under `game/citadel/addons/mods`, and adds that
+directory to the game's `SearchPaths`. It removes an older loose-file copy and old Openlock search
+paths so exactly one source is mounted, while leaving other tools' addon folders alone.
+
+On an interactive run the installer asks for a grade: `dev` keeps every Deadlock and Deadworks
+addon and shell window available, `observer` hides the shell's own chrome and windows so a
+recording only shows the game (XML surfaces sent by an addon or remote operator still appear in
+the toast stack), and `player` keeps saved layout schemes and loads the saved geometry
+automatically at startup. Pass `-Grade dev|observer|player` to skip the prompt, or `-NoUi` for a
+non-interactive run. The chosen grade is written into the same build record the shell reads.
 
 Launch Deadlock: the shell boots from `base_hud.xml` through
 [clientaddon/standalone/panorama/scripts/openlock_boot.js](clientaddon/standalone/panorama/scripts/openlock_boot.js).
@@ -62,11 +89,46 @@ The installer can mount prebuilt Panorama packages from any git repository. A pa
 ```
 
 The package is cloned under `openlock-packages/`, its prebuilt VPK is verified and copied to
-`game/citadel/addons/openlock_packages/<id>` and that directory joins Openlock's search paths.
+`game/citadel/addons/mods/packages/<id>` and that directory joins Openlock's search paths.
 The installer refuses an archive whose VPK magic is wrong, a path that escapes the checkout, or a
 `target` that does not match this copy's `steam.inf`. Pass `-ForcePackage` only for a known-good
 mismatch, and `-PackageRef <branch-or-tag>` to pin every package checkout. Openlock never runs a
 package's scripts during install, and a package cannot write fonts or `gameinfo.gi`.
+
+### Addon windows and controls
+
+A Deadworks addon ships windows as real shploingus packages: `SHPKG002` frames with a
+`shploingus.recipe/3` source, or `SHPKG003` frames with the package's own artifacts after it. Put
+the `.shpkg` under the addon's search path or inside its VPK; the server reads both. It checks the
+frame's payload digest, parses the recipe with the same 13-key window grammar the shell package
+uses, and sends only packages with no refusals to the client.
+
+A window's delivered XML layout is looked up as `panorama/layout/<window-id>.xml` (or
+`<record-id>.xml`) in the VPK that carries the package. The resource path is the archive path
+without its `panorama/` prefix, so `panorama/layout/my_panel.xml` becomes
+`file://{resources}/layout/my_panel.xml`. A loose `.shpkg` is still read and its windows are
+listed, but its artifacts are not a mounted Panorama resource; ship the package and its XML in a
+VPK when the window must draw. A window with no delivered layout keeps its declared content kind;
+one with a layout opens as `addon-layout` and mounts the XML with `BLoadLayout`. The layout's own
+controls are the addon's, so the package does not need a second control grammar.
+
+A package's windows declare their own title-bar controls through `layout` and `behavior`: `pin` is
+offered only when `pinnable` is true; `minimize`, `maximize` and `close` are offered only when
+`layout` names them behind `title-position`. The shell renders that list instead of assuming every
+window has all four, and the context menu follows the same list. A package with a broken digest,
+unknown content or lane, missing key, duplicate id or unusable geometry is refused by archive,
+line and window; none of its windows are partially mounted.
+
+### Observer XML surfaces
+
+In `observer` grade the shell's own chrome is hidden, but a package XML can still be sent as a
+toast. The server command `openlock_observer <window-id>` sends a loaded package window to every
+connected shell; the shell mounts its XML in the toast stack. The layout receives the live shell
+record on the `dw_observer_data` attribute of its host panel as `openlock.observer/1` JSON:
+`build`, `update`, `packages`, `windows`, `connected` and `observedAt`. A layout can read that
+attribute from its parent and render live stats, or keep its own controls for external links. The
+shell's close affordance is outside the XML, so a delivered surface cannot trap the observer.
+`OpenlockObserverData(id)` returns the same record from the shell script.
 
 ## Regenerate the package
 

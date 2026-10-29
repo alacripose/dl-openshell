@@ -11083,7 +11083,7 @@ var SHELL = {
     },
     {
       "kind": "Game",
-      "path": "citadel/addons/openlock_ui",
+      "path": "citadel/addons/mods",
       "line": 77,
       "exists": true,
       "mounts": "vpk"
@@ -11598,13 +11598,14 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "af918a8",
+    "commit": "1a9133b",
     "branch": "main",
     "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 15:19",
+    "generatedAt": "2026-10-28 20:52",
+    "grade": "player",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  af918a8+  ·  game 6821"
+    "label": "v0.7.0  ·  1a9133b+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11738,28 +11739,26 @@ var SHELL = {
     "refusals": []
   },
   "buildState": {
-    "stage": "installed",
-    "finishedAt": "2026-10-28 15:11",
+    "format": "openlock.build/1",
+    "grade": "player",
+    "stage": "prepare",
+    "state": "running",
+    "startedAt": "2026-10-28 20:52:45",
+    "updatedAt": "2026-10-28 20:52:45",
+    "finishedAt": "",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 1094465,
-    "resources": 11,
-    "path": "citadel/addons/openlock_ui/pak01_dir.vpk",
+    "vpkBytes": 0,
+    "resources": 0,
+    "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
-        "name": "compile",
-        "ok": true,
-        "resources": 11
-      },
-      {
-        "name": "pack",
-        "ok": true,
-        "bytes": 1094465
-      },
-      {
-        "name": "install",
-        "ok": true
+        "name": "prepare",
+        "state": "running",
+        "startedAt": "20:52:45",
+        "finishedAt": ""
       }
     ],
+    "message": "assembling the client tree",
     "packages": []
   },
   "update": {

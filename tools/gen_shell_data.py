@@ -555,6 +555,20 @@ def read_build(gameinfo: Path) -> dict:
         "generatedAt": time.strftime("%Y-%m-%d %H:%M"),
     }
 
+    # The installer selects the grade once and writes it into build.json before this generator
+    # runs. The shell data must carry that choice: a player-mode release VPK cannot depend on a
+    # live server record to hide shell chrome or restore a saved layout.
+    state_path = PACKAGE_DIR / "build.json"
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            if state.get("grade") in ("dev", "observer", "player"):
+                build["grade"] = state["grade"]
+        except (json.JSONDecodeError, OSError):
+            # A malformed build record is reported by the buildState reader below, which keeps
+            # its line number; the grade simply stays absent here.
+            pass
+
     manifest = ROOT / "openlock.manifest.json"
     if manifest.exists():
         try:
