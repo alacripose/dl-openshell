@@ -143,6 +143,75 @@
     height: 0px;
 }
 
+/* The boot preloader lives in the bar's tab slot. It is visible while the shell is collapsed so
+   the six modules can be warmed one at a time before the player reaches for the openshell
+   button. Once the last module is ready the strip fades and the bar returns to its normal tabs. */
+.PreloadStrip {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    margin-left: 96px;
+    width: 78%;
+    height: 30px;
+    flow-children: right;
+    z-index: 502;
+}
+
+.PreloadLabel {
+    margin-top: 8px;
+    margin-right: 8px;
+    color: #ffffff;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+}
+
+.PreloadModules {
+    height: 30px;
+    flow-children: right;
+}
+
+.PreloadModule {
+    height: 18px;
+    margin-top: 6px;
+    margin-right: 2px;
+    padding: 2px 7px;
+    background-color: #000000;
+    border: 1px solid #ffffff33;
+    opacity: 0;
+}
+
+.PreloadModule.Loading {
+    border: 1px solid #c9a86a;
+}
+
+.PreloadModule.Ready {
+    border: 1px solid #ffffff88;
+}
+
+.PreloadModule.Refused {
+    border: 1px solid #b04a3a;
+}
+
+.PreloadModuleLabel {
+    color: #ffffff;
+    font-size: 10px;
+    vertical-align: center;
+}
+
+.PreloadTrack {
+    width: 72px;
+    height: 2px;
+    margin-top: 14px;
+    margin-left: 6px;
+    background-color: #ffffff22;
+}
+
+.PreloadFill {
+    width: 0%;
+    height: 100%;
+    background-color: #c9a86a;
+}
+
 /* Fixed index into every frame. The strip itself clips when a HUD sweep adds many entries. */
 .WindowsButton {
     position: absolute;
@@ -385,7 +454,17 @@
     height: 1px;
 }
 
+.WindowDrag {
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
 .WindowButton {
+    z-index: 2;
     margin-right: 4px;
     vertical-align: center;
     width: 26px;

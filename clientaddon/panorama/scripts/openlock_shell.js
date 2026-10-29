@@ -23,6 +23,10 @@
     var launcherBar = root.FindChildTraverse("LauncherBar");
     var taskbar = root.FindChildTraverse("Taskbar");
     var strip = root.FindChildTraverse("TabStrip");
+    var preloadStrip = root.FindChildTraverse("PreloadStrip");
+    var preloadLabel = root.FindChildTraverse("PreloadLabel");
+    var preloadModules = root.FindChildTraverse("PreloadModules");
+    var preloadFill = root.FindChildTraverse("PreloadFill");
     var windowLayer = root.FindChildTraverse("WindowLayer");
     var panelLayer = root.FindChildTraverse("PanelLayer");
     var dropGrid = root.FindChildTraverse("DropGrid");
@@ -38,6 +42,12 @@
     // The idle/compact chrome is a behavior of the shell, not a grade gate. Echo the baked grade
     // beside the transition so the client's own console can show whether a grade suppressed it.
     var shellGrade = String((data.build && data.build.grade) || "dev");
+    // The preloader warms each bar module before the player opens the shell. It owns the bar's
+    // tab slot while it runs, so a scheduled render cannot replace the loading chips with tabs.
+    var preloadActive = true;
+    var preloadSeq = 0;
+    var preloadStartedAt = 0;
+    var preloadCompleted = 0;
 
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
@@ -99,6 +109,7 @@
     var frameTickAt = 0;
     var frameTicks = 0;
     var reportedRefusals = {};
+    var runtimeRefusals = [];
 
     var frames = {};      // id -> { frame, title, meta, body, refusal, win }
     var lastInteractionAt = Date.now();
@@ -475,6 +486,7 @@
 
     function renderBar() {
         if (!strip) return;
+        if (preloadActive) return;
         strip.RemoveAndDeleteChildren();
         var listed = {};
 
@@ -518,8 +530,157 @@
         }
     }
 
+    function preloadList() {
+        var ids = [];
+        var tabs = data.tabs || [];
+        for (var i = 0; i < tabs.length; i++) {
+            if (windowById(tabs[i])) ids.push(tabs[i]);
+        }
+        if (ids.length) return ids;
+        // A package with no declared tabs still has its first modules warmed in window order.
+        for (var w = 0; w < (data.windows || []).length && ids.length < 6; w++) {
+            if (!data.windows[w].live) ids.push(data.windows[w].id);
+        }
+        return ids;
+    }
+
+    function preloadChip(id, index, total) {
+        var win = windowById(id);
+        var chip = $.CreatePanel("Panel", preloadModules, "");
+        chip.AddClass("PreloadModule");
+        chip.hittest = false;
+        chip.hittestchildren = false;
+        var label = $.CreatePanel("Label", chip, "");
+        label.AddClass("PreloadModuleLabel");
+        label.text = (win && win.title) || id;
+        label.hittest = false;
+        // Ease the chip in from the left rather than popping it. The old Panorama parser has no
+        // transitions, so this is a short scheduled curve on opacity and margin.
+        var step = 0;
+        var steps = 7;
+        chip.style.opacity = "0";
+        function easeIn() {
+            step++;
+            chip.style.opacity = String(step / steps);
+            chip.style.marginLeft = Math.round(-6 + (6 * step) / steps) + "px";
+            if (step < steps) $.Schedule(0.018, easeIn);
+        }
+        $.Schedule(0.01, easeIn);
+        return chip;
+    }
+
+    function fadePreloadBar() {
+        var opacity = 1;
+        function tick() {
+            opacity -= 0.1;
+            if (taskbar) {
+                taskbar.style.opacity = String(Math.max(0, opacity));
+                if (opacity <= 0 && !expanded && !preloadActive) {
+                    taskbar.style.visibility = "collapse";
+                    taskbar.style.opacity = "1";
+                }
+            }
+            if (opacity > 0 && !expanded && !preloadActive) $.Schedule(0.03, tick);
+        }
+        $.Schedule(0.03, tick);
+    }
+
+    function startPreload() {
+        var ids = preloadList();
+        preloadActive = true;
+        preloadSeq++;
+        preloadStartedAt = Date.now();
+        preloadCompleted = 0;
+        if (!preloadStrip || !preloadModules || !ids.length) {
+            preloadActive = false;
+            if (preloadStrip) preloadStrip.style.visibility = "collapse";
+            if (strip) strip.style.visibility = "visible";
+            renderBar();
+            return;
+        }
+
+        if (strip) strip.style.visibility = "collapse";
+        preloadStrip.style.visibility = "visible";
+        preloadModules.RemoveAndDeleteChildren();
+        if (taskbar) {
+            taskbar.style.visibility = "visible";
+            taskbar.style.opacity = "1";
+        }
+        if (preloadLabel) preloadLabel.text = "preloading 0/" + ids.length;
+        if (preloadFill) preloadFill.style.width = "0%";
+        var token = preloadSeq;
+        var index = 0;
+
+        function next() {
+            if (token !== preloadSeq || !preloadActive) return;
+            if (index >= ids.length) { finishPreload(token); return; }
+            var id = ids[index];
+            var chip = preloadChip(id, index, ids.length);
+            chip.AddClass("Loading");
+            var at = index;
+            $.Schedule(0.28, function () {
+                if (token !== preloadSeq || !preloadActive) return;
+                var win = windowById(id);
+                var ok = false;
+                try {
+                    if (win) {
+                        createFrame(win);
+                        ok = !!frames[id];
+                    }
+                } catch (e) {
+                    $.Msg("[Openlock] preload REFUSED '", id, "': ", String(e));
+                }
+                chip.RemoveClass("Loading");
+                chip.AddClass(ok ? "Ready" : "Refused");
+                preloadCompleted = at + 1;
+                if (preloadLabel) preloadLabel.text = "preloaded " + preloadCompleted + "/" + ids.length;
+                if (preloadFill) preloadFill.style.width = Math.round((preloadCompleted / ids.length) * 100) + "%";
+                $.Msg("[Openlock] preload: ", id, " ", ok ? "ready" : "refused", " (",
+                    preloadCompleted, "/", ids.length, ")");
+                index++;
+                next();
+            });
+        }
+
+        next();
+    }
+
+    function finishPreload(token) {
+        if (token !== preloadSeq) return;
+        preloadActive = false;
+        if (strip) strip.style.visibility = "visible";
+        if (preloadStrip) preloadStrip.style.visibility = "collapse";
+        renderBar();
+        $.Msg("[Openlock] preload done: ", preloadCompleted, " module(s) in ",
+            Date.now() - preloadStartedAt, " ms");
+        if (expanded) {
+            if (taskbar) { taskbar.style.visibility = "visible"; taskbar.style.opacity = "1"; }
+            render();
+        } else {
+            fadePreloadBar();
+        }
+    }
+
+    function skipPreload() {
+        if (!preloadActive) return;
+        preloadActive = false;
+        preloadSeq++;
+        var ids = preloadList();
+        for (var i = 0; i < ids.length; i++) {
+            var win = windowById(ids[i]);
+            if (!win || frames[ids[i]]) continue;
+            try { createFrame(win); } catch (e) { $.Msg("[Openlock] preload REFUSED '", ids[i], "': ", String(e)); }
+        }
+        if (preloadStrip) preloadStrip.style.visibility = "collapse";
+        if (strip) strip.style.visibility = "visible";
+        if (taskbar) taskbar.style.opacity = "1";
+        renderBar();
+        $.Msg("[Openlock] preload skipped: the shell was opened before all modules were warm");
+    }
+
     function choose(id) {
         activeTab = id;
+        showTaskbar();
         openWindow(id);
     }
 
@@ -665,7 +826,10 @@
         // controls remain where the player can see them.
         var chrome = (win.autoFrame || win.discovered) ? 16 : CHROME_DP;
         var dockTop = SHELL_TOP_DP + chrome;
-        var needShift = Math.max(0, dockTop - g.y);
+        // A live HUD panel is never shifted for chrome. Moving the game's own abilities/top-bar
+        // container made the game re-layout it on the next frame, which is the flicker between
+        // two positions; the chrome now yields to the panel instead.
+        var needShift = framePanel ? 0 : Math.max(0, dockTop - g.y);
         if (record.shiftY === undefined) record.shiftY = 0;
         record.targetShiftY = needShift;
         if (Math.abs(record.shiftY - needShift) > 0.5) startShiftAnimation(win.id);
@@ -917,8 +1081,15 @@
         var f = frames[id];
         if (!f) return;
         f.lastActiveAt = lastInteractionAt;
-        f.frame.SetHasClass("IdleCompact", false);
-        animateCompact(f, 0);
+        // Hover must put the full chrome back before the next frame, not after an animation that
+        // the older client can miss. Reset the mix outright so the title text and outline return
+        // together; the ease is for going idle, not for coming back.
+        f.idleMix = 0;
+        f.idleTarget = 0;
+        f.idleAnim = false;
+        f.loggedIdle = false;
+        try { f.frame.RemoveClass("IdleCompact"); } catch (e) {}
+        paintCompact(f);
     }
 
     // A per-window hover state, because this client exposes no cursor position at all:
@@ -930,6 +1101,7 @@
     function enterFrame(id, source) {
         var f = frames[id];
         if (!f) return;
+        lastInteractionAt = Date.now();
         if (!f.hovered) $.Msg("[Openlock] chrome hover: ", id, " over via ", source || "panel");
         f.hovered = true;
         f.hoverEnteredAt = Date.now();
@@ -2101,6 +2273,8 @@
         var key = title + "|" + why;
         if (reportedRefusals[key]) return;
         reportedRefusals[key] = true;
+        runtimeRefusals.push({ file: "client", subject: title, why: why });
+        if (runtimeRefusals.length > 40) runtimeRefusals.shift();
         globalThis.OpenlockToast(title, why, "", true);
     }
 
@@ -2219,6 +2393,14 @@
         var title = $.CreatePanel("Panel", frame, "");
         title.AddClass("WindowTitle");
 
+        // The drag target is a strip behind the glyphs, not the title panel itself. A handler on
+        // the title also caught presses meant for minimize/maximize/pin/close, so every glyph
+        // started a drag. Only empty title space (and the move glyph) now begins one.
+        var dragStrip = $.CreatePanel("Panel", title, "");
+        dragStrip.AddClass("WindowDrag");
+        dragStrip.hittest = true;
+        dragStrip.hittestchildren = false;
+
         var titleLabel = $.CreatePanel("Label", title, "");
         titleLabel.AddClass("WindowTitleLabel");
         titleLabel.text = win.title || win.id;
@@ -2248,15 +2430,19 @@
         var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); }, win.id);
         if (pinned[win.id]) pinButton.AddClass("PinOn");
         var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); }, win.id);
+        // Keep the last glyph clear of the northeast resize grip. The title's own layout does not
+        // know the grip's width; this class is the reservation that does.
+        if (closeButton) closeButton.AddClass("WindowClose");
 
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions", win.id);
+        bindDwell(dragStrip, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions", win.id);
         bindDwell(titleLabel, win.title || win.id, "Frame  ·  " + (win.id || "") + "  ·  " + (win.content || "live"), win.id);
         title.SetPanelEvent("oncontextmenu", function () {
             var g = ensureGeometry(win);
             showContextMenu(win, g.x + 12, g.y + 6);
         });
-        makeDraggable(title, win.id, "move");
+        makeDraggable(dragStrip, win.id, "move");
 
         var meta = $.CreatePanel("Panel", frame, "");
         meta.AddClass("WindowMeta");
@@ -2533,9 +2719,32 @@
 
     // --- show / hide ---------------------------------------------------------
 
+    // The bar is chrome, not a second game HUD. When the pointer has not touched it or a window
+    // for a few seconds it fades out and gives the top row back to the game; hovering the
+    // launcher brings it back. The frames own the longer idle curve below.
+    var taskbarHiding = false;
+
+    function showTaskbar() {
+        if (!taskbar) return;
+        taskbarHiding = false;
+        taskbar.style.opacity = "1";
+        taskbar.style.visibility = "visible";
+    }
+
+    function hideTaskbar() {
+        if (!taskbar || preloadActive || !expanded || taskbarHiding) return;
+        taskbarHiding = true;
+        taskbar.style.opacity = "0";
+        $.Schedule(0.25, function () {
+            if (!taskbarHiding) return;
+            taskbarHiding = false;
+            if (!preloadActive && expanded) taskbar.style.visibility = "collapse";
+        });
+    }
+
     function render() {
         if (launcherBar) launcherBar.style.visibility = "visible";
-        if (taskbar) taskbar.style.visibility = expanded ? "visible" : "collapse";
+        if (taskbar) taskbar.style.visibility = (expanded || preloadActive) ? "visible" : "collapse";
 
         // Opening the shell materializes the pinned live windows. They are the customization
         // layer: once pinned, they keep their placement while the shell is closed.
@@ -2596,7 +2805,9 @@
     globalThis.OpenlockRestoreLayout = restoreUiLayout;
 
     globalThis.OpenlockToggle = function () {
+        skipPreload();
         expanded = !expanded;
+        if (expanded) showTaskbar();
         freeCursor(expanded);
         if (expanded && !activeId) activeId = data.tabs.length ? data.tabs[0] : WINDOWS_ID;
         render();
@@ -2676,7 +2887,12 @@
                 if (typeof Game !== "undefined" && Game.GetCursorPosition) p = Game.GetCursorPosition();
             } catch (e) {}
         }
-        if (!p) return null;
+        if (!p) {
+            if (lastMousePoint && Date.now() - lastMouseAt < 2000) {
+                return { x: lastMousePoint.x, y: lastMousePoint.y };
+            }
+            return null;
+        }
         var x = p.x !== undefined ? p.x : (p[0] !== undefined ? p[0] : (p.position && p.position.x));
         var y = p.y !== undefined ? p.y : (p[1] !== undefined ? p[1] : (p.position && p.position.y));
         if (x === undefined || y === undefined) return null;
@@ -2705,6 +2921,10 @@
     }
 
     var lastPointerEvent = "none";
+    // The reduced CSDK 10 client exposes no cursor API. Its panel events do carry the pointer on
+    // mousemove, so the last event position is kept as the fallback for drag and hover.
+    var lastMousePoint = null;
+    var lastMouseAt = 0;
 
     // The engine does not deliver a mousemove stream to Panorama panels, but it does expose the
     // cursor and the button state. One scheduled poll reads both; the delta since mousedown is
@@ -2784,11 +3004,20 @@
         return null;
     }
 
+    function recordPointer(args) {
+        var at = pointFromEventArgs(args);
+        if (!at) return null;
+        lastMousePoint = at;
+        lastMouseAt = Date.now();
+        return at;
+    }
+
     function beginPointerDrag(id, mode, eventArgs) {
         var win = windowById(id);
         lastPointerEvent = "down " + mode;
         if (!win) { endPointerDrag(false); return; }
-        var at = cursorPoint() || pointFromEventArgs(eventArgs);
+        enterFrame(id, "drag");
+        var at = pointFromEventArgs(eventArgs) || cursorPoint();
         if (!at) {
             var probe = "$:" + (typeof $) +
                 " MousePosition:" + (typeof $ !== "undefined" ? typeof $.MousePosition : "absent") +
@@ -2851,6 +3080,12 @@
                 beginPointerDrag(id, mode, arguments);
             });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
+            // A mousemove over the chrome is the CSDK10 restore path: that client has no cursor
+            // probe, so onmouseover alone can be missed while the title is shrinking.
+            panel.SetPanelEvent("onmousemove", function () {
+                recordPointer(arguments);
+                if (!pointerDrag) enterFrame(id, "move");
+            });
         } catch (e) {
             refuseFeature("Drag refused", "the engine rejected the drag binding: " + String(e));
         }
@@ -3459,10 +3694,14 @@
         }
 
         if (kind === "refusals" || kind === "table") {
-            headingXd(body, (data.refusals.length || 0) + " refusal(s)");
+            headingXd(body, ((data.refusals.length || 0) + runtimeRefusals.length) + " refusal(s)");
             for (var r = 0; r < data.refusals.length; r++) {
                 var x = data.refusals[r];
                 rowXd(body, x.file + ":" + x.line + "  " + x.subject + " — " + x.why, "ViewMuted");
+            }
+            for (var rr = 0; rr < runtimeRefusals.length; rr++) {
+                var rx = runtimeRefusals[rr];
+                rowXd(body, rx.file + "  " + rx.subject + " — " + rx.why, "ViewMuted");
             }
             return;
         }
@@ -3730,6 +3969,8 @@
             discoverHudWindows();
         }
 
+        if (expanded && !preloadActive && Date.now() - lastInteractionAt > 5000) hideTaskbar();
+
         $.Schedule(0.5, poll);
     }
 
@@ -3763,8 +4004,24 @@
     // The launcher is hit-testable and always on screen, so it is the safest panel to learn what
     // this build's event system actually delivers before wiring a drag to it again.
     try {
+        if (taskbar) {
+            taskbar.hittest = true;
+            taskbar.hittestchildren = true;
+            taskbar.SetPanelEvent("onmouseover", function () {
+                lastInteractionAt = Date.now();
+                showTaskbar();
+            });
+            taskbar.SetPanelEvent("onmousemove", function () {
+                lastInteractionAt = Date.now();
+                showTaskbar();
+            });
+        }
         if (launcherBar) {
-            launcherBar.SetPanelEvent("onmouseover", function () { lastPointerEvent = "over"; });
+            launcherBar.SetPanelEvent("onmouseover", function () {
+                lastPointerEvent = "over";
+                lastInteractionAt = Date.now();
+                showTaskbar();
+            });
             launcherBar.SetPanelEvent("onmousemove", function () { lastPointerEvent = "mov " + probeArgs(arguments); });
             launcherBar.SetPanelEvent("onmousedown", function () { lastPointerEvent = "down " + probeArgs(arguments); });
         }
@@ -3779,6 +4036,7 @@
     $.Schedule(2.0, setLauncherName);
     applyScheme(themes.default, false);
     renderBar();
+    startPreload();
     startClock();
 
     // The version notice is the shell telling the player what it read from the install: the
