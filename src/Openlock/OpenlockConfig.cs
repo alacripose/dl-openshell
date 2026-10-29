@@ -12,7 +12,7 @@ public sealed class OpenlockConfig : IConfig
     public bool Enabled { get; set; } = true;
 
     /// <summary>Name shown in chat and in the load banner.</summary>
-    public string ModeName { get; set; } = "OPENLOCK";
+    public string ModeName { get; set; } = "dl-openshell";
 
     /// <summary>
     /// Client addon roots, checked before the game's own search paths. Empty means "use the game's
@@ -100,8 +100,10 @@ public sealed class OpenlockConfig : IConfig
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(ModeName))
-            ModeName = "OPENLOCK";
+        if (string.IsNullOrWhiteSpace(ModeName)
+            || string.Equals(ModeName, "OPENLOCK", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ModeName, "OPENSHELL", StringComparison.OrdinalIgnoreCase))
+            ModeName = "dl-openshell";
 
         GravityReduction = Math.Clamp(GravityReduction, 0f, 800f);
         Friction = Math.Clamp(Friction, 0f, 100f);

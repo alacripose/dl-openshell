@@ -659,7 +659,7 @@ var SHELL = {
       "opacity": 930,
       "elevation": 0,
       "pinnable": true,
-      "refused": "the world view is a 3D scene, not a panel; it cannot be drawn inside a window"
+      "view": "world-view"
     },
     {
       "id": "determinism",
@@ -11017,12 +11017,6 @@ var SHELL = {
       "why": "content 'streamer': no streamer source exists on this build; there is nothing to mount"
     },
     {
-      "file": "package.shspec",
-      "line": 331,
-      "subject": "world",
-      "why": "content 'world-view': the world view is a 3D scene, not a panel; it cannot be drawn inside a window"
-    },
-    {
       "file": "package.cells",
       "line": 2,
       "subject": "cells 1",
@@ -11598,14 +11592,14 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "f4250a4",
+    "commit": "c547ad6",
     "branch": "main",
     "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 20:56",
+    "generatedAt": "2026-10-28 22:23",
     "grade": "player",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  f4250a4+  ·  game 6821"
+    "label": "v0.7.0  ·  c547ad6+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11743,8 +11737,8 @@ var SHELL = {
     "grade": "player",
     "stage": "prepare",
     "state": "running",
-    "startedAt": "2026-10-28 20:56:11",
-    "updatedAt": "2026-10-28 20:56:11",
+    "startedAt": "2026-10-28 22:23:10",
+    "updatedAt": "2026-10-28 22:23:11",
     "finishedAt": "",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
     "vpkBytes": 0,
@@ -11754,7 +11748,7 @@ var SHELL = {
       {
         "name": "prepare",
         "state": "running",
-        "startedAt": "20:56:11",
+        "startedAt": "22:23:11",
         "finishedAt": ""
       }
     ],

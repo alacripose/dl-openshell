@@ -77,7 +77,7 @@
             for (var n = 0; n < nodes.length; n++) toggle(nodes[n], "class:" + ABILITY_CLASSES[c] + ":" + n);
         }
 
-        $.Msg("[Openlock] ability HUD ", hide ? "collapsed" : "restored", " (", matched, " panel(s))");
+        $.Msg("[dl-openshell] ability HUD ", hide ? "collapsed" : "restored", " (", matched, " panel(s))");
     }
 
     function poll() {

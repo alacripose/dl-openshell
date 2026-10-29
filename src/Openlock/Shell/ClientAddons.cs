@@ -40,7 +40,7 @@ public sealed class ClientAddons
             var path = ResolvePath(gameDir, raw);
             if (path is null)
             {
-                Log.Write($"[Openlock] addon REFUSED path '{raw}': not an absolute path and no game directory to resolve it against");
+                Log.Write($"[dl-openshell] addon REFUSED path '{raw}': not an absolute path and no game directory to resolve it against");
                 continue;
             }
 
@@ -69,11 +69,11 @@ public sealed class ClientAddons
         _candidates.Add(new Candidate(path, source, exists, shell, hud));
 
         if (!exists)
-            Log.Write($"[Openlock] addon REFUSED path '{path}' ({source}): directory does not exist");
+            Log.Write($"[dl-openshell] addon REFUSED path '{path}' ({source}): directory does not exist");
         else if (!shell && !hud)
-            Log.Write($"[Openlock] addon REFUSED path '{path}' ({source}): no panorama/layout/openlock_shell or openlock_hud");
+            Log.Write($"[dl-openshell] addon REFUSED path '{path}' ({source}): no panorama/layout/openlock_shell or openlock_hud");
         else
-            Log.Write($"[Openlock] addon found at '{path}' ({source}): shell={shell} hud={hud}");
+            Log.Write($"[dl-openshell] addon found at '{path}' ({source}): shell={shell} hud={hud}");
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public sealed class ClientAddons
         var gameinfo = Path.Combine(gameDir, "citadel", "gameinfo.gi");
         if (!File.Exists(gameinfo))
         {
-            Log.Write($"[Openlock] addon discovery REFUSED: no gameinfo.gi at '{gameinfo}'");
+            Log.Write($"[dl-openshell] addon discovery REFUSED: no gameinfo.gi at '{gameinfo}'");
             yield break;
         }
 

@@ -22,6 +22,7 @@ public sealed class ShellMount
     private readonly OpenlockPlugin _plugin;
     private readonly HashSet<int> _announced = [];
     private readonly Dictionary<int, AddonState> _lastState = [];
+    private readonly HashSet<string> _registeredAddonIds = new(StringComparer.OrdinalIgnoreCase);
 
     private BuildStatus _build = new("");
     private AddonPackages _addons = new();
@@ -50,21 +51,21 @@ public sealed class ShellMount
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
 
         Log.Write(
-            $"[Openlock] shell {_package.Name} {_package.Version}: {_package.Windows.Count} windows, " +
+            $"[dl-openshell] shell {_package.Name} {_package.Version}: {_package.Windows.Count} windows, " +
             $"{_package.Tabs.Count} tabs, bar {_package.Bar ?? "none"}, {_package.Filed.Count} filed, " +
             $"{_package.Pins.Count} pins, {_package.Refusals.Count} refusal(s)");
-        Log.Write($"[Openlock] layout profiles: {_layouts.DirectoryPath}");
+        Log.Write($"[dl-openshell] layout profiles: {_layouts.DirectoryPath}");
         Log.Write(
-            $"[Openlock] addon packages: {_addons.Packages.Count} package(s), {_addons.Windows.Count} window(s), " +
+            $"[dl-openshell] addon packages: {_addons.Packages.Count} package(s), {_addons.Windows.Count} window(s), " +
             $"{_addons.RefusalCount} refusal(s)");
         foreach (var package in _addons.Packages)
-            Log.Write($"[Openlock] addon package {package.Id} {package.Version}: {package.WindowIds.Count} window(s) at {package.Archive}");
+            Log.Write($"[dl-openshell] addon package {package.Id} {package.Version}: {package.WindowIds.Count} window(s) at {package.Archive}");
         foreach (var package in _addons.Packages)
             foreach (var refusal in package.Refusals)
-                Log.Write($"[Openlock] addon REFUSED {refusal.File}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
+                Log.Write($"[dl-openshell] addon REFUSED {refusal.File}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
 
         foreach (var refusal in _package.Refusals)
-            Log.Write($"[Openlock] shell REFUSED {Rel(root, refusal.File)}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
+            Log.Write($"[dl-openshell] shell REFUSED {Rel(root, refusal.File)}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
     }
 
     public void Register()
@@ -86,23 +87,16 @@ public sealed class ShellMount
         // here is what lets a click inside an addon layout reach the server without a second
         // routing table owned by the addon.
         foreach (var window in _addons.Windows)
-        {
-            var id = window.Id;
-            UI.Panel(RootPanel).On("view:" + id, e =>
-            {
-                _active = id;
-                SendWindow(id, e.Caller);
-            });
-        }
+            RegisterAddonWindow(window);
 
         UI.Panel(RootPanel).On("steady", e => _plugin.ReconcileAll("shell reconcile"));
-        UI.Panel(RootPanel).On("mountlog", e => Log.Write($"[Openlock] client mount: {e.ArgAt(0)}"));
+        UI.Panel(RootPanel).On("mountlog", e => Log.Write($"[dl-openshell] client mount: {e.ArgAt(0)}"));
         UI.Panel(RootPanel).On("restore", e => _plugin.RestoreAllFromShell());
 
         UI.Panel(RootPanel).On("layout", e => SaveLayout(e));
         UI.Panel(RootPanel).On("layout-applied", e =>
             Log.Write(
-                $"[Openlock] layout APPLIED by {NameOf(e.Caller)}: scheme={e.ArgAt(0, "?")} " +
+                $"[dl-openshell] layout APPLIED by {NameOf(e.Caller)}: scheme={e.ArgAt(0, "?")} " +
                 $"windows={e.ArgAt(1, "?")} ignored={e.ArgAt(2, "?")}"));
         UI.Panel(RootPanel).On("layout-load", e => LoadLayout(e));
         UI.Panel(RootPanel).On("layout-reset", e => ResetLayout(e));
@@ -121,6 +115,47 @@ public sealed class ShellMount
         };
     }
 
+    private void RegisterAddonWindow(ShpPackage.Window window)
+    {
+        if (!_registeredAddonIds.Add(window.Id))
+            return;
+
+        var id = window.Id;
+        UI.Panel(RootPanel).On("view:" + id, e =>
+        {
+            _active = id;
+            SendWindow(id, e.Caller);
+        });
+    }
+
+    /// <summary>
+    /// Adds a package after launch and pushes it to every connected shell. A live package's source
+    /// XML travels as a node tree in the same addon payload a mounted package uses, so the client
+    /// builds it with CreatePanel and does not need a new resource path or a reconnect.
+    /// </summary>
+    public int DeliverAddon(string path, out string why)
+    {
+        var added = _addons.Deliver(path, out why);
+        if (added == 0)
+            return 0;
+
+        foreach (var window in _addons.Windows)
+            RegisterAddonWindow(window);
+
+        var sent = 0;
+        foreach (var controller in Players.GetAll())
+        {
+            if (controller.IsBot)
+                continue;
+
+            PublishAddons(controller);
+            sent++;
+        }
+
+        Log.Write($"[dl-openshell] addon delivered live from {path}: {added} window(s) to {sent} shell(s)");
+        return added;
+    }
+
     /// <summary>Mounts the shell for one player. The addon is not requested when discovery refused it.</summary>
     public void Show(CCitadelPlayerController controller)
     {
@@ -130,7 +165,7 @@ public sealed class ShellMount
         if (!_plugin.Addons.ShellInstalled)
         {
             Log.Write(
-                $"[Openlock] shell REFUSED for {controller.PlayerName}: {LayoutPath} is not in any resolved addon path " +
+                $"[dl-openshell] shell REFUSED for {controller.PlayerName}: {LayoutPath} is not in any resolved addon path " +
                 "(see the path report above); no panel is drawn rather than a guessed one");
             return;
         }
@@ -142,7 +177,7 @@ public sealed class ShellMount
         PublishBuildStatus(controller);
         PublishAddons(controller);
         SendWindow(_active, controller);
-        Log.Write($"[Openlock] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} + {_addons.Windows.Count} addon window(s)");
+        Log.Write($"[dl-openshell] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} + {_addons.Windows.Count} addon window(s)");
     }
 
     public void Open(CCitadelPlayerController? controller)
@@ -152,7 +187,7 @@ public sealed class ShellMount
 
         if (!_plugin.Addons.ShellInstalled)
         {
-            Log.Write($"[Openlock] shell open REFUSED for {controller.PlayerName}: addon layout not present in any search path");
+            Log.Write($"[dl-openshell] shell open REFUSED for {controller.PlayerName}: addon layout not present in any search path");
             return;
         }
 
@@ -191,8 +226,8 @@ public sealed class ShellMount
         }
 
         Log.Write(sent > 0
-            ? $"[Openlock] observer XML '{windowId}' sent to {sent} shell(s) at {window.LayoutPath}"
-            : $"[Openlock] observer XML '{windowId}' has no connected shell");
+            ? $"[dl-openshell] observer XML '{windowId}' sent to {sent} shell(s) at {window.LayoutPath}"
+            : $"[dl-openshell] observer XML '{windowId}' has no connected shell");
         return sent;
     }
 
@@ -202,7 +237,7 @@ public sealed class ShellMount
             return;
 
         UI.Panel(RootPanel).Set(controller.Recipients, "active", "");
-        Log.Write($"[Openlock] shell hidden for {controller.PlayerName}");
+        Log.Write($"[dl-openshell] shell hidden for {controller.PlayerName}");
     }
 
     /// <summary>Reads back the client's addon status once, so a broken addon is in the log.</summary>
@@ -218,8 +253,8 @@ public sealed class ShellMount
             {
                 _lastBuildLog = _build.BuildJson;
                 Log.Write(_build.HasBuild
-                    ? $"[Openlock] build status published ({_build.BuildJson.Length} bytes)"
-                    : "[Openlock] build status cleared; shell uses its baked record");
+                    ? $"[dl-openshell] build status published ({_build.BuildJson.Length} bytes)"
+                    : "[dl-openshell] build status cleared; shell uses its baked record");
             }
         }
 
@@ -232,7 +267,7 @@ public sealed class ShellMount
             if (!_lastState.TryGetValue(controller.Slot, out var previous) || previous != state)
             {
                 _lastState[controller.Slot] = state;
-                Log.Write($"[Openlock] shell addon state for {controller.PlayerName}: {previous} -> {state}");
+                Log.Write($"[dl-openshell] shell addon state for {controller.PlayerName}: {previous} -> {state}");
             }
             if (state is AddonState.Failed)
             {
@@ -241,7 +276,7 @@ public sealed class ShellMount
 
                 _addonFailedLogged = true;
                 Log.Write(
-                    $"[Openlock] shell REFUSED slot={controller.Slot}: {LayoutPath} did not mount on that client; " +
+                    $"[dl-openshell] shell REFUSED slot={controller.Slot}: {LayoutPath} did not mount on that client; " +
                     "the shell stays closed (no silent substitute)");
                 continue;
             }
@@ -254,7 +289,7 @@ public sealed class ShellMount
                 PublishBuildStatus(controller);
                 PublishAddons(controller);
                 SendWindow(_active, controller);
-                Log.Write($"[Openlock] shell addon ready for {controller.PlayerName}; active '{_active}' re-sent");
+                Log.Write($"[dl-openshell] shell addon ready for {controller.PlayerName}; active '{_active}' re-sent");
             }
 
             if (buildChanged)
@@ -270,24 +305,24 @@ public sealed class ShellMount
         var caller = e.Caller;
         var raw = e.ArgAt(0);
         Log.Write(
-            $"[Openlock] layout SAVE raw args={e.Args.Length} len={raw.Length} " +
+            $"[dl-openshell] layout SAVE raw args={e.Args.Length} len={raw.Length} " +
             $"text='{(raw.Length > 300 ? raw[..300] + "…" : raw)}'");
         if (!_layouts.TryParse(raw, out var scheme, out var windows, out var why))
         {
-            Log.Write($"[Openlock] layout SAVE REFUSED by {NameOf(caller)}: {why}");
+            Log.Write($"[dl-openshell] layout SAVE REFUSED by {NameOf(caller)}: {why}");
             PublishLayout(caller, "layout not saved: " + why);
             return;
         }
 
         if (!_layouts.Save(scheme, windows, out why))
         {
-            Log.Write($"[Openlock] layout SAVE FAILED scheme={scheme} by {NameOf(caller)}: {why}");
+            Log.Write($"[dl-openshell] layout SAVE FAILED scheme={scheme} by {NameOf(caller)}: {why}");
             PublishLayout(caller, "layout not saved: " + why);
             return;
         }
 
         Log.Write(
-            $"[Openlock] layout saved scheme={scheme} windows={windows.Count} " +
+            $"[dl-openshell] layout saved scheme={scheme} windows={windows.Count} " +
             $"file={_layouts.PathFor(scheme)} by {NameOf(caller)}");
         if (caller is not null)
             UI.Panel(RootPanel).Set(caller.Recipients, "layoutrequest", "");
@@ -302,13 +337,13 @@ public sealed class ShellMount
         var scheme = (e.ArgAt(0) ?? "").Trim().ToLowerInvariant();
         if (!LayoutProfiles.IsValidScheme(scheme))
         {
-            Log.Write($"[Openlock] layout LOAD REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
+            Log.Write($"[dl-openshell] layout LOAD REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
             PublishLayout(e.Caller, "layout not loaded: invalid scheme");
             return;
         }
 
         var exists = _layouts.HasProfile(scheme);
-        Log.Write($"[Openlock] layout load scheme={scheme} exists={exists} by {NameOf(e.Caller)}");
+        Log.Write($"[dl-openshell] layout load scheme={scheme} exists={exists} by {NameOf(e.Caller)}");
         PublishLayout(e.Caller, exists
             ? $"layout loaded · {scheme}"
             : $"no saved layout for '{scheme}'; package defaults remain");
@@ -322,19 +357,19 @@ public sealed class ShellMount
         var scheme = (e.ArgAt(0) ?? "").Trim().ToLowerInvariant();
         if (!LayoutProfiles.IsValidScheme(scheme))
         {
-            Log.Write($"[Openlock] layout RESET REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
+            Log.Write($"[dl-openshell] layout RESET REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
             PublishLayout(e.Caller, "layout not reset: invalid scheme");
             return;
         }
 
         if (!_layouts.Reset(scheme, out var why))
         {
-            Log.Write($"[Openlock] layout RESET FAILED scheme={scheme} by {NameOf(e.Caller)}: {why}");
+            Log.Write($"[dl-openshell] layout RESET FAILED scheme={scheme} by {NameOf(e.Caller)}: {why}");
             PublishLayout(e.Caller, "layout not reset: " + why);
             return;
         }
 
-        Log.Write($"[Openlock] layout reset scheme={scheme} by {NameOf(e.Caller)}");
+        Log.Write($"[dl-openshell] layout reset scheme={scheme} by {NameOf(e.Caller)}");
         PublishLayout(e.Caller, $"layout reset · {scheme} · package defaults");
     }
 
@@ -382,7 +417,7 @@ public sealed class ShellMount
             sent++;
         }
 
-        Log.Write($"[Openlock] layout save requested for {sent} connected shell(s)");
+        Log.Write($"[dl-openshell] layout save requested for {sent} connected shell(s)");
     }
 
     private static string NameOf(CCitadelPlayerController? controller) =>

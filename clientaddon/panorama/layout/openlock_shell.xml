@@ -35,7 +35,7 @@
              never covered by a window. Pinned windows stay beside it while the shell is closed. -->
         <Panel id="LauncherBar" class="LauncherBar">
             <Panel id="LauncherButton" class="LauncherButton" onmouseactivate="OpenlockToggle()">
-                <Label id="LauncherLabel" class="LauncherLabel" text="Openlock" />
+                <Label id="LauncherLabel" class="LauncherLabel" text="dl-openshell" />
             </Panel>
             <Panel id="SchemeButton" class="SchemeButton" onmouseactivate="OpenlockCycleScheme()">
                 <Label id="SchemeLabel" class="SchemeLabel" text="D" />

@@ -11,6 +11,7 @@ clientaddon/logs/
 # Build output (install.ps1 regenerates these)
 dist/
 *.vpk
+release/openshell-player.sha256
 shell/alpha-shell/build.json
 src/**/bin/
 src/**/obj/

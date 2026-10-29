@@ -104,15 +104,15 @@ public sealed class PatchRecipe
     /// </summary>
     public void Report(string path, Func<string, float?>? readLive = null)
     {
-        Log.Write($"[Openlock] recipe {Format} {Package} {Version} ({Path.GetFileName(path)})");
-        Log.Write($"[Openlock]   {Records.Count} record(s), {Records.Count(r => r.Refused)} refused by declaration");
+        Log.Write($"[dl-openshell] recipe {Format} {Package} {Version} ({Path.GetFileName(path)})");
+        Log.Write($"[dl-openshell]   {Records.Count} record(s), {Records.Count(r => r.Refused)} refused by declaration");
 
         foreach (var record in Records)
         {
             if (record.Refused)
             {
                 Log.Write(
-                    $"[Openlock]   REFUSED {record.Kind}/{record.Name} target={record.Field("target")}: " +
+                    $"[dl-openshell]   REFUSED {record.Kind}/{record.Name} target={record.Field("target")}: " +
                     $"{record.Reason ?? "no reason declared"}");
                 continue;
             }
@@ -122,31 +122,31 @@ public sealed class PatchRecipe
                 var live = readLive(record.Name);
                 if (live is null)
                 {
-                    Log.Write($"[Openlock]   REFUSED setting/{record.Name}: not present on this build");
+                    Log.Write($"[dl-openshell]   REFUSED setting/{record.Name}: not present on this build");
                     continue;
                 }
 
                 if (!float.TryParse(record.Field("baseline"), out var declared))
                 {
-                    Log.Write($"[Openlock]   REFUSED setting/{record.Name}: baseline not declared (live {live:0.##})");
+                    Log.Write($"[dl-openshell]   REFUSED setting/{record.Name}: baseline not declared (live {live:0.##})");
                     continue;
                 }
 
                 if (MathF.Abs(live.Value - declared) > 0.001f)
                 {
                     Log.Write(
-                        $"[Openlock]   REFUSED setting/{record.Name}: baseline mismatch, declared {declared:0.##}, " +
+                        $"[dl-openshell]   REFUSED setting/{record.Name}: baseline mismatch, declared {declared:0.##}, " +
                         $"live {live:0.##}");
                     continue;
                 }
 
                 Log.Write(
-                    $"[Openlock]   accepted setting/{record.Name}: baseline {declared:0.##} matched, " +
+                    $"[dl-openshell]   accepted setting/{record.Name}: baseline {declared:0.##} matched, " +
                     $"target {record.Field("target")}");
                 continue;
             }
 
-            Log.Write($"[Openlock]   accepted {record.Kind}/{record.Name} target={record.Field("target")}");
+            Log.Write($"[dl-openshell]   accepted {record.Kind}/{record.Name} target={record.Field("target")}");
         }
     }
 }

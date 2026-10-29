@@ -1,6 +1,6 @@
-# Openlock UI Shell
+# dl-openshell UI Shell
 
-Openlock is a **Panorama UI shell for Deadlock**: a window manager that runs over the live game,
+dl-openshell is a **Panorama UI shell for Deadlock**: a window manager that runs over the live game,
 frames the game's own HUD panels without reparenting them, and adds a launcher bar, taskbar,
 toasts, a tools view and a small desktop-style workspace. The UI shell is the primary deliverable
 and the release product. It mounts as a normal `pak01_dir.vpk` addon and does not require any
@@ -21,7 +21,15 @@ server-side plugin or custom game mode.
 - Mounts windows declared by Deadworks addon packages. A package is a real shploingus
   `SHPKG002`/`SHPKG003` frame (`.shpkg`), loose or inside a VPK; the frame's digest is checked
   before its `shploingus.recipe/3` source is read. Each window's title-bar controls are the
-  package's own `layout`/`behavior` projection, including whether it may be pinned.
+  package's own `layout`/`behavior` projection, including whether it may be pinned. Source XML is
+  rendered as a client-built DOM tree, so its controls stay clickable; compiled-only packages keep
+  the mounted `BLoadLayout` path.
+- Delivers a package to already-connected players with `dl_openshell_deliver`, the live bridge:
+  the XML and CSS travel in the addon payload and the shell builds the window without a new
+  resource path, VPK mount or reconnect.
+- Reports in the World window the current server hostname, map, player count, the maps the engine
+  can load and the client content actually mounted; the API window describes the Deadworks API
+  surface this plugin builds on.
 - Includes a console that opens any declared window or loads any Panorama layout present in the
   installed game, including layouts contributed by mounted addons.
 
@@ -29,12 +37,15 @@ server-side plugin or custom game mode.
 
 ### Release install
 
-Download `install.ps1` from the [latest release](https://github.com/alacripose/dl-openshell/releases/latest),
-put it in `game/bin/win64` beside `deadlock.exe`, close Deadlock, and run it. The release script
-downloads `openlock-player.vpk`, verifies its published SHA-256, installs it under
+Download `install.cmd` and `install.ps1` from the [latest release](https://github.com/alacripose/dl-openshell/releases/latest),
+put both in `game/bin/win64` beside `deadlock.exe`, close Deadlock, and double-click `install.cmd`.
+Windows blocks a downloaded `.ps1` under the default execution policy, so the launcher starts it
+with a process-scoped bypass; `install.ps1` stays the installer. The release script asks for the
+shell grade, downloads `openshell-player.vpk`, verifies its published SHA-256, installs it under
 `game/citadel/addons/mods`, and adds that directory to `SearchPaths`. It does not require a
 checkout, Python, or the CSDK, and it never overwrites a `pak01_dir.vpk` owned by another mod
-manager.
+manager. To run the script directly instead, right-click it → Properties → Unblock, then choose
+“Run with PowerShell”.
 
 The public landing page is [the Pages site](https://alacripose.github.io/dl-openshell/). Release
 assets are built locally because compiling Panorama needs the game's CSDK; see
@@ -54,7 +65,7 @@ it is targeting, so the layout catalog, game palette, tools and build record des
 copy rather than a developer's checkout. A minimal install simply produces a smaller catalog. It
 then assembles `clientaddon/`, compiles the Panorama resources, packs
 `dist/openlock_ui/pak01_dir.vpk`, installs it under `game/citadel/addons/mods`, and adds that
-directory to the game's `SearchPaths`. It removes an older loose-file copy and old Openlock search
+directory to the game's `SearchPaths`. It removes an older loose-file copy and old dl-openshell search
 paths so exactly one source is mounted, while leaving other tools' addon folders alone.
 
 On an interactive run the installer asks for a grade: `dev` keeps every Deadlock and Deadworks
@@ -89,10 +100,10 @@ The installer can mount prebuilt Panorama packages from any git repository. A pa
 ```
 
 The package is cloned under `openlock-packages/`, its prebuilt VPK is verified and copied to
-`game/citadel/addons/mods/packages/<id>` and that directory joins Openlock's search paths.
+`game/citadel/addons/mods/packages/<id>` and that directory joins dl-openshell's search paths.
 The installer refuses an archive whose VPK magic is wrong, a path that escapes the checkout, or a
 `target` that does not match this copy's `steam.inf`. Pass `-ForcePackage` only for a known-good
-mismatch, and `-PackageRef <branch-or-tag>` to pin every package checkout. Openlock never runs a
+mismatch, and `-PackageRef <branch-or-tag>` to pin every package checkout. dl-openshell never runs a
 package's scripts during install, and a package cannot write fonts or `gameinfo.gi`.
 
 ### Addon windows and controls
@@ -104,13 +115,24 @@ frame's payload digest, parses the recipe with the same 13-key window grammar th
 uses, and sends only packages with no refusals to the client.
 
 A window's delivered XML layout is looked up as `panorama/layout/<window-id>.xml` (or
-`<record-id>.xml`) in the VPK that carries the package. The resource path is the archive path
-without its `panorama/` prefix, so `panorama/layout/my_panel.xml` becomes
-`file://{resources}/layout/my_panel.xml`. A loose `.shpkg` is still read and its windows are
-listed, but its artifacts are not a mounted Panorama resource; ship the package and its XML in a
-VPK when the window must draw. A window with no delivered layout keeps its declared content kind;
-one with a layout opens as `addon-layout` and mounts the XML with `BLoadLayout`. The layout's own
-controls are the addon's, so the package does not need a second control grammar.
+`<record-id>.xml`) in the VPK that carries the package. The source XML is parsed into a
+`liveTree` in the addon payload: the included CSS class rules are folded onto each node, and the
+shell builds every panel with `$.CreatePanel`. Labels and images are pointer-transparent; panels
+and buttons are hit-testable, so a control cannot be swallowed by a transparent layout host. This
+is the port of the original client-side DOM renderer, and it is the path a package uses whenever
+its source XML is present. A package carrying only compiled resources keeps the mounted path: the
+resource is looked up as `panorama/layout/<window-id>.vxml_c` and mounted with `BLoadLayout`.
+A loose `.shpkg` is read and its windows are listed; with XML artifacts it can be drawn without a
+VPK. A window with neither keeps its declared content kind.
+
+A package can also arrive after the client is already in the game, where Deadworks and Deadlock
+cannot add a resource path live. Run `dl_openshell_deliver <path-to.shpkg-or-addon.vpk>` on the
+server: the frame is verified, the XML/CSS become the same `liveTree`, and the updated addon
+payload is pushed to every connected shell without a reconnect or a file in the game tree.
+
+A copyable end-to-end example lives in [examples/motd-addon](examples/motd-addon/README.md): a real
+`SHPKG003` package that carries a compiled Server MOTD layout, packs it into a VPK, and installs
+where `AddonPackages` already scans. Build it with `examples\motd-addon\build.ps1`.
 
 A package's windows declare their own title-bar controls through `layout` and `behavior`: `pin` is
 offered only when `pinnable` is true; `minimize`, `maximize` and `close` are offered only when
@@ -118,6 +140,13 @@ offered only when `pinnable` is true; `minimize`, `maximize` and `close` are off
 window has all four, and the context menu follows the same list. A package with a broken digest,
 unknown content or lane, missing key, duplicate id or unusable geometry is refused by archive,
 line and window; none of its windows are partially mounted.
+
+### Publishing an addon card
+
+The landing page renders addons from [landing/tools/addons.json](landing/tools/addons.json). Add one
+object to `addons` with `name`, `version`, `author`, `format`, `target`, `note`, and optionally
+`download` and `source`. `builtIn: true` adds the built-in tag. The page reads the catalog at load
+and falls back to its inline copy when the file is not reachable; no page edit is needed.
 
 ### Observer XML surfaces
 
@@ -194,6 +223,7 @@ generated file or a successful pack as proof that the UI drew.
 ## Files
 
 - [install.ps1](install.ps1) — compile, pack and mount the UI addon.
+- [install.cmd](install.cmd) — double-click launcher for a downloaded install.ps1.
 - [clientaddon/panorama/layout/openlock_shell.xml](clientaddon/panorama/layout/openlock_shell.xml) — shell layout.
 - [clientaddon/panorama/scripts/openlock_shell.js](clientaddon/panorama/scripts/openlock_shell.js) — window manager, live-panel hooks, schemes, toasts, tools.
 - [clientaddon/panorama/styles/openlock_shell.css](clientaddon/panorama/styles/openlock_shell.css) — layout and base chrome.

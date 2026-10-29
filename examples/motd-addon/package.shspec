@@ -1,0 +1,18 @@
+shploingus.recipe/3
+package	motd-demo	1-0-0
+# A minimal window package: one MOTD surface, one content kind, and the title-bar controls the
+# shell is allowed to draw. The XML that draws it is compiled into the VPK beside this package.
+window	motd-panel
+	title	Server MOTD
+	content	readout
+	lane	frame
+	extent	square-pixels
+	geometry	140 140 440 300
+	min-size	280 150
+	opacity	950
+	elevation	1
+	theme-role	panel
+	pinnable	true
+	layout	title-position,minimize,maximize,close
+	behavior	drag,resize,minimize,maximize,close
+	record-id	motd-panel

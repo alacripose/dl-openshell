@@ -38,6 +38,9 @@
     var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
     var currentScheme = "";
     var currentGrade = "dev";
+    // The launcher shows the Steam persona on this machine. dl-openshell is only the fallback for
+    // a client that cannot expose a persona, never a build-time player name.
+    var shellDisplayName = "dl-openshell";
     var observerXmlPanels = {};
     var observerXmlAt = 0;
     var savedProfiles = {};
@@ -291,7 +294,7 @@
             root.RemoveClass("GradePlayer");
             root.AddClass(value === "observer" ? "GradeObserver" : value === "player" ? "GradePlayer" : "GradeDev");
         } catch (e) {}
-        $.Msg("[Openlock] grade: ", currentGrade);
+        $.Msg("[dl-openshell] grade: ", currentGrade);
     }
 
     function gradeFromRecords() {
@@ -337,7 +340,7 @@
         }
         for (var k = 0; k < hosts.length; k++) {
             try { hosts[k].AddClass(schemeClass(scheme.id)); } catch (e) {
-                $.Msg("[Openlock] scheme class REFUSED for '", scheme.id, "': ", String(e));
+                $.Msg("[dl-openshell] scheme class REFUSED for '", scheme.id, "': ", String(e));
             }
         }
 
@@ -409,9 +412,9 @@
     function quitForUpdate() {
         try {
             $.DispatchEvent("CitadelConCommand", "quit");
-            $.Msg("[Openlock] update restart: quit dispatched");
+            $.Msg("[dl-openshell] update restart: quit dispatched");
         } catch (e) {
-            $.Msg("[Openlock] update restart REFUSED: no quit command on this build: ", String(e));
+            $.Msg("[dl-openshell] update restart REFUSED: no quit command on this build: ", String(e));
         }
     }
 
@@ -649,7 +652,7 @@
                 b.panel.style.transform = transform;
                 perf.writes++;
             } catch (e) {
-                $.Msg("[Openlock] shell transform REFUSED for '", win.id, "': ", String(e));
+                $.Msg("[dl-openshell] shell transform REFUSED for '", win.id, "': ", String(e));
             }
         }
 
@@ -676,13 +679,13 @@
         // layout they cause, not just the JS property assignments.
         var f = frames[id];
         if (f && f.frame) {
-            try { var flush = f.frame.actuallayoutwidth; if (flush < 0) $.Msg("[Openlock] layout read negative"); } catch (e) {}
+            try { var flush = f.frame.actuallayoutwidth; if (flush < 0) $.Msg("[dl-openshell] layout read negative"); } catch (e) {}
         }
         var b = bound[id];
         if (b && b.panel) {
             // Read the live panel too: the frame read flushes the chrome, but the transform on the
             // game panel is what a panel window's resize costs, so its layout must be forced here.
-            try { var panelFlush = b.panel.actuallayoutwidth; if (panelFlush < 0) $.Msg("[Openlock] panel layout read negative"); } catch (e) {}
+            try { var panelFlush = b.panel.actuallayoutwidth; if (panelFlush < 0) $.Msg("[dl-openshell] panel layout read negative"); } catch (e) {}
         }
         var elapsed = Math.max(0, Date.now() - started);
         if (!perf.cost[id]) perf.cost[id] = { total: 0, max: 0, avg: 0, samples: 0 };
@@ -940,7 +943,7 @@
             var natural = naturalOf(panel);
             if (!natural) continue;
             bound[win.id] = { panel: panel, natural: natural };
-            $.Msg("[Openlock] shell framed '", win.id, "' → ",
+            $.Msg("[dl-openshell] shell framed '", win.id, "' → ",
                 candidates[i].name || candidates[i].kind, " ", Math.round(natural.w), "×",
                 Math.round(natural.h));
             return bound[win.id];
@@ -997,7 +1000,7 @@
             }
             b.panel.style.opacity = "1";
         } catch (e) {
-            $.Msg("[Openlock] pin visibility REFUSED for '", id, "': ", String(e));
+            $.Msg("[dl-openshell] pin visibility REFUSED for '", id, "': ", String(e));
         }
     }
 
@@ -1646,7 +1649,7 @@
     }
 
     function refuseFeature(title, why) {
-        $.Msg("[Openlock] REFUSED " + title + ": " + why);
+        $.Msg("[dl-openshell] REFUSED " + title + ": " + why);
         var key = title + "|" + why;
         if (reportedRefusals[key]) return;
         reportedRefusals[key] = true;
@@ -1870,7 +1873,7 @@
     function openWindow(id) {
         var win = windowById(id);
         if (!win) {
-            $.Msg("[Openlock] shell open REFUSED: no window '", id, "'");
+            $.Msg("[dl-openshell] shell open REFUSED: no window '", id, "'");
             return;
         }
 
@@ -1946,7 +1949,7 @@
             var refusal = $.CreatePanel("Label", panel, "");
             refusal.AddClass("ToastBody");
             refusal.text = "Observer XML refused: " + String(e);
-            $.Msg("[Openlock] observer XML REFUSED ", win.layoutPath, ": ", String(e));
+            $.Msg("[dl-openshell] observer XML REFUSED ", win.layoutPath, ": ", String(e));
         }
 
         observerXmlPanels[win.id] = { panel: panel, host: host };
@@ -2344,10 +2347,10 @@
         drawGeometry();
         if (ignored) {
             var note = "layout profile ignored " + ignored + " window(s) that no longer exist or are invalid";
-            $.Msg("[Openlock] " + note + " scheme=" + key);
+            $.Msg("[dl-openshell] " + note + " scheme=" + key);
             if (announce) globalThis.OpenlockToast("Layout profile", note, "", true);
         }
-        $.Msg("[Openlock] layout profile applied scheme=", key, " windows=", known, " ignored=", ignored);
+        $.Msg("[dl-openshell] layout profile applied scheme=", key, " windows=", known, " ignored=", ignored);
         sendArgs("layout-applied", key + "|" + known + "|" + ignored);
         if (announce && known) {
             globalThis.OpenlockToast("Layout loaded", key + " · " + known + " window(s)", "", false);
@@ -2366,7 +2369,7 @@
 
         var payload = null;
         try { payload = JSON.parse(raw); } catch (e) {
-            $.Msg("[Openlock] layout payload unreadable: ", String(e));
+            $.Msg("[dl-openshell] layout payload unreadable: ", String(e));
             if (!layoutNoticesSeen.payload) {
                 layoutNoticesSeen.payload = true;
                 globalThis.OpenlockToast("Layout profile", "payload unreadable; package defaults remain", "", true);
@@ -2375,7 +2378,7 @@
         }
 
         if (!payload || payload.format !== "openlock.layouts/1") {
-            $.Msg("[Openlock] layout payload ignored: unknown format");
+            $.Msg("[dl-openshell] layout payload ignored: unknown format");
             return;
         }
 
@@ -2385,7 +2388,7 @@
             var text = String(notices[i]);
             if (!text || layoutNoticesSeen[text]) continue;
             layoutNoticesSeen[text] = true;
-            $.Msg("[Openlock] layout notice: ", text);
+            $.Msg("[dl-openshell] layout notice: ", text);
             globalThis.OpenlockToast("Layout profile", text, "", true);
         }
 
@@ -2424,7 +2427,7 @@
         try {
             $.DispatchEvent("CitadelConCommand", "hud_free_cursor " + (want ? "1" : "-1"));
         } catch (e) {
-            $.Msg("[Openlock] shell cursor dispatch failed: ", String(e));
+            $.Msg("[dl-openshell] shell cursor dispatch failed: ", String(e));
         }
     }
 
@@ -2433,7 +2436,7 @@
             $.DispatchEvent("CitadelConCommand",
                 "dw_ui openlock-shell|" + eventName + (arg === undefined ? "" : ":" + arg));
         } catch (e) {
-            $.Msg("[Openlock] shell send failed: ", String(e));
+            $.Msg("[dl-openshell] shell send failed: ", String(e));
         }
     }
 
@@ -2444,7 +2447,7 @@
             $.DispatchEvent("CitadelConCommand",
                 "dw_ui openlock-shell|" + eventName + "|" + String(arg === undefined ? "" : arg));
         } catch (e) {
-            $.Msg("[Openlock] shell send failed: ", String(e));
+            $.Msg("[dl-openshell] shell send failed: ", String(e));
         }
     }
 
@@ -2684,7 +2687,7 @@
             dragCapture.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
         } catch (e) {
             dragCapture = null;
-            $.Msg("[Openlock] drag capture unavailable: ", String(e));
+            $.Msg("[dl-openshell] drag capture unavailable: ", String(e));
         }
     }
 
@@ -3120,13 +3123,13 @@
         try { payload = JSON.parse(raw); } catch (e) {
             if (!liveStatusWarned.addons) {
                 liveStatusWarned.addons = true;
-                $.Msg("[Openlock] addon payload unreadable: ", String(e));
+                $.Msg("[dl-openshell] addon payload unreadable: ", String(e));
             }
             return;
         }
 
         if (!payload || payload.format !== "openlock.addons/2") {
-            $.Msg("[Openlock] addon payload ignored: unknown format");
+            $.Msg("[dl-openshell] addon payload ignored: unknown format");
             return;
         }
 
@@ -3142,7 +3145,7 @@
         }
 
         if (added) {
-            $.Msg("[Openlock] addon windows merged: ", added, " from ", data.addonPackages.length, " package(s)");
+            $.Msg("[dl-openshell] addon windows merged: ", added, " from ", data.addonPackages.length, " package(s)");
             refreshOpenWindow("mods");
             refreshOpenWindow("__windows");
             updateObserverXml(true);
@@ -3161,7 +3164,7 @@
                 try { liveBuild = JSON.parse(raw); } catch (e) {
                     if (!liveStatusWarned.build) {
                         liveStatusWarned.build = true;
-                        $.Msg("[Openlock] build record unreadable: ", String(e));
+                        $.Msg("[dl-openshell] build record unreadable: ", String(e));
                     }
                 }
             }
@@ -3178,7 +3181,7 @@
                 try { liveUpdate = JSON.parse(updateRaw); } catch (e) {
                     if (!liveStatusWarned.update) {
                         liveStatusWarned.update = true;
-                        $.Msg("[Openlock] update record unreadable: ", String(e));
+                        $.Msg("[dl-openshell] update record unreadable: ", String(e));
                     }
                 }
             }
@@ -3570,6 +3573,89 @@
         return runConsole(String(text || ""));
     };
 
+    // A package layout is drawn from its node tree, not BLoadLayout. This is the port of the
+    // original client-side DOM path: every panel is created with $.CreatePanel, so hittest and
+    // hittestchildren are ours to set and a control cannot be swallowed by a pointer-transparent
+    // host. A package mounted as a VPK still uses BLoadLayout only when it shipped no source XML.
+    var liveTags = {
+        Panel: true, Label: true, Button: true, Image: true, TextEntry: true,
+        ProgressBar: true, Slider: true, DropDown: true
+    };
+
+    function liveStyleKey(name) {
+        var parts = String(name || "").split("-");
+        var key = parts[0] || "";
+        for (var i = 1; i < parts.length; i++) {
+            key += parts[i].charAt(0).toUpperCase() + parts[i].substring(1);
+        }
+        return key;
+    }
+
+    function buildLiveNode(parent, node, depth, addon) {
+        if (!parent || !node || depth > 24) return null;
+        var tag = liveTags[node.tag] ? node.tag : "Panel";
+        var panel = null;
+        try {
+            panel = $.CreatePanel(tag, parent, node.id || "");
+        } catch (e) {
+            try { panel = $.CreatePanel("Panel", parent, ""); } catch (e2) { return null; }
+        }
+        if (!panel) return null;
+
+        var classes = String(node.class || "").split(/\s+/);
+        for (var c = 0; c < classes.length; c++) {
+            if (classes[c]) {
+                try { panel.AddClass(classes[c]); } catch (e) {}
+            }
+        }
+
+        if (node.text !== undefined && node.text !== null && node.text !== "") {
+            try {
+                if (tag === "Label" || tag === "Button") panel.text = String(node.text);
+                else panel.SetAttributeString("text", String(node.text));
+            } catch (e) {}
+        }
+
+        var attrs = node.attrs || {};
+        for (var key in attrs) {
+            if (!attrs.hasOwnProperty(key)) continue;
+            var value = String(attrs[key]);
+            try {
+                if (key === "src" && typeof panel.SetImage === "function") panel.SetImage(value);
+                else if (key === "enabled") panel.enabled = value !== "false";
+                else if (key === "visible") panel.style.visibility = value === "false" ? "collapse" : "visible";
+                else panel.SetAttributeString(key, value);
+            } catch (e) {}
+        }
+
+        var styles = node.styles || {};
+        for (var prop in styles) {
+            if (!styles.hasOwnProperty(prop)) continue;
+            try { panel.style[liveStyleKey(prop)] = String(styles[prop]); } catch (e) {}
+        }
+
+        // The old DOM path set these itself. A Label or Image that takes the pointer hides the
+        // button or row behind it; a Panel that ignores the pointer makes every child dead.
+        var pointer = tag !== "Label" && tag !== "Image" && tag !== "ProgressBar";
+        panel.hittest = pointer;
+        panel.hittestchildren = true;
+
+        var children = node.children || [];
+        for (var i = 0; i < children.length; i++) {
+            buildLiveNode(panel, children[i], depth + 1, addon);
+        }
+        return panel;
+    }
+
+    function renderLiveTree(host, win) {
+        var tree = win.liveTree || [];
+        if (!tree.length) return false;
+        for (var i = 0; i < tree.length; i++) {
+            buildLiveNode(host, tree[i], 0, win.addon || "");
+        }
+        return true;
+    }
+
     function renderOwn(win, body) {
         body.RemoveAndDeleteChildren();
 
@@ -3727,14 +3813,20 @@
         }
 
         if (kind === "addon-layout") {
-            headingXd(body, win.addonName || win.addon || "addon layout");
+            var addonHost = $.CreatePanel("Panel", body, "");
+            addonHost.AddClass("LayoutHost");
+            addonHost.hittest = true;
+            addonHost.hittestchildren = true;
+
+            if (renderLiveTree(addonHost, win)) return;
+
             if (!win.layoutPath) {
                 rowXd(body, "the package declares no delivered layout for this window", "ViewMuted");
                 return;
             }
-            rowXd(body, win.layoutPath, "ViewMuted");
-            var addonHost = $.CreatePanel("Panel", body, "");
-            addonHost.AddClass("LayoutHost");
+
+            // Compiled-only packages keep the mounted-resource path. Source XML packages take the
+            // DOM path above, where every control owns its pointer surface.
             try {
                 addonHost.BLoadLayout(win.layoutPath, false, false);
             } catch (e) {
@@ -3771,15 +3863,6 @@
                 })(layouts[l]);
             }
             if (layouts.length > 24) rowXd(body, "type to open any of the other " + (layouts.length - 24), "ViewMuted");
-            return;
-        }
-
-        if (kind === "api-viewer") {
-            headingXd(body, "openlock shell");
-            rowXd(body, "layout: openlock_shell.xml");
-            rowXd(body, "data: openlock_shell_data.js (generated from package.shspec)");
-            rowXd(body, "live panels: framed, never reparented");
-            if (!connected()) rowXd(body, "server: not connected", "ViewMuted");
             return;
         }
 
@@ -3927,7 +4010,7 @@
         try {
             if (typeof Steam !== "undefined" && Steam.GetPersonaName) name = String(Steam.GetPersonaName() || "");
         } catch (e) {
-            $.Msg("[Openlock] Steam persona unavailable: ", String(e));
+            $.Msg("[dl-openshell] Steam persona unavailable: ", String(e));
         }
         if (!name) {
             try {
@@ -3936,7 +4019,8 @@
         }
         // Never fall back to a value baked at build time: that value belongs to the builder, not
         // to whoever is running this install. If Steam is unavailable, show the shell name.
-        if (launcherLabel) launcherLabel.text = name || "Openlock";
+        shellDisplayName = name || "dl-openshell";
+        if (launcherLabel) launcherLabel.text = shellDisplayName;
     }
 
     // A click or leaving the shell retires the pointer tooltip. The context menu has its own
@@ -3945,7 +4029,7 @@
         root.SetPanelEvent("onmouseactivate", hideDwell);
         root.SetPanelEvent("onmouseout", hideDwell);
     } catch (e) {
-        $.Msg("[Openlock] tooltip lifetime REFUSED: ", String(e));
+        $.Msg("[dl-openshell] tooltip lifetime REFUSED: ", String(e));
     }
 
     // Panel events route up the parent chain. The root therefore keeps a drag alive while the
@@ -3954,7 +4038,7 @@
         root.SetPanelEvent("onmousemove", function () { if (pointerDrag) movePointerDrag(arguments); });
         root.SetPanelEvent("onmouseup", function () { if (pointerDrag) endPointerDrag(true); });
     } catch (e) {
-        $.Msg("[Openlock] drag capture REFUSED: ", String(e));
+        $.Msg("[dl-openshell] drag capture REFUSED: ", String(e));
     }
 
     measureScreen();
@@ -3965,7 +4049,7 @@
     // report, not synthesized input: nothing here moves the cursor or opens anything.
     (function () {
         var at = cursorPoint();
-        $.Msg("[Openlock] pointer api: ", cursorApi, " at ",
+        $.Msg("[dl-openshell] pointer api: ", cursorApi, " at ",
             at ? (Math.round(at.x) + "," + Math.round(at.y)) : "unavailable",
             " screen ", Math.round(screenW), "x", Math.round(screenH),
             " frameTime ", (engineNowMs() >= 0 ? "yes" : "no"));
@@ -3993,11 +4077,11 @@
         if (!build.commit) line.push("no git metadata");
         if (build.generatedAt) line.push(build.generatedAt);
         globalThis.OpenlockToast(
-            "Openlock " + (build.version ? "v" + build.version : (data.version || "")),
+            shellDisplayName + " " + (build.version ? "v" + build.version : (data.version || "")),
             line.join("  ·  ") || "layout package loaded",
             "",
             false);
-        $.Msg("[Openlock] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
+        $.Msg("[dl-openshell] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
             " commit=", (build.commit || "unknown"), " game=", (build.gameVersion || "unknown"),
             " windows=", data.windows.length, " refusals=", data.refusals.length);
     });

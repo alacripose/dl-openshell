@@ -1,0 +1,41 @@
+.MotdRoot {
+    width: 100%;
+    height: 100%;
+    padding: 18px 20px 16px 20px;
+    flow-children: down;
+    background-color: #0e1116f2;
+}
+
+.MotdKicker {
+    color: #e0b56a;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.MotdTitle {
+    color: #f4e6c8;
+    font-size: 21px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.MotdRule {
+    width: 100%;
+    height: 1px;
+    background-color: #8a6f42;
+    margin: 10px 0 9px 0;
+}
+
+.MotdLine {
+    color: #c9b89c;
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 3px;
+}
+
+.MotdFooter {
+    color: #6f6453;
+    font-size: 10px;
+    margin-top: 10px;
+}

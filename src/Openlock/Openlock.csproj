@@ -40,7 +40,7 @@
           DestinationFolder="$(_PluginDir)"
           SkipUnchangedFiles="false"
           ContinueOnError="WarnAndContinue" />
-    <Message Importance="high" Text="Openlock: deployed $(AssemblyName).dll to $(_PluginDir)" />
+    <Message Importance="high" Text="dl-openshell: deployed $(AssemblyName).dll to $(_PluginDir)" />
   </Target>
 
   <!-- Declared patch recipes ship next to the plugin; the plugin refuses to apply a base whose

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build Openlock, check the manifest against the built assembly, and install it into Deadworks.
+  Build dl-openshell, check the manifest against the built assembly, and install it into Deadworks.
 
 .DESCRIPTION
   Refuses to deploy when the manifest version and the built assembly version disagree, or when the
@@ -27,7 +27,7 @@ if (-not (Test-Path $apiDll)) {
 $manifestPath = Join-Path $root 'openlock.manifest.json'
 $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 
-Write-Host "Building Openlock $($manifest.version) against $DeadworksDir"
+Write-Host "Building dl-openshell $($manifest.version) against $DeadworksDir"
 dotnet build (Join-Path $root 'src\Openlock\Openlock.csproj') -c Release "-p:DeadworksDir=$DeadworksDir" | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 

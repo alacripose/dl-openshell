@@ -12,7 +12,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 {
     public const string Version = "0.7.0";
 
-    public override string Name => "Openlock";
+    public override string Name => "dl-openshell";
 
     [PluginConfig]
     public OpenlockConfig Config { get; set; } = new();
@@ -48,9 +48,9 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
     public override void OnLoad(bool isReload)
     {
         Log.Banner($"{Config.ModeName} {(isReload ? "reloaded" : "loaded")} v{Version}");
-        Log.Write($"[Openlock] log file: {Log.Path}");
+        Log.Write($"[dl-openshell] log file: {Log.Path}");
         Log.Write(
-            $"[Openlock]   abilities={(Config.DisableHeroAbilities ? "disabled" : "on")} " +
+            $"[dl-openshell]   abilities={(Config.DisableHeroAbilities ? "disabled" : "on")} " +
             $"gravity=-{Config.GravityReduction} friction={Config.Friction} " +
             $"spirit->strength={(Config.SpiritItemsBecomeStrength ? "on" : "off")}");
 
@@ -64,7 +64,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         var recipe = PatchRecipe.Load(recipePath);
         if (recipe is null)
         {
-            Log.Write($"[Openlock] recipe missing at {recipePath}; no base values are declared or applied.");
+            Log.Write($"[dl-openshell] recipe missing at {recipePath}; no base values are declared or applied.");
         }
         else
         {
@@ -73,7 +73,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
         _addons = ClientAddons.Resolve(Config);
         foreach (var line in _addons.ReportLines)
-            Log.Write($"[Openlock] addon {line}");
+            Log.Write($"[dl-openshell] addon {line}");
         _abilityHud.Installed = _addons.HudInstalled;
 
         _shell.Load(Path.Combine(pluginDir, "shell", "alpha-shell"));
@@ -104,7 +104,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         // (or a disable in config) restores the shipped baselines.
         _world.Restore();
         Log.Write(
-            $"[Openlock] {Config.ModeName} unloaded (reload-safe): converted stats and their state are kept.");
+            $"[dl-openshell] {Config.ModeName} unloaded (reload-safe): converted stats and their state are kept.");
     }
 
     public override void OnStartupServer()
@@ -160,7 +160,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
         var pressed = args.ChangedButtons & AbilityLockout.HeroAbilityInputs;
         if (pressed != 0 && _loggedBlocks.Add($"{args.PlayerSlot}|{pressed}"))
-            Log.Write($"[Openlock] ability input blocked slot={args.PlayerSlot} buttons={pressed}");
+            Log.Write($"[dl-openshell] ability input blocked slot={args.PlayerSlot} buttons={pressed}");
     }
 
     // --- Modifier 1b: ability points cannot be spent ----------------------
@@ -189,7 +189,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
         NotifyUpgradeBlocked(args.Pawn);
         Log.Write(
-            $"[Openlock] ability point SPEND REFUSED: {args.Amount:+#;-#;0} " +
+            $"[dl-openshell] ability point SPEND REFUSED: {args.Amount:+#;-#;0} " +
             $"source={args.Source} spendOnly={args.SpendOnly} " +
             $"player={args.Pawn.Controller?.PlayerName ?? "?"}");
 
@@ -207,7 +207,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             return;
 
         _upgradeNotices[controller.Slot] = now;
-        controller.HudAnnounce("OPENLOCK", "Ability upgrades are disabled in this mode.");
+        controller.HudAnnounce(Config.ModeName, "Ability upgrades are disabled in this mode.");
     }
 
     // --- Per-frame work ---------------------------------------------------
@@ -298,7 +298,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         {
             _startupApplied = true;
             Log.Write(
-                $"[Openlock] world applied and read back: {Config.ModeName} " +
+                $"[dl-openshell] world applied and read back: {Config.ModeName} " +
                 $"gravity={_world.AppliedGravity} friction={_world.AppliedFriction}");
         }
     }
@@ -314,7 +314,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         var modifierName = args.ModifierVData.Name;
 
         if (_loggedAdds.Add(item + "|" + modifierName))
-            Log.Write($"[Openlock] modifier add {item} via {modifierName}");
+            Log.Write($"[dl-openshell] modifier add {item} via {modifierName}");
 
         if (string.IsNullOrEmpty(item) || !item.StartsWith("upgrade_", StringComparison.OrdinalIgnoreCase))
             return HookResult.Continue;
@@ -334,36 +334,36 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             return;
 
         var ability = args.Ability?.Ability;
-        Log.Write($"[Openlock] engine: hero ability executed ability={ability?.AbilityName ?? "?"}");
+        Log.Write($"[dl-openshell] engine: hero ability executed ability={ability?.AbilityName ?? "?"}");
     }
 
     // --- Commands ---------------------------------------------------------
 
-    [Command("openlock", Description = "Report the Openlock game mode's state")]
+    [Command("openlock", Description = "Report the dl-openshell game mode's state")]
     public void CmdStatus(Caller caller)
     {
         caller.Reply($"[{Config.ModeName}] v{Version} — {(Config.Enabled ? "enabled" : "disabled")}");
-        caller.Reply($"[OPENLOCK] hero abilities: {(Config.DisableHeroAbilities ? "disabled" : "enabled")}");
+        caller.Reply($"[dl-openshell] hero abilities: {(Config.DisableHeroAbilities ? "disabled" : "enabled")}");
         caller.Reply(
-            $"[OPENLOCK] world: gravity={(int)(_world.AppliedGravity ?? 0)}, " +
+            $"[dl-openshell] world: gravity={(int)(_world.AppliedGravity ?? 0)}, " +
             $"friction={_world.AppliedFriction?.ToString() ?? "unset"}");
-        caller.Reply($"[OPENLOCK] spirit->strength: {_strength.Summary}");
+        caller.Reply($"[dl-openshell] spirit->strength: {_strength.Summary}");
     }
 
     /// <summary>
     /// The mode's server-side shell. Works from the server console or chat, and every verb is
     /// recorded in the log so an operator can see what was done and to whom.
     /// </summary>
-    [Command("openlock_ctl", Description = "Openlock shell: status | steady | repair | restore")]
+    [Command("openlock_ctl", Description = "dl-openshell shell: status | steady | repair | restore")]
     public void CmdShell(Caller caller, string verb = "status") => Shell(caller, verb);
 
-    [Command("openlock-ctl", Description = "Openlock shell: status | steady | repair | restore")]
+    [Command("openlock-ctl", Description = "dl-openshell shell: status | steady | repair | restore")]
     public void CmdShellDashed(Caller caller, string verb = "status") => Shell(caller, verb);
 
     private void Shell(Caller caller, string verb)
     {
         var command = (verb ?? "status").Trim().ToLowerInvariant();
-        Log.Write($"[Openlock] shell '{command}' by {caller.Name}");
+        Log.Write($"[dl-openshell] shell '{command}' by {caller.Name}");
 
         switch (command)
         {
@@ -385,22 +385,22 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
                     touched++;
                 }
 
-                caller.Reply($"[OPENLOCK] {command}: {touched} hero(es) reconciled");
+                caller.Reply($"[dl-openshell] {command}: {touched} hero(es) reconciled");
                 return;
             }
 
             case "restore":
                 _strength.RestoreAll("shell restore");
-                caller.Reply("[OPENLOCK] restored every hero to their captured baseline");
+                caller.Reply("[dl-openshell] restored every hero to their captured baseline");
                 return;
 
             default:
-                caller.Reply("[OPENLOCK] usage: openlock_ctl status|steady|repair|restore");
+                caller.Reply("[dl-openshell] usage: openlock_ctl status|steady|repair|restore");
                 return;
         }
     }
 
-    [Command("openlock_layout", Description = "Openlock layout profiles: status | save")]
+    [Command("openlock_layout", Description = "dl-openshell layout profiles: status | save")]
     public void CmdLayout(Caller caller, string verb = "status")
     {
         var command = (verb ?? "status").Trim().ToLowerInvariant();
@@ -408,20 +408,20 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         {
             case "save":
                 _shell.RequestLayoutSave();
-                caller.Reply("[OPENLOCK] layout save requested from connected shells");
+                caller.Reply("[dl-openshell] layout save requested from connected shells");
                 return;
 
             case "status":
-                caller.Reply($"[OPENLOCK] layout profiles: {_shell.LayoutDirectory}");
+                caller.Reply($"[dl-openshell] layout profiles: {_shell.LayoutDirectory}");
                 return;
 
             default:
-                caller.Reply("[OPENLOCK] usage: openlock_layout status|save");
+                caller.Reply("[dl-openshell] usage: openlock_layout status|save");
                 return;
         }
     }
 
-    [Command("openlock-layout", Description = "Openlock layout profiles: status | save")]
+    [Command("openlock-layout", Description = "dl-openshell layout profiles: status | save")]
     public void CmdLayoutDashed(Caller caller, string verb = "status") => CmdLayout(caller, verb);
 
     [Command("openlock_observer", Description = "Show a package XML observer surface on connected shells")]
@@ -433,21 +433,51 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             var available = _shell.AddonWindows.Where(w => !string.IsNullOrEmpty(w.LayoutPath)).Take(12)
                 .Select(w => w.Id).ToArray();
             caller.Reply(available.Length == 0
-                ? "[OPENLOCK] no package XML observer surface is loaded"
-                : "[OPENLOCK] usage: openlock_observer <window-id>; available: " + string.Join(", ", available));
+                ? "[dl-openshell] no package XML observer surface is loaded"
+                : "[dl-openshell] usage: openlock_observer <window-id>; available: " + string.Join(", ", available));
             return;
         }
 
         var sent = _shell.ShowObserver(id);
         caller.Reply(sent == 0
-            ? $"[OPENLOCK] observer XML '{id}' is not a loaded package window with a mounted XML layout"
-            : $"[OPENLOCK] observer XML '{id}' sent to {sent} shell(s)");
+            ? $"[dl-openshell] observer XML '{id}' is not a loaded package window with a mounted XML layout"
+            : $"[dl-openshell] observer XML '{id}' sent to {sent} shell(s)");
     }
 
     [Command("openlock-observer", Description = "Show a package XML observer surface on connected shells")]
     public void CmdObserverDashed(Caller caller, string windowId = "") => CmdObserver(caller, windowId);
 
-    [Command("openlock_ui", Description = "Openlock shell panel: open | hide")]
+    /// <summary>
+    /// The live bridge. Deadworks and Deadlock cannot mount a new resource path while a client is
+    /// running, so a package is read here, its XML becomes a node tree in the addon payload, and
+    /// every connected shell builds the windows itself. Nothing is written into the game tree.
+    /// </summary>
+    [Command("dl_openshell_deliver", Description = "Deliver a .shpkg or addon VPK to connected shells live")]
+    public void CmdDeliver(Caller caller, string path = "")
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            caller.Reply("[dl-openshell] usage: dl_openshell_deliver <path-to.shpkg-or-addon.vpk>");
+            return;
+        }
+
+        var added = _shell.DeliverAddon(path.Trim().Trim('"'), out var why);
+        caller.Reply(added == 0
+            ? $"[dl-openshell] live delivery refused: {why}"
+            : $"[dl-openshell] delivered {added} window(s) live; connected shells rebuild the payload now");
+    }
+
+    [Command("dl-openshell-deliver", Description = "Deliver a .shpkg or addon VPK to connected shells live")]
+    public void CmdDeliverDashed(Caller caller, string path = "") => CmdDeliver(caller, path);
+
+    // Existing packages and scripts may still call the old names; they are aliases, not a second path.
+    [Command("openshell_deliver", Description = "Alias for dl_openshell_deliver")]
+    public void CmdDeliverAlias(Caller caller, string path = "") => CmdDeliver(caller, path);
+
+    [Command("openlock_deliver", Description = "Alias for dl_openshell_deliver")]
+    public void CmdDeliverLegacy(Caller caller, string path = "") => CmdDeliver(caller, path);
+
+    [Command("openlock_ui", Description = "dl-openshell shell panel: open | hide")]
     public void CmdUi(Caller caller, string verb = "open")
     {
         if (caller.Player is not { } controller)
@@ -456,15 +486,15 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         if ((verb ?? "open").Trim().Equals("hide", StringComparison.OrdinalIgnoreCase))
         {
             _shell.Collapse(controller);
-            caller.Reply("[OPENLOCK] shell hidden; cursor returned");
+            caller.Reply("[dl-openshell] shell hidden; cursor returned");
             return;
         }
 
         _shell.Open(controller);
-        caller.Reply("[OPENLOCK] shell open; press Hide to return the cursor");
+        caller.Reply("[dl-openshell] shell open; press Hide to return the cursor");
     }
 
-    [Command("openlock-ui", Description = "Openlock shell panel: open | hide")]
+    [Command("openlock-ui", Description = "dl-openshell shell panel: open | hide")]
     public void CmdUiDashed(Caller caller, string verb = "open") => CmdUi(caller, verb);
 
     // --- Shell surface ----------------------------------------------------
@@ -490,7 +520,7 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             _world.Restore();
         }
 
-        Log.Write($"[Openlock] shell toggled mode -> {Config.Enabled}");
+        Log.Write($"[dl-openshell] shell toggled mode -> {Config.Enabled}");
     }
 
     public void ReconcileAll(string reason)
@@ -506,23 +536,23 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             touched++;
         }
 
-        Log.Write($"[Openlock] {reason}: {touched} hero(es) reconciled");
+        Log.Write($"[dl-openshell] {reason}: {touched} hero(es) reconciled");
     }
 
     public void RestoreAllFromShell()
     {
         _strength.RestoreAll("shell restore");
-        Log.Write("[Openlock] shell restore: every hero returned to their captured baseline");
+        Log.Write("[dl-openshell] shell restore: every hero returned to their captured baseline");
     }
 
-    [Command("openlock_mode", Description = "Turn the Openlock mode on or off")]
+    [Command("openlock_mode", Description = "Turn the dl-openshell mode on or off")]
     public void CmdMode(Caller caller, string state)
     {
         var on = state is "on" or "1" or "true" or "enable";
         var off = state is "off" or "0" or "false" or "disable";
         if (!on && !off)
         {
-            caller.Reply("[OPENLOCK] use /openlock_mode on|off");
+            caller.Reply("[dl-openshell] use /openlock_mode on|off");
             return;
         }
 
@@ -540,8 +570,8 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
             _world.Restore();
         }
 
-        Log.Write($"[Openlock] mode toggled -> {on} by {caller.Name}");
-        caller.Reply($"[OPENLOCK] mode {(on ? "on" : "off")}");
+        Log.Write($"[dl-openshell] mode toggled -> {on} by {caller.Name}");
+        caller.Reply($"[dl-openshell] mode {(on ? "on" : "off")}");
     }
 
     [Command("openlock_hud", Description = "Hide or show the ability HUD in this mode: on | off")]
@@ -555,9 +585,9 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         else
             _abilityHud.SetHidden(false);
 
-        Log.Write($"[Openlock] ability HUD hiding set to {Config.HideAbilityHud} by {caller.Name}");
+        Log.Write($"[dl-openshell] ability HUD hiding set to {Config.HideAbilityHud} by {caller.Name}");
         caller.Reply(
-            $"[OPENLOCK] ability HUD hiding {(Config.HideAbilityHud ? "on" : "off")}" +
+            $"[dl-openshell] ability HUD hiding {(Config.HideAbilityHud ? "on" : "off")}" +
             (Config.Enabled && Config.DisableHeroAbilities ? "" : " (mode is off, so nothing is hidden)"));
     }
 
@@ -571,12 +601,12 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
         var granted = pawn?.AddItem(item);
 
         Log.Write(granted is not null
-            ? $"[Openlock] give: {item} -> {caller.Name}"
-            : $"[Openlock] give: failed for {item} for {caller.Name}");
+            ? $"[dl-openshell] give: {item} -> {caller.Name}"
+            : $"[dl-openshell] give: failed for {item} for {caller.Name}");
 
         caller.Reply(granted is not null
-            ? $"[OPENLOCK] granted {item}"
-            : $"[OPENLOCK] could not grant {item}");
+            ? $"[dl-openshell] granted {item}"
+            : $"[dl-openshell] could not grant {item}");
 
         if (granted is not null && pawn is not null)
             _pendingReconcile.Add(pawn.Handle);
@@ -610,12 +640,12 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
                 _strength.Reconcile(pawn, Config, "probe");
 
             Log.Write(
-                $"[Openlock] probe slot={controller.Slot} name={controller.PlayerName} hero={pawn.HeroID} " +
+                $"[dl-openshell] probe slot={controller.Slot} name={controller.PlayerName} hero={pawn.HeroID} " +
                 $"level={pawn.Level} health={pawn.Health}/{pawn.MaxHealth} engineMax={pawn.GetMaxHealth()}");
 
             Log.Write(HeroBonuses.Read(pawn, out var w, out var a, out var t)
-                ? $"[Openlock]   resolved bonuses: weapon={w:0.##} armor={a:0.##} tech={t:0.##}"
-                : "[Openlock]   resolved bonuses: hero upgrade bonuses modifier NOT found");
+                ? $"[dl-openshell]   resolved bonuses: weapon={w:0.##} armor={a:0.##} tech={t:0.##}"
+                : "[dl-openshell]   resolved bonuses: hero upgrade bonuses modifier NOT found");
 
             foreach (var ability in pawn.AbilityComponent.Abilities)
             {
@@ -624,13 +654,13 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
                     continue;
 
                 Log.Write(
-                    $"[Openlock]   item {vdata.Name} slot={ability.AbilitySlot} " +
+                    $"[dl-openshell]   item {vdata.Name} slot={ability.AbilitySlot} " +
                     $"tier={_itemTier.Get(vdata.Handle)} spirit={SpiritToStrength.IsSpirit(vdata)} " +
                     $"upgrades=0b{ability.UpgradeBits:b5}");
             }
         }
 
         if (!seen)
-            Log.Write("[Openlock] probe: no player has a hero in the world");
+            Log.Write("[dl-openshell] probe: no player has a hero in the world");
     }
 }

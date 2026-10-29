@@ -50,6 +50,7 @@ public sealed class AddonPackages
     private readonly List<PackageRecord> _packages = [];
     private readonly List<ShpPackage.Window> _windows = [];
     private readonly Dictionary<string, ShpPackage.Window> _byId = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _seenIds = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<PackageRecord> Packages => _packages;
     public IReadOnlyList<ShpPackage.Window> Windows => _windows;
@@ -90,7 +91,6 @@ public sealed class AddonPackages
         }
 
         var seenArchives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var seenIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (root, source) in roots)
         {
@@ -114,7 +114,7 @@ public sealed class AddonPackages
                     }
 
                     var package = ShpPackage.LoadFile(full);
-                    result.Add(package, label, source, seenIds, null);
+                    result.Add(package, label, source, result._seenIds, null, full);
                 }
                 catch (Exception exception) when (exception is IOException
                     or UnauthorizedAccessException
@@ -158,12 +158,108 @@ public sealed class AddonPackages
                     }
 
                     var package = ShpPackage.Parse(bytes, $"{label}!/{entry}");
-                    result.Add(package, $"{label}!/{entry}", source, seenIds, archiveEntries);
+                    result.Add(package, $"{label}!/{entry}", source, result._seenIds, archiveEntries, full);
                 }
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Loads one package after discovery and adds its windows to the live payload. This is the
+    /// server-side half of the live bridge: a .shpkg or a VPK carrying one can be handed over
+    /// while clients are connected, and the next payload sends its verified recipe and DOM tree
+    /// without writing anything into the game's mounted resource paths.
+    /// </summary>
+    public int Deliver(string path, out string why)
+    {
+        why = "";
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            why = "no package path was given";
+            return 0;
+        }
+
+        string full;
+        try { full = Path.GetFullPath(path); }
+        catch (Exception exception) { why = exception.Message; return 0; }
+
+        if (!File.Exists(full))
+        {
+            why = $"'{path}' does not exist";
+            return 0;
+        }
+
+        if (_packages.Count >= MaxPackages)
+        {
+            why = $"the live package ceiling is {MaxPackages}";
+            return 0;
+        }
+
+        var before = _windows.Count;
+        try
+        {
+            if (Path.GetExtension(full).Equals(PackageExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                var info = new FileInfo(full);
+                if (info.Length > MaxPackageBytes)
+                {
+                    why = $"package is {info.Length} bytes; the ceiling is {MaxPackageBytes}";
+                    return 0;
+                }
+
+                Add(ShpPackage.LoadFile(full), full, "live", _seenIds, null, full);
+            }
+            else if (Path.GetExtension(full).Equals(".vpk", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!VpkReader.TryEntries(full, out var entries, out var error))
+                {
+                    why = $"VPK index is unreadable: {error}";
+                    return 0;
+                }
+
+                var archiveEntries = new HashSet<string>(entries, StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in entries.Where(name => name.EndsWith(PackageExtension, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var bytes = VpkReader.ReadEntry(full, entry);
+                    if (bytes is null)
+                    {
+                        why = $"VPK entry '{entry}' could not be read";
+                        continue;
+                    }
+
+                    if (bytes.Length > MaxPackageBytes)
+                    {
+                        why = $"package '{entry}' is {bytes.Length} bytes; the ceiling is {MaxPackageBytes}";
+                        continue;
+                    }
+
+                    Add(ShpPackage.Parse(bytes, $"{full}!/{entry}"), $"{full}!/{entry}", "live", _seenIds, archiveEntries, full);
+                }
+            }
+            else
+            {
+                why = "live delivery takes a .shpkg or a .vpk carrying one";
+                return 0;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            why = exception.Message;
+            return 0;
+        }
+
+        var added = _windows.Count - before;
+        if (added == 0 && why.Length == 0)
+        {
+            var refusal = _packages.LastOrDefault()?.Refusals.FirstOrDefault();
+            why = refusal is null
+                ? "the package declares no windows"
+                : $"{refusal.Subject}: {refusal.Why}";
+        }
+
+        return added;
     }
 
     public string PayloadJson() => JsonSerializer.Serialize(
@@ -180,7 +276,8 @@ public sealed class AddonPackages
         string archive,
         string source,
         Dictionary<string, string> seenIds,
-        IReadOnlyCollection<string>? archiveEntries)
+        IReadOnlyCollection<string>? archiveEntries,
+        string? archivePath)
     {
         if (_packages.Count >= MaxPackages)
         {
@@ -237,6 +334,15 @@ public sealed class AddonPackages
                 window.Addon = package.Name;
                 window.AddonName = package.Name;
                 window.LayoutPath = LayoutPathFor(window, localId, archiveEntries);
+                // The mounted path is still the primary way a package is drawn. A live tree is
+                // additive: a package carrying only compiled resources keeps BLoadLayout, and a
+                // package pushed after launch draws from this tree instead. A layout that exists
+                // but cannot become a tree is a real refusal, and the shell shows refusals in the
+                // minimal shell, the log and the toast stack.
+                window.LiveTree = LayoutTree.Read(package, window, localId, archiveEntries, archivePath, out var liveWhy);
+                if (window.LiveTree is null && !string.IsNullOrEmpty(liveWhy))
+                    record.Refusals.Add(new ShpPackage.Refusal(
+                        archive, 1, localId, "live layout refused: " + liveWhy));
                 record.WindowIds.Add(fullId);
                 _windows.Add(window);
             }

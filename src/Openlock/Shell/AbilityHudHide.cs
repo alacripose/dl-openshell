@@ -42,7 +42,7 @@ public sealed class AbilityHudHide
         if (!Installed)
         {
             Log.Write(
-                $"[Openlock] ability HUD REFUSED for {controller.PlayerName}: {LayoutPath} is not in any resolved " +
+                $"[dl-openshell] ability HUD REFUSED for {controller.PlayerName}: {LayoutPath} is not in any resolved " +
                 "addon path; the game's ability HUD stays visible");
             return;
         }
@@ -55,7 +55,7 @@ public sealed class AbilityHudHide
         UI.Panel(PanelId).Set(controller.Recipients, "hud", hidden ? "0" : "1");
 
         Log.Write(
-            $"[Openlock] ability HUD addon requested for {controller.PlayerName}: " +
+            $"[dl-openshell] ability HUD addon requested for {controller.PlayerName}: " +
             $"{LayoutPath}, hud={(hidden ? "collapsed" : "visible")}");
     }
 
@@ -75,7 +75,7 @@ public sealed class AbilityHudHide
 
             UI.Panel(PanelId).Set(controller.Recipients, "hud", hidden ? "0" : "1");
             Log.Write(
-                $"[Openlock] ability HUD {(hidden ? "collapsed" : "restored")} for {controller.PlayerName}");
+                $"[dl-openshell] ability HUD {(hidden ? "collapsed" : "restored")} for {controller.PlayerName}");
         }
     }
 
@@ -103,7 +103,7 @@ public sealed class AbilityHudHide
             if (state is AddonState.Failed)
             {
                 Log.Write(
-                    $"[Openlock] ability HUD REFUSED slot={slot}: {LayoutPath} is not mounted on that client; " +
+                    $"[dl-openshell] ability HUD REFUSED slot={slot}: {LayoutPath} is not mounted on that client; " +
                     "the game's ability HUD stays visible (no silent fallback)");
 
                 // The addon may be deployed after the client joined. Retry at a human rate rather
@@ -120,11 +120,11 @@ public sealed class AbilityHudHide
                 _awaited.Add(slot);
                 UI.Panel(PanelId).LoadXml(controller.Recipients, LayoutPath);
                 UI.Panel(PanelId).Set(controller.Recipients, "hud", "0");
-                Log.Write($"[Openlock] ability HUD retry requested for slot={slot}");
+                Log.Write($"[dl-openshell] ability HUD retry requested for slot={slot}");
                 continue;
             }
 
-            Log.Write($"[Openlock] ability HUD addon {state} for slot={slot}");
+            Log.Write($"[dl-openshell] ability HUD addon {state} for slot={slot}");
         }
     }
 }

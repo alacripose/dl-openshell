@@ -197,11 +197,10 @@ LAYOUT_PANELS = {
 
 OWN_VIEWS = {
     "mods", "ledger", "docs", "settings", "log", "readout", "table", "notifications", "api-viewer",
-    "console", "tools", "ui-tree",
+    "world-view", "console", "tools", "ui-tree",
 }
 
 NO_SOURCE = {
-    "world-view": "the world view is a 3D scene, not a panel; it cannot be drawn inside a window",
     "streamer": "no streamer source exists on this build; there is nothing to mount",
 }
 

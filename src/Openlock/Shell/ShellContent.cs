@@ -43,12 +43,9 @@ public static class ShellContent
         ["table"] = new(ViewType.Own, "table", ""),
         ["notifications"] = new(ViewType.Own, "notifications", ""),
         ["api-viewer"] = new(ViewType.Own, "api-viewer", ""),
+        ["world-view"] = new(ViewType.Own, "world-view", ""),
 
         // Declared, but no mountable source exists on this build.
-        ["world-view"] = new(
-            ViewType.Refused,
-            "",
-            "the world view is a 3D scene, not a panel; it cannot be drawn inside a window"),
         ["streamer"] = new(
             ViewType.Refused,
             "",
@@ -183,11 +180,43 @@ public static class ShellContent
                 break;
 
             case "api-viewer":
+                lines.Add("#deadworks api");
+                lines.Add("namespace DeadworksManaged.Api · plugin base IDeadworksPlugin");
+                lines.Add("lifecycle: OnLoad(isReload) · OnUnload · OnPrecacheResources");
+                lines.Add("content addons: ContentAddons · DeadworksManaged.Api.ContentAddons.Refresh");
+                lines.Add("world: Server.MapName · Server.GetMapList() · Server.ChangeLevel(map)");
+                lines.Add("entities: SchemaAccessor<T> · EntityDataRegistry · CBaseEntity subclasses");
+                lines.Add("config: PluginConfigAttribute · ConVar.Find(name)?.GetString()");
+                lines.Add("ui: UI.Panel(panel).Set(recipients, key, json) · UIEvent.ClientEvent");
                 lines.Add("#openlock plugin");
-                lines.Add($"version {OpenlockPlugin.Version}");
-                lines.Add("content resolver: ShellContent.Resolve (one table)");
-                lines.Add("shell layout: file://{resources}/layout/openlock_shell.xml");
+                lines.Add($"version {OpenlockPlugin.Version} · mounted shell layout openlock_shell.xml");
                 break;
+
+            case "world-view":
+            {
+                var hostname = (ConVar.Find("hostname")?.GetString() ?? "")
+                    .ReplaceLineEndings(" ").Trim();
+                var maps = Server.GetMapList();
+
+                lines.Add("#current server");
+                lines.Add($"hostname {(string.IsNullOrWhiteSpace(hostname) ? "(not set)" : hostname)}");
+                lines.Add($"map {(string.IsNullOrWhiteSpace(Server.MapName) ? "(none)" : Server.MapName)}");
+                lines.Add($"state {(Server.IsChangingLevel ? "changing level" : "running")} · {Players.GetAll().Count(p => !p.IsBot)} player(s)");
+
+                lines.Add("#maps the server can load");
+                if (maps.Count == 0)
+                    lines.Add("no maps reported by the engine");
+                foreach (var map in maps)
+                    lines.Add(map.Equals(Server.MapName, StringComparison.OrdinalIgnoreCase) ? $"{map} · current" : map);
+
+                lines.Add("#mounted client content");
+                var addons = plugin.AddonReport;
+                if (addons.Count == 0)
+                    lines.Add("no client addon paths resolved");
+                foreach (var addon in addons)
+                    lines.Add(addon);
+                break;
+            }
 
             case "console":
                 lines.Add("#declared windows");

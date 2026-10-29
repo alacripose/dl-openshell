@@ -4,9 +4,19 @@ Every release publishes exactly these files:
 
 | Asset | Purpose |
 | --- | --- |
+| `install.cmd` | Double-click launcher. Starts `install.ps1` with a process-scoped execution-policy bypass. |
 | `install.ps1` | Standalone installer. Drop it in `game/bin/win64` beside `deadlock.exe` and run it. |
-| `openlock-player.vpk` | Verified Panorama archive, built in player grade. |
-| `openlock-player.sha256` | SHA-256 of `openlock-player.vpk`; the installer refuses a mismatch. |
+| `openshell-player.vpk` | Verified Panorama archive, built in player grade. |
+| `openshell-player.sha256` | SHA-256 of `openshell-player.vpk`; the installer refuses a mismatch. |
+| `LICENSE` | MIT license for the release. |
+
+Windows marks downloaded `.ps1` files, and the default `RemoteSigned` policy refuses to run them
+before the first line. `install.cmd` applies `-ExecutionPolicy Bypass` for its child process only;
+it is not a machine-wide policy change. Running `install.ps1` directly requires right-click →
+Properties → Unblock first.
+
+When `openshell-player.vpk` and `openshell-player.sha256` sit beside the installer, it verifies and
+installs those files instead of downloading; a complete release drop works offline.
 
 The installer writes the archive to `game/citadel/addons/mods/pak01_dir.vpk` and adds
 `Game citadel/addons/mods` to `game/citadel/gameinfo.gi`. It does not install into
@@ -21,7 +31,7 @@ The client and CSDK are required, so the binary is built on a machine with Deadl
 ```
 
 The script runs `install.ps1 -Grade player`, copies the resulting `dist/openlock_ui/pak01_dir.vpk`
-to `release/openlock-player.vpk`, and writes the checksum. It prints the `gh release create`
+to `release/openshell-player.vpk`, and writes the checksum. It prints the `gh release create`
 command but does not upload.
 
 The release workflow only deploys `landing/` to GitHub Pages. GitHub-hosted runners cannot compile

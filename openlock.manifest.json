@@ -1,6 +1,6 @@
 {
   "id": "openlock",
-  "name": "Openlock",
+  "name": "dl-openshell",
   "version": "0.7.0",
   "kind": "deadworks-plugin",
   "assembly": "Openlock.dll",
@@ -19,7 +19,7 @@
     { "id": "GravityReduction", "default": 200, "surface": "ConVar sv_gravity (engine default 800 -> 600)" },
     { "id": "Friction", "default": 2, "surface": "ConVar sv_friction (engine default 4)" },
     { "id": "SpiritItemsBecomeStrength", "default": true, "surface": "CitadelAbilityVData.m_eItemSlotType == EItemSlotType_Tech, then CCitadelPlayerPawn.RemoveItem/AddItem" },
-    { "id": "ModeName", "default": "OPENLOCK", "surface": "chat + console reporting, dw_plugin enable/disable" }
+    { "id": "ModeName", "default": "dl-openshell", "surface": "chat + console reporting, dw_plugin enable/disable" }
   ],
   "verified": {
     "compiles": true,

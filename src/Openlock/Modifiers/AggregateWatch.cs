@@ -60,7 +60,7 @@ public sealed class AggregateWatch
 
             Changes++;
             Log.Write(
-                $"[Openlock] aggregate changed player={controller.PlayerName} " +
+                $"[dl-openshell] aggregate changed player={controller.PlayerName} " +
                 $"hero={pawn.HeroID} | " +
                 $"weapon {previous.Weapon:0.##}->{weapon:0.##} ({dWeapon:+0.##;-0.##;0}) | " +
                 $"armor {previous.Armor:0.##}->{armor:0.##} ({dArmor:+0.##;-0.##;0}) | " +
