@@ -38,6 +38,7 @@ from gen_shell_data import read_installs  # noqa: E402
 BUILT_VPK = ROOT / "dist" / "openlock_ui" / "pak01_dir.vpk"
 BUILD_RECORD = Path("game") / "bin" / "win64" / "openlock.build.json"
 INSTALLED_VPK = Path("game") / "citadel" / "addons" / "mods" / "pak01_dir.vpk"
+LOOSE_DATA = Path("game") / "citadel" / "addons" / "mods" / "panorama" / "scripts" / "openlock_shell_data.vjs_c"
 GAMEINFO = Path("game") / "citadel" / "gameinfo.gi"
 DATA_ENTRY = "openlock_shell_data.js"
 
@@ -61,16 +62,19 @@ def vpk_build(vpk: Path) -> dict:
             blob = vpk_read.entry_bytes(str(vpk), entry)
         if blob is None:
             return {}
-        text = blob.decode("utf-8", "replace")
-        found = {}
-        for key in ("commit", "dirty", "grade"):
-            match = re.search(r'"' + key + r'"\s*:\s*"?([^",\r\n]*)"?', text)
-            if match:
-                found[key] = match.group(1).strip().strip('"')
-        if "dirty" in found:
-            found["dirty"] = found["dirty"] == "true"
-        return found
+        return build_from_text(blob.decode("utf-8", "replace"))
     return {}
+
+
+def build_from_text(text: str) -> dict:
+    found = {}
+    for key in ("commit", "dirty", "grade"):
+        match = re.search(r'"' + key + r'"\s*:\s*"?([^",\r\n]*)"?', text)
+        if match:
+            found[key] = match.group(1).strip().strip('"')
+    if "dirty" in found:
+        found["dirty"] = found["dirty"] == "true"
+    return found
 
 
 def remote_main(root: Path) -> tuple[str, str]:
@@ -142,6 +146,34 @@ def github_cell(root: Path, head: str, remote: str, error: str) -> dict:
 
 
 def install_cell(root: Path, head: str) -> dict:
+    # A live tools install writes loose compiled resources beside the (still open) VPK. The VPK is
+    # stale by design in that mode, so the commit baked into the loose shell data is the authority.
+    loose = root / LOOSE_DATA
+    if loose.is_file():
+        record = read_record(root)
+        baked = build_from_text(loose.read_text(encoding="utf-8", errors="replace"))
+        committed = str(baked.get("commit") or "")
+        facts = ["live compiled resources"]
+        failures = []
+        if committed:
+            facts.append(f"commit {committed}{'+' if baked.get('dirty') else ''}")
+            if head and committed != head:
+                failures.append(f"baked commit {committed} != HEAD {head}")
+        else:
+            failures.append("no build commit is baked into the live shell data")
+        record_state = f"{record.get('stage', '?')}/{record.get('state', '?')}"
+        facts.append(f"installer record {record_state}")
+        if record_state != "installed/ok":
+            failures.append("installer record is not installed/ok")
+        mount = mounted(root)
+        facts.append("mount present" if mount else "mount missing from gameinfo.gi")
+        if not mount:
+            failures.append("citadel/addons/mods is not in gameinfo.gi")
+        detail = "; ".join(facts)
+        if failures:
+            return cell("install", "absent", "B", loose, detail + " | " + "; ".join(failures), sha256_file(loose))
+        return cell("install", "held", "B", loose, detail, sha256_file(loose))
+
     witness = root / INSTALLED_VPK
     record = read_record(root)
     if not witness.is_file():
