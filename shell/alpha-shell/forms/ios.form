@@ -1,0 +1,42 @@
+shploingus.form/1
+form	ios
+	label	iOS 6 SpringBoard
+	rule	.WindowFrame	border-radius	6px
+	rule	.WindowFrame	border-width	1px
+	rule	.WindowTitle	height	30px
+	rule	.WindowTitle	padding-left	8px
+	rule	.WindowTitle	padding-right	4px
+	rule	.WindowTitleLabel	margin-left	24px
+	rule	.WindowTitleLabel	font-size	12px
+	rule	.WindowTitleLabel	letter-spacing	0.2px
+	rule	.WindowButton	width	18px
+	rule	.WindowButton	height	16px
+	rule	.WindowButton	margin-right	5px
+	rule	.WindowButton	border-radius	8px
+	rule	.WindowButton Label	font-size	11px
+	rule	.WindowMeta	height	14px
+	rule	.WindowMeta	padding-left	8px
+	rule	.WindowBody	padding	8px
+	rule	.Taskbar	height	30px
+	rule	.TabStrip	margin-left	168px
+	rule	.TabStrip	width	60%
+	rule	.PreloadStrip	margin-left	168px
+	rule	.PreloadStrip	width	60%
+	rule	.ShellTab	margin-right	4px
+	rule	.ShellTab	padding	3px 10px
+	rule	.ShellTab	border-radius	12px
+	rule	.ShellTab.Active	border-radius	12px
+	rule	.LauncherButton	border-radius	12px
+	rule	.LauncherButton	padding	4px 10px
+	rule	.SchemeButton	width	20px
+	rule	.SchemeButton	height	20px
+	rule	.SchemeButton	border-radius	9px
+	rule	.ViewAction	border-radius	10px
+	rule	.ViewAction	padding	6px 12px
+	rule	.ContextMenu	border-radius	8px
+	rule	.Toast	border-radius	8px
+	rule	.Toast	border-left-width	3px
+	rule	.DwellInfo	border-radius	6px
+	rule	.UpdateModal	border-radius	8px
+	rule	.PickerBadge	border-radius	8px
+	rule	.PickerCancel	border-radius	10px

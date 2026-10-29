@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -34,6 +35,90 @@ PACKAGE_DIR = ROOT / "shell" / "alpha-shell"
 OUTPUT = ROOT / "clientaddon" / "panorama" / "scripts" / "openlock_shell_data.js"
 SCHEMES_OUTPUT = None
 
+# The source identity the delivery gate compares. It must cover every file that can change the
+# shell the player sees, and it must not depend on files the build writes. In particular the
+# generated data and scheme sheet are excluded: they carry their own generated timestamp and
+# are outputs of this script, not inputs to it.
+SOURCE_DIGEST_DIRS = (
+    "clientaddon/installhost",
+    "clientaddon/panorama/layout",
+    "clientaddon/panorama/scripts",
+    "clientaddon/panorama/styles",
+    "clientaddon/standalone",
+    "shell/alpha-shell/frames",
+    "shell/alpha-shell/themes",
+)
+SOURCE_DIGEST_EXCLUDES = {
+    "clientaddon/panorama/scripts/openlock_shell_data.js",
+    "clientaddon/panorama/styles/openlock_schemes.css",
+    "clientaddon/panorama/styles/openlock_shell_legacy.css",
+}
+SOURCE_DIGEST_FILES = (
+    "install.ps1",
+    "openlock.manifest.json",
+    "shell/alpha-shell/package.shspec",
+    "shell/alpha-shell/deadlock.windows",
+    "shell/alpha-shell/package.cells",
+    "tools/gen_legacy_shell.py",
+    "tools/gen_shell_data.py",
+    "tools/gen_shell_theme.py",
+    "tools/pack_vpk.py",
+)
+
+# Markers the delivery gate must find in the installed shell script. They are deliberately
+# capability names, not a version string: an archive from an older commit can carry the same
+# commit and still lack the code the player was promised.
+DELIVERY_FEATURES = {
+    "popit": ("PopitSurface", "showPopit", "runPopitAction"),
+    "picker": ("PickerOverlay", "startPicker", "renderPicker", "pickerApply"),
+    "performance": ("renderPerf", "PerfGraph"),
+    "observer": ("showObserver", "ObserverXmlHost"),
+    "live-packages": ("OpenlockDelivery", "offerAddons", "renderTree"),
+    "palette": ("renderPalette", "PaletteRow", "cyclePalette"),
+    "popit-renderer": ("rendererFor", "RendererPopit", "applyPalettePaint"),
+}
+
+
+def source_digest() -> str:
+    """A content identity for the shell sources, stable across build invocations.
+
+    A git commit alone cannot distinguish a build made before an uncommitted UI change from one
+    made after it. The installed data carries this digest, and tools/parity_check.py recomputes
+    it from the worktree. A stale artifact therefore fails even when HEAD is unchanged.
+    """
+    files: list[Path] = []
+    for relative in SOURCE_DIGEST_DIRS:
+        root = ROOT / relative
+        if root.is_dir():
+            files.extend(path for path in root.rglob("*") if path.is_file())
+    for relative in SOURCE_DIGEST_FILES:
+        path = ROOT / relative
+        if path.is_file():
+            files.append(path)
+
+    digest = hashlib.sha256()
+    for path in sorted({path.resolve() for path in files}, key=lambda item: str(item).lower()):
+        try:
+            relative = path.relative_to(ROOT).as_posix()
+        except ValueError:
+            relative = path.as_posix()
+        if relative in SOURCE_DIGEST_EXCLUDES or "__pycache__" in path.parts or path.suffix == ".pyc":
+            continue
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def feature_gaps(script: str) -> dict[str, list[str]]:
+    """Capabilities the current source promises but the delivered script does not contain."""
+    return {
+        feature: [marker for marker in markers if marker not in script]
+        for feature, markers in DELIVERY_FEATURES.items()
+        if any(marker not in script for marker in markers)
+    }
+
 
 def read_recipe(path: Path):
     data = {
@@ -45,6 +130,7 @@ def read_recipe(path: Path):
         "bar": None,
         "filed": [],
         "pins": [],
+        "layers": [],
         "refusals": [],
     }
     if not path.exists():
@@ -60,14 +146,28 @@ def read_recipe(path: Path):
         return data
 
     current = None
+    current_layer = None
     for index, raw in enumerate(lines[1:], start=2):
         if not raw or raw.lstrip().startswith("#"):
             continue
         if raw.startswith("\t"):
-            if current is None:
-                continue
             fields = raw.lstrip("\t").split("\t")
             if len(fields) < 2:
+                continue
+            if current_layer is not None:
+                key, value = fields[0], fields[1]
+                if key in ("title", "surface", "hint"):
+                    current_layer[key] = value
+                elif key == "action" and len(fields) >= 3:
+                    current_layer["actions"].append(
+                        {
+                            "id": fields[1],
+                            "label": fields[2],
+                            "window": fields[3] if len(fields) > 3 else "",
+                        }
+                    )
+                continue
+            if current is None:
                 continue
             key, value = fields[0], fields[1]
             if key in ("title", "content", "lane", "extent", "theme-role", "behavior", "layout", "record-id", "panel"):
@@ -98,9 +198,20 @@ def read_recipe(path: Path):
 
         fields = raw.split("\t")
         key = fields[0]
+        current_layer = None
         if key == "package":
             data["name"] = fields[1] if len(fields) > 1 else ""
             data["version"] = fields[2] if len(fields) > 2 else ""
+        elif key == "layer" and len(fields) > 1:
+            current_layer = {
+                "id": fields[1],
+                "title": "",
+                "surface": "grid",
+                "hint": "",
+                "actions": [],
+                "line": index,
+            }
+            data["layers"].append(current_layer)
         elif key == "window":
             current = {
                 "id": fields[1] if len(fields) > 1 else f"window-{index}",
@@ -125,6 +236,7 @@ def read_recipe(path: Path):
                 "opacity": 930,
                 "elevation": 1,
                 "pinnable": False,
+                "layers": [],
             }
             data["windows"].append(current)
         elif key == "tab" and len(fields) > 1:
@@ -135,6 +247,15 @@ def read_recipe(path: Path):
             data["filed"].append({"window": fields[1], "tab": fields[2], "line": index})
         elif key == "pin" and len(fields) > 1:
             data["pins"].append(fields[1])
+
+    # A layer is attached to the window it names. The client draws it as a contextual tool
+    # surface; the JSON around each window therefore carries the same declaration the C# reader
+    # validated, instead of a second table the client could drift from.
+    by_id = {window["id"]: window for window in data["windows"]}
+    for layer in data["layers"]:
+        window = by_id.get(layer["id"])
+        if window is not None:
+            window["layers"].append(layer)
 
     # A window's declared behavior is delivered by the client's window manager: the title bar
     # moves it, the corner grip resizes it, and the buttons minimize, maximize and close it.
@@ -200,7 +321,8 @@ LAYOUT_PANELS = {
 
 OWN_VIEWS = {
     "mods", "ledger", "docs", "settings", "log", "readout", "table", "notifications", "api-viewer",
-    "world-view", "console", "tools", "ui-tree",
+    "world-view", "console", "tools", "ui-tree", "performance", "picker", "palette",
+    "updates", "repo", "landing",
 }
 
 NO_SOURCE = {
@@ -691,6 +813,7 @@ def read_build(gameinfo: Path) -> dict:
         "commit": "",
         "branch": "",
         "dirty": False,
+        "sourceDigest": "",
         "gameVersion": "",
         "generatedAt": time.strftime("%Y-%m-%d %H:%M"),
     }
@@ -738,6 +861,8 @@ def read_build(gameinfo: Path) -> dict:
     except (OSError, subprocess.SubprocessError):
         # No repository in this checkout: the label says so below rather than inventing one.
         build["commit"] = ""
+
+    build["sourceDigest"] = source_digest()
 
     steam = gameinfo.parent / "steam.inf"
     if steam.exists():

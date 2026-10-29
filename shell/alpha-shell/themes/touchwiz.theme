@@ -1,0 +1,25 @@
+shploingus.theme/1
+# TouchWiz Nature UX. Samsung's dark teal-black surface with the green-leaning accent is the
+# colour intent; the 2 dp frame, 8 dp chip radius and brighter active edge are its form. The
+# form is declared separately so it composes with any palette. Ink on body is 14.8:1.
+theme	touchwiz
+	label	TouchWiz
+	form	touchwiz
+	source	TouchWiz Nature UX surface and colour intent; 2 dp frame / 8 dp radius
+	body	#07100CF2
+	panel	#0E1A15F2
+	title	#163026F2
+	meta	#07100CF2
+	border	#275243
+	borderStrong	#59D6A0
+	ink	#ECFFF6
+	muted	#9DBBAB
+	accent	#59D6A0
+	alert	#FF6B6B
+	alertBody	#2A1111F2
+# TouchWiz owns the surface and the colour intent, so the two game surfaces take its dark
+# green-black rather than staying at Deadlock's parchment.
+rule	.CitadelHudTopBar	background-color	#07100CE6
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#07100CE6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

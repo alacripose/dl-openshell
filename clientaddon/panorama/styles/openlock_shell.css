@@ -740,6 +740,17 @@
     height: 100%;
 }
 
+/* The live package tree is built with CreatePanel inside this host. Without an explicit height
+   the host is zero-sized and the tree exists but is never laid out, which reads as an empty
+   package window. */
+.AddonHost {
+    width: 100%;
+    height: 260px;
+    min-height: 180px;
+    margin-top: 6px;
+    overflow: squish;
+}
+
 /* UI tree inspector: folders, selection actions, geometry and the CSS rule form. */
 .UiField {
     width: 100%;
@@ -1096,11 +1107,152 @@
     vertical-align: center;
 }
 
+/* The determinate fill a live package's ProgressBar gets: the engine's own fill is compiled
+   into the game, so a package cannot restyle it and a theme cannot recolour it. */
+.ProgressFill {
+    background-color: #e0b56a;
+}
+
 .ObserverXmlHost {
     width: 100%;
-    height: 170px;
+    /* A package toast carries a whole window, not one row. The previous 170px clipped the
+       package's own footer, which is where a progress readout usually lives. */
+    height: 280px;
     margin-top: 4px;
     overflow: squish;
+}
+
+/* --- popit contextual tool surface ---------------------------------------
+   A layer is declared on a window in the package. The surface is a radial ring (the Popit
+   context surface) or a vertical bar, drawn above every frame. The dismiss panel is the only
+   full-screen hit-testable panel; the ring itself is a normal child, so a click outside closes
+   the surface instead of falling through to the game. */
+
+.IconPopit {
+    width: 12px;
+    height: 12px;
+    flow-children: right;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.IconPopitDot {
+    width: 2px;
+    height: 2px;
+    margin-right: 1px;
+    border-radius: 1px;
+    vertical-align: center;
+}
+
+/* The Popit surface itself is in openlock_popit.css (layout) and forms/popit.form (shape).
+   The old ring/bar rows and their hardcoded colours are gone; the surface is a grid of
+   Deadlock-textured tiles with a version frame, so no text row remains here. */
+
+/* --- picker --------------------------------------------------------------
+   Scrubbing is a pointer capture, not a second HUD. The overlay is hit-testable only while a
+   scrub is active, so it cannot leak game input at any other time; the highlight sits above it
+   and belongs to the scrub, not to the game. */
+
+.PickerOverlay {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+    z-index: 650;
+    background-color: #00000018;
+}
+
+.PickerHighlight {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    z-index: 651;
+    border: 2px solid #e0b56a;
+    background-color: transparent;
+}
+
+.PickerBadge {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    margin-top: 54px;
+    margin-right: 12px;
+    padding: 8px 10px;
+    width: 320px;
+    flow-children: down;
+    z-index: 652;
+    background-color: #14100bf2;
+    border: 1px solid #8a6f42;
+    border-radius: 3px;
+}
+
+.PickerBadgeLabel {
+    color: #f4e6c8;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.PickerCancel {
+    width: 100%;
+    height: 26px;
+    background-color: #3a2416;
+    border: 1px solid #8a6f42;
+    border-radius: 2px;
+}
+
+.PickerCancel Label {
+    color: #e0b56a;
+    font-size: 11px;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.PickerTarget {
+    font-family: "Radiance";
+    font-size: 11px;
+}
+
+.PickerHint {
+    font-size: 10px;
+}
+
+/* --- performance ---------------------------------------------------------
+   The graph is drawn as panels, not an image: each sample is one bar whose height is the
+   measured value against the window's own ceiling. Bars over 24 ms are the alert role. */
+
+.PerfGraph {
+    width: 100%;
+    height: 58px;
+    margin-bottom: 8px;
+    padding: 4px;
+    flow-children: right;
+    border: 1px solid #4a3b25;
+}
+
+.PerfBar {
+    width: fill-parent-flow(1);
+    height: 8px;
+    margin-right: 1px;
+    vertical-align: bottom;
+    opacity: 0.72;
+}
+
+.PerfBar.Slow {
+    opacity: 1;
+}
+
+.PerfValue {
+    font-family: "Radiance";
+    font-size: 11px;
+}
+
+.PerfMuted {
+    font-size: 10px;
+}
+
+.PerfLogRow {
+    font-size: 10px;
 }
 
 /* --- update modal -------------------------------------------------------- */
@@ -1144,4 +1296,54 @@
     width: 100%;
     height: fit-children;
     flow-children: right;
+}
+
+/* --- Palette editor -------------------------------------------------------
+   Each row is one role from the active .theme schema. The swatch is filled
+   inline with the chosen colour; the label and value stay on the row so the
+   editor is a schema view, not a colour wheel with no names. */
+.PaletteRow {
+    width: 100%;
+    height: 34px;
+    padding: 4px 8px;
+    flow-children: right;
+    border: 1px solid #00000000;
+    margin-bottom: 3px;
+}
+.PaletteRow:hover {
+    border-color: #8a6f42;
+}
+.PaletteSwatch {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #2a2422;
+    margin-right: 8px;
+}
+.PaletteName {
+    width: fill-parent-flow(1);
+    height: 22px;
+    font-size: 12px;
+    vertical-align: middle;
+}
+.PaletteValue {
+    width: 86px;
+    height: 22px;
+    font-size: 11px;
+    text-align: right;
+    vertical-align: middle;
+}
+.PaletteNote {
+    width: 100%;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+.PaletteSchema {
+    width: 100%;
+    height: fit-children;
+    padding: 6px 8px;
+    margin-top: 6px;
+    background-color: #00000033;
+    border: 1px solid #00000055;
+    font-size: 10px;
+    white-space: normal;
 }

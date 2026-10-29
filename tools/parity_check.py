@@ -33,7 +33,7 @@ sys.path.insert(0, str(TOOLS))
 
 import vpk_read  # noqa: E402
 from axis_witness import DATABASE, git, open_store, utc_now  # noqa: E402
-from gen_shell_data import read_installs  # noqa: E402
+from gen_shell_data import feature_gaps, read_installs, source_digest  # noqa: E402
 
 BUILT_VPK = ROOT / "dist" / "openlock_ui" / "pak01_dir.vpk"
 BUILD_RECORD = Path("game") / "bin" / "win64" / "openlock.build.json"
@@ -69,7 +69,7 @@ def vpk_build(vpk: Path) -> dict:
 
 def build_from_text(text: str) -> dict:
     found = {}
-    for key in ("commit", "dirty", "grade"):
+    for key in ("commit", "dirty", "grade", "sourceDigest"):
         match = re.search(r'"' + key + r'"\s*:\s*"?([^",\r\n]*)"?', text)
         if match:
             found[key] = match.group(1).strip().strip('"')
@@ -78,36 +78,101 @@ def build_from_text(text: str) -> dict:
     return found
 
 
+def shell_script(root: Path, kind: str, witness: Path) -> str:
+    """The delivered shell plus its companion modules, from a VPK or the loose tree.
+
+    Delivery and Popit live in their own scripts by design. Reading only `openlock_shell.js`
+    would report those capabilities missing from a correct build, so the gate reads the whole
+    shell script set and tests the capability markers against it.
+    """
+    names = ("openlock_shell", "openlock_delivery", "openlock_popit", "openlock_audio")
+    texts: list[str] = []
+    if kind == "vpk":
+        entries, inline = vpk_read._read_tree(str(witness))
+        for entry in entries:
+            path = str(entry["path"])
+            if not path.startswith("panorama/scripts/"):
+                continue
+            base = Path(path).name
+            if not any(base in (f"{name}.js", f"{name}.vjs_c") for name in names):
+                continue
+            blob = inline.get(path)
+            if blob is None:
+                blob = vpk_read.entry_bytes(str(witness), entry)
+            if blob is not None:
+                texts.append(blob.decode("utf-8", "replace"))
+        return "\n".join(texts)
+
+    for name in names:
+        for suffix in (".vjs_c", ".js"):
+            path = witness.parent / f"{name}{suffix}"
+            if path.is_file():
+                texts.append(path.read_text(encoding="utf-8", errors="replace"))
+                break
+    return "\n".join(texts)
+
+
+def delivery_failures(shell: dict, expected_digest: str) -> list[str]:
+    """Reasons an installed shell is not the current source, independent of its git commit."""
+    failures: list[str] = []
+    if expected_digest:
+        delivered = str(shell.get("sourceDigest") or "")
+        if not delivered:
+            failures.append("the shell data carries no source digest; rebuild and reinstall")
+        elif delivered != expected_digest:
+            failures.append(
+                f"source digest {delivered[:12]} != current worktree {expected_digest[:12]}"
+            )
+    missing = shell.get("missingFeatures") or {}
+    if missing:
+        failures.append(
+            "missing current shell feature marker(s): "
+            + "; ".join(f"{feature} [{' '.join(markers)}]" for feature, markers in missing.items())
+        )
+    return failures
+
+
 def shell_build(root: Path) -> dict:
     """What shell a tree actually runs, whether it is loose compiled resources or a packed VPK.
 
     A live install can carry both: the VPK from the last packaged install and loose `_c`
     resources from a later map-reload install. The loose copy wins because the client resolves it
-    first; reporting the stale archive would call a working client out of date.
+    first; reporting the stale archive would call a working client out of date. A CSDK10 tools
+    tree has its own `citadel_addons` slot, which is a different surface from a game archive.
     """
+    tools = root / TOOLS_DATA
     loose = root / LOOSE_DATA
-    if loose.is_file():
+    if tools.is_file():
+        kind = "tools"
+        witness = tools
+        baked = build_from_text(tools.read_text(encoding="utf-8", errors="replace"))
+    elif loose.is_file():
+        kind = "loose"
+        witness = loose
         baked = build_from_text(loose.read_text(encoding="utf-8", errors="replace"))
-        return {
-            "kind": "loose",
-            "witness": loose,
-            "sha256": sha256_file(loose),
-            "commit": str(baked.get("commit") or ""),
-            "dirty": bool(baked.get("dirty")),
-            "grade": str(baked.get("grade") or ""),
-        }
-    archive = root / INSTALLED_VPK
-    if archive.is_file():
+    else:
+        archive = root / INSTALLED_VPK
+        if not archive.is_file():
+            return {
+                "kind": "none", "witness": root / INSTALLED_VPK, "sha256": "",
+                "commit": "", "dirty": False, "grade": "", "sourceDigest": "",
+                "missingFeatures": {},
+            }
+        kind = "vpk"
+        witness = archive
         baked = vpk_build(archive)
-        return {
-            "kind": "vpk",
-            "witness": archive,
-            "sha256": sha256_file(archive),
-            "commit": str(baked.get("commit") or ""),
-            "dirty": bool(baked.get("dirty")),
-            "grade": str(baked.get("grade") or ""),
-        }
-    return {"kind": "none", "witness": root / INSTALLED_VPK, "sha256": "", "commit": "", "dirty": False, "grade": ""}
+
+    script = shell_script(root, kind, witness)
+    return {
+        "kind": kind,
+        "witness": witness,
+        "sha256": sha256_file(witness),
+        "commit": str(baked.get("commit") or ""),
+        "dirty": bool(baked.get("dirty")),
+        "grade": str(baked.get("grade") or ""),
+        "sourceDigest": str(baked.get("sourceDigest") or ""),
+        "missingFeatures": feature_gaps(script),
+    }
 
 
 def remote_main(root: Path) -> tuple[str, str]:
@@ -188,7 +253,7 @@ def github_cell(root: Path, head: str, remote: str, error: str) -> dict:
     )
 
 
-def install_cell(root: Path, head: str) -> dict:
+def install_cell(root: Path, head: str, expected_digest: str) -> dict:
     # A CSDK10 tools install writes its live slot under AddonRoot citadel_addons. That slot is the
     # client's authority even when a game addon VPK exists beside it in the same tree.
     tools = root / TOOLS_DATA
@@ -212,6 +277,7 @@ def install_cell(root: Path, head: str) -> dict:
         facts.append("tools mount present" if mount else "tools mount missing from gameinfo.gi")
         if not mount:
             failures.append("AddonRoot citadel_addons is not mounted")
+        failures.extend(delivery_failures(shell_build(root), expected_digest))
         # A game archive in the same tree is a different surface. Report its build, but do not
         # fail the tools gate on it: the tools client mounts AddonRoot citadel_addons, not this
         # archive. The live Steam client is compared separately above.
@@ -248,6 +314,7 @@ def install_cell(root: Path, head: str) -> dict:
         facts.append("mount present" if mount else "mount missing from gameinfo.gi")
         if not mount:
             failures.append("citadel/addons/mods is not in gameinfo.gi")
+        failures.extend(delivery_failures(shell_build(root), expected_digest))
         detail = "; ".join(facts)
         if failures:
             return cell("install", "absent", "B", loose, detail + " | " + "; ".join(failures), sha256_file(loose))
@@ -290,6 +357,7 @@ def install_cell(root: Path, head: str) -> dict:
     if not mount:
         failures.append("citadel/addons/mods is not in gameinfo.gi")
 
+    failures.extend(delivery_failures(shell_build(root), expected_digest))
     detail = "; ".join(facts)
     if failures:
         return cell("install", "absent", "B", witness, detail + " | " + "; ".join(failures), installed_hash)
@@ -311,7 +379,7 @@ def find_live(explicit: str) -> Path | None:
     return Path(str(choose["path"]))
 
 
-def live_cell(root: Path | None, installed_hash: str, head: str) -> dict:
+def live_cell(root: Path | None, installed_hash: str, head: str, expected_digest: str) -> dict:
     if root is None:
         return cell("live", "absent", "D", "steam", "no Steam Deadlock install was found")
     shell = shell_build(root)
@@ -321,8 +389,13 @@ def live_cell(root: Path | None, installed_hash: str, head: str) -> dict:
     committed = shell["commit"] or "unknown"
     grade = shell["grade"] or "?"
     detail = f"{shell['kind']} build {committed}{'+' if shell['dirty'] else ''} grade {grade} sha {live_hash[:12]}"
-    # Different tools compilers produce different bytes for the same source. The build commit is
-    # the identity; a hash match is only the stronger form of the same answer.
+    failures = delivery_failures(shell, expected_digest)
+    if failures:
+        return cell("live", "absent", "B", shell["witness"], detail + " | " + "; ".join(failures), live_hash)
+    # Different tools compilers produce different bytes for the same source. The source digest is
+    # the identity; a commit match is not sufficient, because it cannot see an uncommitted change.
+    if expected_digest and shell["sourceDigest"] == expected_digest:
+        return cell("live", "held", "B", shell["witness"], detail + "; matches the current source", live_hash)
     if head and shell["commit"] == head:
         return cell("live", "held", "B", shell["witness"], detail + f"; commit matches HEAD {head}", live_hash)
     if live_hash == installed_hash:
@@ -330,7 +403,7 @@ def live_cell(root: Path | None, installed_hash: str, head: str) -> dict:
     return cell("live", "absent", "B", shell["witness"], detail + f"; differs from HEAD {head or '(none)'}", live_hash)
 
 
-def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str) -> dict | None:
+def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str, expected_digest: str) -> dict | None:
     """One other client or tools shell, measured rather than assumed.
 
     These are deliberately not gate refusals: a second tools tree or the shipping client may sit
@@ -367,17 +440,20 @@ def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str)
 
     committed = shell["commit"] or "unknown"
     grade = shell["grade"] or "?"
+    failures = delivery_failures(shell, expected_digest)
+    state = "held" if not failures and head and shell["commit"] == head else "drift"
     detail = (
         f"{shell['kind']} build {committed}{'+' if shell['dirty'] else ''} grade {grade} "
         f"sha {shell['sha256'][:12]} mount {str(row.get('shell') or 'unknown')}"
     )
-    state = "held" if head and shell["commit"] == head else "drift"
     if not shell["commit"]:
         detail += "; no build commit is baked into this shell"
+    if failures:
+        detail += " | " + "; ".join(failures)
     elif state == "drift":
         detail += f"; differs from HEAD {head}"
     else:
-        detail += "; matches HEAD"
+        detail += "; matches HEAD and the current source"
     return {
         "cell": name,
         "kind": kind,
@@ -391,7 +467,7 @@ def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str)
     }
 
 
-def audit_installs(install_root: Path, live_root: Path | None, head: str) -> list[dict]:
+def audit_installs(install_root: Path, live_root: Path | None, head: str, expected_digest: str) -> list[dict]:
     """Every other client and tools shell the machine's own discovery already knows about.
 
     `read_installs` covers game trees with a gameinfo. A reduced CSDK tools host can carry the
@@ -423,7 +499,7 @@ def audit_installs(install_root: Path, live_root: Path | None, head: str) -> lis
         if not key or key in seen:
             continue
         seen.add(key)
-        reading = audit_cell(row, install_root, live_root, head)
+        reading = audit_cell(row, install_root, live_root, head, expected_digest)
         if reading:
             audits.append(reading)
     return audits
@@ -433,15 +509,16 @@ def derive(install_root: Path, live_override: str, require_live: bool = False) -
     head = git(ROOT, "rev-parse", "--short", "HEAD")
     dirty = bool(git(ROOT, "status", "--porcelain"))
     remote, remote_error = remote_main(ROOT)
+    expected_digest = source_digest()
     cells = [
         repo_cell(ROOT, head, dirty),
         github_cell(ROOT, head, remote, remote_error),
-        install_cell(install_root, head),
+        install_cell(install_root, head, expected_digest),
     ]
     installed_hash = cells[2]["sha256"]
     live_root = find_live(live_override)
-    cells.append(live_cell(live_root, installed_hash, head))
-    audits = audit_installs(install_root, live_root, head)
+    cells.append(live_cell(live_root, installed_hash, head, expected_digest))
+    audits = audit_installs(install_root, live_root, head, expected_digest)
 
     by_name = {row["cell"]: row for row in cells}
     refusals = []

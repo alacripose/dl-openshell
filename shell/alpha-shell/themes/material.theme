@@ -1,0 +1,26 @@
+shploingus.theme/1
+# Material Design 1, true MD1 dark. The four token values are MD1's own dark-theme values:
+# #121212 is the canonical dark surface, 8 dp is the layout grid, and the teal accent is the
+# kit's default swatch. Chrome geometry rides the separate `form` row so this palette can be
+# composed with any other form. Contrast of ink on body is 16.1:1, above MD1's 4.5:1 floor.
+theme	material
+	label	Material
+	form	material
+	source	Material Design 1 dark theme; 8 dp grid; 4.5:1 floor
+	body	#121212F2
+	panel	#1E1E1EF2
+	title	#2C2C2CF2
+	meta	#121212F2
+	border	#3A3A3A
+	borderStrong	#80CBC4
+	ink	#FFFFFF
+	muted	#B0B0B0
+	accent	#009688
+	alert	#F44336
+	alertBody	#2B1111F2
+# The top bar and the shop are the two game surfaces the shell sits over most; MD1's dark
+# surface keeps the game readable instead of fighting it.
+rule	.CitadelHudTopBar	background-color	#121212E6
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#121212E6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

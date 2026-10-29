@@ -13,8 +13,27 @@ server-side plugin or custom game mode.
 - Frames live Deadlock panels (shop, map, minimap, abilities, combat log, escape menu and the
   rest) by tracking their real rect and moving them with a CSS transform. The panel stays in the
   game's tree, so the shop's parent assertion is never violated.
+- Speaks the four procedural UI cues from the ala-cities reference — select, place, refuse and
+  notify — synthesized at build time by [tools/gen_shell_audio.py](tools/gen_shell_audio.py),
+  compiled as `Openlock.UI.*` soundevents, and fired by the shell's own actions. A client build
+  without `PlayUISoundEvent` runs silently instead of refusing the layout.
 - Keeps a taskbar, pinned windows, a drop grid for moving and resizing, and toast notifications
   that can open the window they name.
+- Separates the **colour scheme** from the **chrome form**. `deadlock`, `alpha`, `holo`,
+  `material`, `ios` and `touchwiz` are palettes; `material` (MD1), `ios` (iOS 6 SpringBoard) and
+  `touchwiz` (Nature UX) also ship form rules for radius, borders, controls and the tab strip.
+- Declares **Popit tool layers** beside a window (`layer` in the package). The shell draws the
+  versioned Popit grid (LBP3/LBP1/LBP2/PSP/Vita/Karting shape schemas, Deadlock-art icons, hover and
+  selection, and an overlap refusal) and routes each action back to the server as
+  `layer:<window>:<action>`; a layer action may open another declared window. The Picker layer
+  scrubs the live HUD and edits one panel's position, size, opacity and colours with a restore
+  path. `docs/popit-elements.json` inventories every implemented element by stable id and file.
+- Ships a **Performance** window: measured UI-frame graph, apply/write counters, per-window apply
+  cost and the bounded refusal/package/perf log. The same log records every client refusal.
+- Accepts **live package and observer payloads**: `addons` merges or removes package windows in
+  connected shells, builds source XML as a node tree without remounting, and `observer` carries
+  observer toasts (and an optional live XML surface). `openlock_toast` lets a server owner or a
+  connected tools instance send a notice without inventing a window.
 - Exposes a Tools window fed by the install: live build stage and VPK size when the server bridge
   is connected, the last baked record otherwise, update state, tool presence and the mounted search
   paths, plus the generated refusals list. A small non-interactive strip shows the running stage.
@@ -26,7 +45,8 @@ server-side plugin or custom game mode.
   the mounted `BLoadLayout` path.
 - Delivers a package to already-connected players with `dl_openshell_deliver`, the live bridge:
   the XML and CSS travel in the addon payload and the shell builds the window without a new
-  resource path, VPK mount or reconnect.
+  resource path, VPK mount or reconnect. `openlock_observer <window-id>` sends a package window as
+  an observer toast; `openlock_toast <title>|<body>[|<window>]` sends a plain observer notice.
 - Reports in the World window the current server hostname, map, player count, the maps the engine
   can load and the client content actually mounted; the API window describes the Deadworks API
   surface this plugin builds on.
@@ -269,7 +289,9 @@ generated file or a successful pack as proof that the UI drew.
 - [install.cmd](install.cmd) — double-click launcher for a downloaded install.ps1.
 - [clientaddon/panorama/layout/openlock_shell.xml](clientaddon/panorama/layout/openlock_shell.xml) — shell layout.
 - [clientaddon/panorama/scripts/openlock_shell.js](clientaddon/panorama/scripts/openlock_shell.js) — window manager, live-panel hooks, schemes, toasts, tools.
+- [clientaddon/panorama/scripts/openlock_audio.js](clientaddon/panorama/scripts/openlock_audio.js) — four-cue audio layer and its throttle/status probe.
 - [clientaddon/panorama/styles/openlock_shell.css](clientaddon/panorama/styles/openlock_shell.css) — layout and base chrome.
+- [tools/gen_shell_audio.py](tools/gen_shell_audio.py) — deterministic WAV and soundevent generator.
 - [shell/alpha-shell/](shell/alpha-shell/) — the display package that declares every window.
 - [tools/gen_shell_data.py](tools/gen_shell_data.py) — package/data generator.
 - [tools/gen_shell_theme.py](tools/gen_shell_theme.py) — scheme and mod-extension generator.

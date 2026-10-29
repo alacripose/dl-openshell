@@ -1,0 +1,169 @@
+shploingus.form/1
+form	popit
+	label	Popit (LBP3)
+	renderer	popit
+	rule	.WindowButton Label	font-size	12px
+	rule	.Taskbar	height	30px
+	rule	.TabStrip	margin-left	96px
+	rule	.PreloadStrip	margin-left	96px
+	rule	.ShellTab	margin-right	4px
+	rule	.ShellTab	padding	4px 12px
+	rule	.ShellTab	border-radius	10px
+	rule	.ShellTab	border-width	2px
+	rule	.ShellTab.Active	border-radius	10px
+	rule	.LauncherButton	border-radius	10px
+	rule	.LauncherButton	border-width	2px
+	rule	.LauncherButton	padding	3px 9px
+	rule	.SchemeButton	width	20px
+	rule	.SchemeButton	height	20px
+	rule	.SchemeButton	border-radius	10px
+	rule	.SchemeButton	border-width	2px
+	rule	.ContextMenu	border-radius	10px
+	rule	.Toast	border-radius	10px
+	rule	.Toast	border-left-width	4px
+	rule	.DwellInfo	border-radius	10px
+	rule	.UpdateModal	border-radius	10px
+	# --- Popit surface shape schemas ------------------------------------------------
+	# The frame is geometry only. Palette roles paint the plate, tail, edges and tiles from
+	# the active .theme file, so any colour scheme composes with any frame. The renderer picks
+	# one frame class; `popit.form` is the default (LBP3) chrome form.
+	rule	.PopitSurface	width	356px
+	rule	.PopitSurface	height	fit-children
+	rule	.PopitFrame	width	356px
+	rule	.PopitFrame	height	380px
+	rule	.PopitFrame	padding	14px
+	rule	.PopitFrame	border-width	0px
+	rule	.PopitFrame.PopitRows1	height	260px
+	rule	.PopitFrame.PopitRows2	height	380px
+	rule	.PopitFrame.PopitRows3	height	480px
+	rule	.PopitFrame.PopitRows4	height	580px
+	rule	.PopitPlate	ignore-parent-flow	true
+	rule	.PopitPlate	horizontal-align	center
+	rule	.PopitPlate	vertical-align	center
+	rule	.PopitPlate	width	100%
+	rule	.PopitPlate	height	100%
+	rule	.PopitPlate	border-width	1px
+	rule	.PopitPlate	border-radius	34px
+	rule	.PopitTail	ignore-parent-flow	true
+	rule	.PopitTail	horizontal-align	left
+	rule	.PopitTail	vertical-align	bottom
+	rule	.PopitTail	width	22px
+	rule	.PopitTail	height	22px
+	rule	.PopitTail	margin-left	46px
+	rule	.PopitTail	margin-bottom	-11px
+	rule	.PopitTail	border-width	2px
+	rule	.PopitTail	border-radius	3px
+	rule	.PopitTail	pre-transform-rotate2d	45deg
+	rule	.PopitTail.Lbp1	width	30px
+	rule	.PopitTail.Lbp1	height	30px
+	rule	.PopitTail.Lbp1	margin-left	40px
+	rule	.PopitTail.Lbp1	margin-bottom	-15px
+	rule	.PopitTail.Lbp1	border-radius	6px
+	rule	.PopitTail.Lbp3	width	20px
+	rule	.PopitTail.Lbp3	height	20px
+	rule	.PopitTail.Lbp3	margin-left	54px
+	rule	.PopitTail.Lbp3	margin-bottom	-10px
+	rule	.PopitTail.Lbp3	border-radius	2px
+	rule	.PopitTail.Lbp2	visibility	collapse
+	rule	.PopitTail.Psp	visibility	collapse
+	rule	.PopitTail.Vita	visibility	collapse
+	rule	.PopitTail.Karting	visibility	collapse
+	# The LBP3 frame is a rounded hexagon: six thin edges over a rounded plate. The plate's
+	# 53px corner radius meets the 45-degree chamfers at (53, 0) and (0, 53), and the six edge
+	# segments carry the whole outline, so the silhouette is a hexagon rather than a rounded
+	# rectangle decorated with diagonals. The frame height is fixed by the row-count class, so
+	# align-top/bottom keeps the chamfers on the real corners for every row count.
+	rule	.PopitHex	ignore-parent-flow	true
+	rule	.PopitHex	horizontal-align	center
+	rule	.PopitHex	vertical-align	center
+	rule	.PopitHex	width	100%
+	rule	.PopitHex	height	100%
+	rule	.PopitHex	visibility	collapse
+	rule	.PopitFrame.Lbp3 .PopitHex	visibility	visible
+	rule	.PopitHexEdge	ignore-parent-flow	true
+	rule	.PopitHexEdge	height	2px
+	rule	.PopitHexEdge	border-radius	1px
+	rule	.PopitHexEdge.Top	horizontal-align	center
+	rule	.PopitHexEdge.Top	vertical-align	top
+	rule	.PopitHexEdge.Top	width	70%
+	rule	.PopitHexEdge.Bottom	horizontal-align	center
+	rule	.PopitHexEdge.Bottom	vertical-align	bottom
+	rule	.PopitHexEdge.Bottom	width	70%
+	rule	.PopitHexEdge.UpperLeft	horizontal-align	left
+	rule	.PopitHexEdge.UpperLeft	vertical-align	top
+	rule	.PopitHexEdge.UpperLeft	width	72px
+	rule	.PopitHexEdge.UpperLeft	transform	translate3d(-10px, 25px, 0px)
+	rule	.PopitHexEdge.UpperLeft	pre-transform-rotate2d	-45deg
+	rule	.PopitHexEdge.UpperRight	horizontal-align	right
+	rule	.PopitHexEdge.UpperRight	vertical-align	top
+	rule	.PopitHexEdge.UpperRight	width	72px
+	rule	.PopitHexEdge.UpperRight	transform	translate3d(10px, 25px, 0px)
+	rule	.PopitHexEdge.UpperRight	pre-transform-rotate2d	45deg
+	rule	.PopitHexEdge.LowerLeft	horizontal-align	left
+	rule	.PopitHexEdge.LowerLeft	vertical-align	bottom
+	rule	.PopitHexEdge.LowerLeft	width	72px
+	rule	.PopitHexEdge.LowerLeft	transform	translate3d(-10px, -25px, 0px)
+	rule	.PopitHexEdge.LowerLeft	pre-transform-rotate2d	45deg
+	rule	.PopitHexEdge.LowerRight	horizontal-align	right
+	rule	.PopitHexEdge.LowerRight	vertical-align	bottom
+	rule	.PopitHexEdge.LowerRight	width	72px
+	rule	.PopitHexEdge.LowerRight	transform	translate3d(10px, -25px, 0px)
+	rule	.PopitHexEdge.LowerRight	pre-transform-rotate2d	-45deg
+	# LBP1 keeps the soft, glossy bubble; LBP2 is the flatter block; PSP is the compact page;
+	# Vita is the tall card; Karting is the dark garage card with its green selection beam.
+	rule	.PopitFrame.Lbp3 .PopitPlate	border-radius	53px
+	rule	.PopitFrame.Lbp3 .PopitPlate	border-width	1px
+	rule	.PopitFrame.Lbp1	padding	16px
+	rule	.PopitFrame.Lbp1 .PopitPlate	border-radius	52px
+	rule	.PopitFrame.Lbp2	padding	10px
+	rule	.PopitFrame.Lbp2 .PopitPlate	border-radius	4px
+	rule	.PopitFrame.Psp	padding	10px
+	rule	.PopitFrame.Psp .PopitPlate	border-radius	14px
+	rule	.PopitFrame.Vita	padding	12px
+	rule	.PopitFrame.Vita .PopitPlate	border-radius	38px
+	rule	.PopitFrame.Karting	padding	10px
+	rule	.PopitFrame.Karting .PopitPlate	border-radius	6px
+	rule	.PopitFrame.Karting .PopitPlate	border-width	2px
+	rule	.PopitBeam	ignore-parent-flow	true
+	rule	.PopitBeam	horizontal-align	left
+	rule	.PopitBeam	vertical-align	bottom
+	rule	.PopitBeam	width	112px
+	rule	.PopitBeam	height	3px
+	rule	.PopitBeam	margin-left	10px
+	rule	.PopitBeam	margin-bottom	-18px
+	rule	.PopitBeam	border-radius	2px
+	rule	.PopitBeam	pre-transform-rotate2d	18deg
+	rule	.PopitBeam	visibility	collapse
+	rule	.PopitFrame.Karting .PopitBeam	visibility	visible
+	# Header, mode pill and the 4-column tool grid. These are the same for every frame;
+	# only the silhouette changes above.
+	rule	.PopitHeader	height	30px
+	rule	.PopitHeaderTitle	font-size	15px
+	rule	.PopitFrameBadge	width	48px
+	rule	.PopitFrameBadge	height	18px
+	rule	.PopitFrameBadge	border-width	1px
+	rule	.PopitFrameBadge	border-radius	6px
+	rule	.PopitFrameBadge Label	font-size	9px
+	rule	.PopitModeRow	margin-top	6px
+	rule	.PopitModeRow	height	24px
+	rule	.PopitModePill	border-width	1px
+	rule	.PopitModePill	border-radius	10px
+	rule	.PopitMode	padding	2px 7px
+	rule	.PopitMode Label	font-size	9px
+	rule	.PopitGrid	margin-top	10px
+	rule	.PopitTile	width	74px
+	rule	.PopitTile	height	82px
+	rule	.PopitTile	margin	3px
+	rule	.PopitTile	border-width	2px
+	rule	.PopitTile	border-radius	12px
+	rule	.PopitTile.Selected	border-width	3px
+	rule	.PopitTileIcon	width	34px
+	rule	.PopitTileIcon	height	34px
+	rule	.PopitTileIcon	margin-top	7px
+	rule	.PopitTileLabel	height	16px
+	rule	.PopitTileLabel	margin-top	3px
+	rule	.PopitTileLabel	font-size	10px
+	rule	.PopitDetail	margin-top	8px
+	rule	.PopitDetail	font-size	11px
+	rule	.PopitHint	margin-top	2px
+	rule	.PopitHint	font-size	10px

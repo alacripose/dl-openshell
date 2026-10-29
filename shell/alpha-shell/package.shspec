@@ -353,6 +353,57 @@ window	streamer
 	layout	minimize,close,title-position
 	behavior	drag,resize,maximize,minimize,close
 	record-id	window-streamer
+# The performance surface is the shell measuring itself. It is a normal declared window: the
+# graphs read the shell's own counters and the log is a bounded ring buffer, so opening it can
+# never be the reason a frame is missed. Colours and chrome come from the active scheme/form;
+# the graphs are drawn as panels, like every other shell mark.
+window	performance
+	title	Performance
+	content	performance
+	lane	control
+	extent	square-pixels
+	geometry	400 96 620 460
+	min-size	360 260
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-performance
+# The picker is the Popit tool that scrubs the live Panorama tree. It is a shell window, not
+# a game overlay: the overlay only catches the pointer while a scrub is active, and the edits
+# are applied to the selected live panel and reported by id.
+window	picker
+	title	Picker
+	content	picker
+	lane	control
+	extent	square-pixels
+	geometry	680 160 520 500
+	min-size	380 300
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-picker
+# The Palette editor extracts a scheme's editable slots from its .theme schema. Each swatch
+# cycles that one role; the schema button shows the .theme text a player can copy to persist.
+window	palette
+	title	Palette
+	content	palette
+	lane	control
+	extent	square-pixels
+	geometry	680 184 460 470
+	min-size	360 300
+	opacity	930
+	elevation	1
+	theme-role	surface
+	pinnable	true
+	layout	minimize,maximize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-palette
 # The pinned HUD subset (H-9.8): stays in the user's view while the shell is hidden.
 #
 # The four geometries below are the four corners of a 1280 × 720 window with the
@@ -412,6 +463,50 @@ window	refusals
 	layout	minimize,close,title-position
 	behavior	drag,resize,maximize,minimize,close
 	record-id	window-refusals
+# Contextual tool layers (the Popit surface). A layer is declared beside its window and is
+# drawn by the shell as the Popit grid; each action is routed back to the server as
+# `layer:<window>:<action>`, and an action may also name a window to open locally first.
+# This is the package's tool surface, not a second content page.
+layer	inventory
+	title	Inventory tools
+	surface	grid
+	hint	Select a tool, then a slot. The surface is data from this package.
+	action	trees	Crafting trees	trees
+	action	refusals	Refusals	refusals
+	action	picker	Picker	picker
+	action	reconcile	Reconcile
+layer	mods
+	title	Package tools
+	surface	grid
+	hint	A package is mounted by the server; these tools inspect what it delivered.
+	action	uitree	UI tree	uitree
+	action	settings	Settings	settings
+	action	performance	Performance	performance
+	action	picker	Picker	picker
+layer	performance
+	title	Measurement tools
+	surface	grid
+	hint	Readings are sampled while this window is open; the log keeps the last 64 entries.
+	action	uitree	UI tree	uitree
+	action	picker	Picker	picker
+	action	reconcile	Reconcile
+layer	map-plan
+	title	Map tools
+	surface	grid
+	hint	Frame the live surfaces, or open the record views filed beside the map.
+	action	skin	Popit surface
+	action	minimap	Minimap	minimap
+	action	world	World	world
+	action	abilities	Abilities	abilities
+	action	picker	Picker	picker
+layer	docs
+	title	Record tools
+	surface	grid
+	hint	The repository, landing page and update record are the motd addon's window shape.
+	action	repo	Repository	repo
+	action	landing	Landing page	landing
+	action	updates	Updates	updates
+	action	picker	Picker	picker
 # The six tabs of the bar, in strip order (H-15.2).
 tab	inventory
 tab	trees
@@ -436,6 +531,8 @@ filed	quickbuy	map-plan
 filed	combat-log	docs
 filed	game-settings	settings
 filed	updates	settings
+filed	performance	settings
+filed	picker	settings
 filed	repo	docs
 filed	landing	docs
 # Pinning is a layer move, declared here and not baked into a spec (UI-SPEC §4):

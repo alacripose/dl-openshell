@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DeadworksManaged.Api;
 using DeadworksManaged.Api.UI;
 
@@ -100,6 +101,9 @@ public sealed class ShellMount
                 $"windows={e.ArgAt(1, "?")} ignored={e.ArgAt(2, "?")}"));
         UI.Panel(RootPanel).On("layout-load", e => LoadLayout(e));
         UI.Panel(RootPanel).On("layout-reset", e => ResetLayout(e));
+        UI.Panel(RootPanel).On("layer", e => HandleLayerAction(e));
+        UI.Panel(RootPanel).On("pick", e =>
+            Log.Write($"[dl-openshell] picker selected '{e.ArgAt(0, "?")}' by {NameOf(e.Caller)}"));
 
         UI.Panel(RootPanel).On("mode", e =>
         {
@@ -133,26 +137,49 @@ public sealed class ShellMount
     /// XML travels as a node tree in the same addon payload a mounted package uses, so the client
     /// builds it with CreatePanel and does not need a new resource path or a reconnect.
     /// </summary>
-    public int DeliverAddon(string path, out string why)
+    public int DeliverAddon(string path, out string why, out bool delivered)
     {
-        var added = _addons.Deliver(path, out why);
-        if (added == 0)
+        var added = _addons.Deliver(path, out why, out var changed);
+        // A zero-window package still commits state (the payload revision must advance and any
+        // previous version is replaced), so `delivered` cannot be inferred from the window count.
+        delivered = changed && string.IsNullOrEmpty(why);
+        if (!changed)
             return 0;
 
         foreach (var window in _addons.Windows)
             RegisterAddonWindow(window);
 
         var sent = 0;
+        // A refused package still republishes (it carries the refusal record), but its notice
+        // must not claim a delivery: `changed` with a reason is exactly the refusal path, and
+        // `added` there is 0 windows.
+        var refused = !string.IsNullOrEmpty(why);
+        // The window the delivery changed, not the catalog's last entry: after a replacement the
+        // last entry can belong to another package, and the toast would open the wrong surface.
+        var changedWindow = refused ? "" : _addons.LastChangedWindow;
+        var notice = JsonSerializer.Serialize(new
+        {
+            title = refused ? "Package refused" : "Package delivered",
+            body = refused ? why : Path.GetFileName(path) + "  ·  " + added + " window(s) are live",
+            revision = _addons.Revision,
+            window = changedWindow,
+            layout = "",
+            attention = false,
+        });
+
         foreach (var controller in Players.GetAll())
         {
             if (controller.IsBot)
                 continue;
 
             PublishAddons(controller);
+            UI.Panel(RootPanel).Set(controller.Recipients, "observer", notice);
             sent++;
         }
 
-        Log.Write($"[dl-openshell] addon delivered live from {path}: {added} window(s) to {sent} shell(s)");
+        Log.Write(refused
+            ? $"[dl-openshell] addon delivery refused from {path}: {why}"
+            : $"[dl-openshell] addon delivered live from {path}: {added} window(s), revision {_addons.Revision}, to {sent} shell(s)");
         return added;
     }
 
@@ -171,13 +198,18 @@ public sealed class ShellMount
         }
 
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
+        // The observer attribute is a one-shot toast channel, not state. Reset it before the panel
+        // loads so the shell's first poll cannot replay the last notice, and a later mount finds
+        // the channel empty rather than showing the same toast again.
+        UI.Panel(RootPanel).Set(controller.Recipients, "observer", "");
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
         PublishLayout(controller);
         PublishBuildStatus(controller);
         PublishAddons(controller);
         SendWindow(_active, controller);
-        Log.Write($"[dl-openshell] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} + {_addons.Windows.Count} addon window(s)");
+        Log.Write($"[dl-openshell] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} + {_addons.Windows.Count} addon window(s), " +
+            $"{_package.Layers.Count} tool layer(s)");
     }
 
     public void Open(CCitadelPlayerController? controller)
@@ -192,6 +224,7 @@ public sealed class ShellMount
         }
 
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
+        UI.Panel(RootPanel).Set(controller.Recipients, "observer", "");
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
         PublishLayout(controller);
@@ -208,8 +241,21 @@ public sealed class ShellMount
     public int ShowObserver(string windowId)
     {
         var window = _addons.WindowById(windowId);
-        if (window is null || string.IsNullOrEmpty(window.LayoutPath))
+        if (window is null || (string.IsNullOrEmpty(window.LayoutPath) && window.LiveTree is not { Count: > 0 }))
             return 0;
+
+        // An observer surface is a toast that carries the package's XML, not a hijack of the
+        // player's active window. The shell's toast stack is present in every grade, so an
+        // observer package is visible even when the shell's own chrome is hidden.
+        var notice = JsonSerializer.Serialize(new
+        {
+            title = window.Title,
+            body = "observer XML  ·  " + (window.AddonName.Length > 0 ? window.AddonName : windowId),
+            window = windowId,
+            layout = window.LayoutPath,
+            tree = window.LiveTree,
+            attention = false,
+        });
 
         var sent = 0;
         foreach (var controller in Players.GetAll())
@@ -217,18 +263,92 @@ public sealed class ShellMount
             if (controller.IsBot)
                 continue;
 
-            _active = windowId;
-            UI.Panel(RootPanel).Set(controller.Recipients, "active", windowId);
-            UI.Panel(RootPanel).Set(controller.Recipients, "view", "");
-            UI.Panel(RootPanel).Set(controller.Recipients, "body", "");
-            UI.Panel(RootPanel).Set(controller.Recipients, "refusal", "");
+            UI.Panel(RootPanel).Set(controller.Recipients, "observer", notice);
             sent++;
         }
 
         Log.Write(sent > 0
-            ? $"[dl-openshell] observer XML '{windowId}' sent to {sent} shell(s) at {window.LayoutPath}"
+            ? $"[dl-openshell] observer XML '{windowId}' sent to {sent} shell(s) at " +
+              (window.LiveTree is { Count: > 0 } ? "its live source tree" : window.LayoutPath)
             : $"[dl-openshell] observer XML '{windowId}' has no connected shell");
         return sent;
+    }
+
+    /// <summary>
+    /// A server owner or a connected tools instance can send a notice without inventing a
+    /// window: the same observer attribute carries it, and the shell's toast stack is visible in
+    /// every grade. A window id makes the toast open that window; an empty id leaves it a notice.
+    /// </summary>
+    public int Notify(string title, string body, string windowId = "", bool attention = false)
+    {
+        var notice = JsonSerializer.Serialize(new
+        {
+            title,
+            body,
+            window = windowId,
+            layout = "",
+            attention,
+        });
+
+        var sent = 0;
+        foreach (var controller in Players.GetAll())
+        {
+            if (controller.IsBot)
+                continue;
+
+            UI.Panel(RootPanel).Set(controller.Recipients, "observer", notice);
+            sent++;
+        }
+        return sent;
+    }
+
+    /// <summary>
+    /// A Popit action is package data, not a command name: the server validates the window and
+    /// the action before it acts, and names an unknown pair instead of guessing at its meaning.
+    /// The client has already opened any local target; this is the server half of the routing.
+    /// </summary>
+    private void HandleLayerAction(UIEvent e)
+    {
+        var raw = e.ArgAt(0, "");
+        var at = raw.LastIndexOf(':');
+        if (at <= 0 || at == raw.Length - 1)
+        {
+            Log.Write($"[dl-openshell] popit REFUSED by {NameOf(e.Caller)}: '{raw}' is not window:action");
+            return;
+        }
+
+        var windowId = raw[..at];
+        var actionId = raw[(at + 1)..];
+        IReadOnlyList<ShpPackage.Layer> layers;
+        if (_package?.WindowById(windowId) is { } packageWindow)
+            layers = packageWindow.Layers;
+        else if (_addons.WindowById(windowId) is { } addonWindow)
+            layers = addonWindow.Layers;
+        else
+        {
+            Log.Write($"[dl-openshell] popit REFUSED by {NameOf(e.Caller)}: no window '{windowId}'");
+            return;
+        }
+
+        var action = layers.SelectMany(layer => layer.Actions)
+            .FirstOrDefault(candidate => string.Equals(candidate.Id, actionId, StringComparison.Ordinal));
+        if (action is null)
+        {
+            Log.Write($"[dl-openshell] popit REFUSED by {NameOf(e.Caller)}: " +
+                $"window '{windowId}' declares no action '{actionId}'");
+            return;
+        }
+
+        Log.Write($"[dl-openshell] popit action {windowId}/{actionId} from {NameOf(e.Caller)}");
+        switch (actionId)
+        {
+            case "reconcile":
+                _plugin.ReconcileAll("popit");
+                break;
+            case "restore":
+                _plugin.RestoreAllFromShell();
+                break;
+        }
     }
 
     public void Collapse(CCitadelPlayerController? controller)

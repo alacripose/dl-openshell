@@ -1,0 +1,39 @@
+shploingus.form/1
+form	material
+	label	Material Design 1
+	rule	.WindowFrame	border-radius	2px
+	rule	.WindowTitle	height	30px
+	rule	.WindowTitle	padding-left	8px
+	rule	.WindowTitle	padding-right	4px
+	rule	.WindowTitleLabel	margin-left	26px
+	rule	.WindowTitleLabel	font-size	13px
+	rule	.WindowButton	width	20px
+	rule	.WindowButton	height	20px
+	rule	.WindowButton	margin-right	4px
+	rule	.WindowButton	border-radius	10px
+	rule	.WindowButton Label	font-size	12px
+	rule	.WindowMeta	height	16px
+	rule	.WindowMeta	padding-left	8px
+	rule	.WindowBody	padding	8px
+	rule	.Taskbar	height	30px
+	rule	.TabStrip	margin-left	96px
+	rule	.PreloadStrip	margin-left	96px
+	rule	.ShellTab	margin-right	4px
+	rule	.ShellTab	padding	3px 10px
+	rule	.ShellTab	border-radius	0px
+	rule	.ShellTab	border-bottom-width	2px
+	rule	.ShellTab.Active	border-bottom-width	2px
+	rule	.LauncherButton	border-radius	0px
+	rule	.LauncherButton	padding	4px 8px
+	rule	.SchemeButton	width	20px
+	rule	.SchemeButton	height	20px
+	rule	.SchemeButton	border-radius	10px
+	rule	.ViewAction	border-radius	2px
+	rule	.ViewAction	padding	6px 12px
+	rule	.ContextMenu	border-radius	2px
+	rule	.Toast	border-radius	2px
+	rule	.Toast	border-left-width	2px
+	rule	.DwellInfo	border-radius	2px
+	rule	.UpdateModal	border-radius	2px
+	rule	.PickerBadge	border-radius	2px
+	rule	.PickerCancel	border-radius	2px
