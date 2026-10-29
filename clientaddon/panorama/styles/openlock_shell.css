@@ -84,7 +84,8 @@
     opacity: 1.0;
 }
 
-/* One top surface: tabs, running windows, version, clock. No bottom strip, no Start. */
+/* One top surface: tabs, running windows, version, clock. No bottom strip, no Start. It uses
+   the same compact black-square vocabulary as an idle HUD frame: black chips, white glyphs. */
 .Taskbar {
     position: absolute;
     horizontal-align: left;
@@ -94,7 +95,37 @@
     width: 100%;
     height: 30px;
     flow-children: right;
+    background-color: #000000a8;
     z-index: 500;
+}
+
+.Taskbar .ShellTab {
+    background-color: #000000;
+    border: 0px;
+    border-radius: 0px;
+    margin-right: 2px;
+}
+
+.Taskbar .ShellTabLabel {
+    color: #ffffff;
+    font-size: 11px;
+}
+
+.Taskbar .ShellTab.Active {
+    background-color: #ffffff22;
+    border: 1px solid #ffffff;
+}
+
+.Taskbar .WindowsButton {
+    background-color: #000000;
+    border: 0px;
+    border-radius: 0px;
+}
+
+.Taskbar .WindowsButtonLabel,
+.Taskbar .VersionLabel,
+.Taskbar .Clock {
+    color: #ffffff;
 }
 
 /* One row, always.  A HUD sweep can add dozens of frames; wrapping the strip grew the bar to
@@ -210,6 +241,84 @@
     z-index: 90;
 }
 
+/* Automatically drawn HUD windows use the compact schema: no border, small black square
+   controls, white glyphs. After a few seconds without a pointer interaction the title strip
+   collapses to a handle with a cubic ease-in-out; the next interaction expands it. */
+.WindowFrame.CompactHud {
+    border: 1px solid #ffffff;
+    background-color: transparent;
+}
+
+.WindowFrame.CompactHud .WindowTitle {
+    height: 16px;
+    padding-left: 14px;
+    padding-right: 14px;
+    background-color: #000000b8;
+    border-bottom: 0px;
+    opacity: 1;
+}
+
+/* The two top grips sit on the title corners. Collapse them for automatic windows; the title
+   strip must never fight the handles for the same pixels. The bottom corners remain. */
+.WindowFrame.CompactHud .GripNW,
+.WindowFrame.CompactHud .GripNE {
+    visibility: collapse;
+}
+
+/* The 1 px outline and the grips are the frame. They disappear at idle and return on hover; the
+   chrome strip, its black controls and its native-size metrics stay visible behind them. */
+.WindowFrame.CompactHud.IdleCompact {
+    border: 0px;
+    background-color: transparent;
+}
+
+.WindowFrame.CompactHud.IdleCompact .ResizeGrip {
+    visibility: collapse;
+}
+
+.WindowFrame.CompactHud.IdleCompact .WindowTitle {
+    background-color: #000000;
+    border: 0px;
+    border-bottom: 1px solid #ffffff;
+}
+
+.WindowFrame.CompactHud.IdleCompact .WindowTitleLabel {
+    visibility: collapse;
+}
+
+.WindowFrame.CompactHud .WindowTitleLabel {
+    margin-left: 5px;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: normal;
+}
+
+.WindowFrame.CompactHud .WindowButton {
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+    background-color: #000000;
+    border: 0px;
+    border-radius: 0px;
+}
+
+.WindowFrame.CompactHud .WindowButton:hover {
+    background-color: #ffffff22;
+    border: 0px;
+}
+
+.WindowFrame.CompactHud .WindowButton Label,
+.WindowFrame.CompactHud .WindowGlyph {
+    color: #ffffff;
+    font-size: 11px;
+    line-height: 12px;
+    font-family: "Radiance";
+}
+
+.WindowFrame.CompactHud .WindowMeta {
+    visibility: collapse;
+}
+
 /* --- windows the shell draws itself -------------------------------------- */
 
 .WindowFrame {
@@ -241,8 +350,24 @@
     width: 100%;
     height: 30px;
     flow-children: right;
+    overflow: clip;
     background-color: #241a10f2;
     border-bottom: 1px solid #8a6f42;
+}
+
+/* A narrow HUD region has no room for five separate 26 dp controls beside its title. Keep the
+   title legible and leave actions on the title's context menu instead of drawing them on top of
+   the neighbouring frame. */
+.WindowFrame.Narrow .WindowButton,
+.WindowFrame.Narrow .WindowCost,
+.WindowFrame.Narrow .WindowSpacer {
+    visibility: collapse;
+}
+
+.WindowFrame.Narrow .WindowTitleLabel {
+    margin-left: 8px;
+    margin-right: 6px;
+    text-overflow: ellipsis;
 }
 
 .WindowTitleLabel {
@@ -564,11 +689,14 @@
     margin-bottom: 4px;
 }
 
+/* Above the taskbar (500), the launcher (600), toasts (800) and every window layer; below the
+   drag capture only while a drag owns the pointer. The dismiss surface is one layer under the
+   menu so a click on a row reaches the row, not the dismiss panel. */
 .ContextDismiss {
     position: absolute;
     width: 100%;
     height: 100%;
-    z-index: 890;
+    z-index: 9000;
 }
 
 .ContextMenu {
@@ -579,7 +707,7 @@
     flow-children: down;
     background-color: #14100bfa;
     border: 1px solid #e0b56a;
-    z-index: 900;
+    z-index: 9001;
 }
 
 .ContextTitle {
@@ -693,42 +821,54 @@
     horizontal-align: right;
     vertical-align: bottom;
     z-index: 60;
-    width: 18px;
-    height: 18px;
-    background-color: #8a6f42e6;
-    border-top: 1px solid #e0b56a;
-    border-left: 1px solid #e0b56a;
+    width: 12px;
+    height: 12px;
+    background-color: transparent;
+    border: 0px;
 }
 
-.ResizeGrip:hover {
-    background-color: #e0b56a;
-    border: 1px solid #fff0cc;
-}
-
+/* An L-shaped corner, not a filled square: it reads as a resize affordance without covering
+   the content under it. */
 .GripNW {
     horizontal-align: left;
     vertical-align: top;
+    border-top: 2px solid #e0b56a;
+    border-left: 2px solid #e0b56a;
 }
 
 .GripNE {
     horizontal-align: right;
     vertical-align: top;
+    border-top: 2px solid #e0b56a;
+    border-right: 2px solid #e0b56a;
 }
 
 .GripSW {
     horizontal-align: left;
     vertical-align: bottom;
+    border-bottom: 2px solid #e0b56a;
+    border-left: 2px solid #e0b56a;
 }
 
 .GripSE {
     horizontal-align: right;
     vertical-align: bottom;
+    border-bottom: 2px solid #e0b56a;
+    border-right: 2px solid #e0b56a;
 }
 
-/* The grip is a real drag handle now, not a grid trigger. Keep the cursor affordance obvious. */
+.GripNW:hover,
+.GripNE:hover,
+.GripSW:hover,
+.GripSE:hover {
+    border-color: #fff0cc;
+}
+
+/* The grip is a real drag handle now, not a grid trigger. One third smaller than the old 22 dp
+   square and drawn as a corner. */
 .PanelWindow .ResizeGrip {
-    width: 22px;
-    height: 22px;
+    width: 15px;
+    height: 15px;
 }
 
 /* --- drop grid ----------------------------------------------------------- */

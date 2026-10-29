@@ -540,6 +540,123 @@ def read_tools(gameinfo: Path):
     return found
 
 
+def _install_state(root: Path):
+    """One row for a game or tools tree, or None when the path is not a Deadlock install."""
+    game = root / "game"
+    gameinfo = game / "citadel" / "gameinfo.gi"
+    if not gameinfo.exists():
+        return None
+
+    try:
+        gameinfo_text = gameinfo.read_text(encoding="utf-8", errors="replace").replace("\\", "/").lower()
+    except OSError:
+        gameinfo_text = ""
+    overlay = (root / "content" / "citadel_addons" / "openlock_ui").exists() or \
+              (game / "citadel_addons" / "openlock_ui").exists()
+    vpk = game / "citadel" / "addons" / "mods" / "pak01_dir.vpk"
+    mounted = "citadel/addons/mods" in gameinfo_text or "addons/mods" in gameinfo_text
+    if mounted:
+        shell = "mounted"
+    elif vpk.exists() or overlay:
+        shell = "installed, not mounted"
+    else:
+        shell = "not installed"
+
+    bin_dir = game / "bin" / "win64"
+    tools_dir = game / "bin_tools" / "win64"
+    tool_names = ("resourcecompiler.exe", "CSDKCfgVPK.exe", "resourcecopy.exe")
+    tool_count = sum(1 for name in tool_names if (bin_dir / name).exists() or (tools_dir / name).exists())
+
+    version = ""
+    record = bin_dir / "openlock.build.json"
+    if record.exists():
+        try:
+            state = json.loads(record.read_text(encoding="utf-8"))
+            version = str(state.get("version") or state.get("finishedAt") or state.get("stage") or "")[:48]
+        except (OSError, json.JSONDecodeError):
+            version = ""
+
+    return {
+        "path": str(root).replace("\\", "/"),
+        "kind": "tools" if (root / "content" / "citadel_addons").exists() else "game",
+        "shell": shell,
+        "vpkBytes": vpk.stat().st_size if vpk.exists() else 0,
+        "toolsPresent": tool_count,
+        "toolsTotal": len(tool_names),
+        "version": version,
+    }
+
+
+def read_installs(gameinfo: Path) -> list[dict]:
+    """Game and tools trees on this machine that carry a Deadlock gameinfo.
+
+    The shell is a Panorama overlay and cannot enumerate a filesystem at runtime, so the
+    installer bakes this list. The search is deliberately bounded to the places a Deadlock or
+    reduced-CSDK tree is actually installed; it never does a full-drive recursive walk. Each row
+    says whether the shell is mounted, present but not mounted, or absent, so the Tools window can
+    answer the same question for every copy on every drive.
+    """
+    roots: list[Path] = []
+    seen: set[str] = set()
+
+    def remember(root: Path):
+        try:
+            key = str(root.resolve()).lower()
+        except OSError:
+            key = str(root).lower()
+        if key in seen:
+            return
+        seen.add(key)
+        roots.append(root)
+
+    current_root = gameinfo.parent.parent.parent
+    remember(current_root)
+
+    letters = "CDEFGHIJKLMNOPQRSTUVWXYZAB"
+    steam_leaves = (
+        "SteamLibrary/steamapps/common/Deadlock",
+        "Steam/steamapps/common/Deadlock",
+        "Program Files (x86)/Steam/steamapps/common/Deadlock",
+        "Games/Steam/steamapps/common/Deadlock",
+    )
+    tools_patterns = (
+        "Users/*/Documents/Documents/deadlockpreview/Project8Staging/*",
+        "Users/*/Documents/deadlockpreview/Project8Staging/*",
+        "Users/*/Documents/*/Project8Staging/*",
+        "Users/*/*/Project8Staging/*",
+        "Projects/*/Project8Staging/*",
+        "dev/*/Project8Staging/*",
+        "Documents/*/Project8Staging/*",
+    )
+
+    for letter in letters:
+        drive = Path(f"{letter}:/")
+        try:
+            if not drive.exists():
+                continue
+        except OSError:
+            continue
+        for leaf in steam_leaves:
+            candidate = drive / leaf
+            if (candidate / "game" / "citadel" / "gameinfo.gi").exists():
+                remember(candidate)
+        for pattern in tools_patterns:
+            try:
+                for candidate in drive.glob(pattern):
+                    if (candidate / "game" / "citadel" / "gameinfo.gi").exists():
+                        remember(candidate)
+            except OSError:
+                continue
+
+    rows = []
+    for root in roots:
+        state = _install_state(root)
+        if state:
+            rows.append(state)
+    rows.sort(key=lambda row: (row["path"] != str(current_root).replace("\\", "/"), row["path"].lower()))
+    return rows[:40]
+
+
 def read_build(gameinfo: Path) -> dict:
     """The version the shell reports at boot: the package, the git build, and the game build.
 
@@ -636,6 +753,7 @@ def main():
     recipe["searchPaths"] = search_paths
     recipe["searchPathsSource"] = gameinfo.name
     recipe["tools"] = read_tools(gameinfo)
+    recipe["installs"] = read_installs(gameinfo)
     recipe["layouts"] = read_layouts(gameinfo)
     recipe["steamName"] = read_steam_persona()
     recipe["build"] = read_build(gameinfo)

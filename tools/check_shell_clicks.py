@@ -98,6 +98,31 @@ def main() -> int:
         if f"function {helper}" not in script and f"{helper} =" not in script:
             errors.append(f"{helper}: expected pointer helper is missing")
 
+    # A title glyph is a press target on the reduced client, not an activate target.
+    if 'press ? "onmousedown" : "onmouseactivate"' not in script:
+        errors.append("addControl: title glyphs would wait for an activate event the tools client drops")
+    # All four corners must stay real resize drags, not decoration.
+    for grip in ("resize-nw", "resize-ne", "resize-sw", "resize-se"):
+        if f'"{grip}"' not in script:
+            errors.append(f"ResizeGrip: missing '{grip}' drag mode")
+    if "makeDraggable(grip" not in script:
+        errors.append("ResizeGrip: corner is not bound to a resize drag")
+
+    # Chrome now follows nested HUD containers and eases a top-row window down under the bar.
+    # These names make the two live-window paths visible to a source check that cannot run the
+    # game's Panorama VM.
+    for required in ("function hudWindowCandidates", "startShiftAnimation",
+                     "record.targetShiftY", "discoverHudWindows();"):
+        if required not in script:
+            errors.append(f"script: missing window-chrome path '{required}'")
+
+    # The idle frame is restored from the pointer rectangle, not from a mouseover on a
+    # transparent child (which the tools client does not reliably deliver).
+    for required in ("function pointerInsideFrame", "record.rect = {", "cursorPoint()",
+                     "function updateCompactChrome"):
+        if required not in script:
+            errors.append(f"script: missing idle-hover path '{required}'")
+
     style = STYLE.read_text(encoding="utf-8")
     # The controls are hidden only by observer grade, never by ordinary chrome.
     for selector in (".LauncherBar", ".Taskbar", ".ToastStack"):
@@ -106,6 +131,28 @@ def main() -> int:
             errors.append(f"{selector}: missing style block")
         elif "visibility: collapse" in match.group(1):
             errors.append(f"{selector}: collapsed in the default grade")
+
+    # The 1 px frame and the grips are what disappear at idle. The chrome strip and its controls
+    # must not be collapsed: that is the regression where hovering could not bring a window back.
+    idle_grip = re.search(r"\.WindowFrame\.CompactHud\.IdleCompact \.ResizeGrip\s*\{([^}]*)\}", style)
+    if not idle_grip or "visibility: collapse" not in idle_grip.group(1):
+        errors.append(".IdleCompact .ResizeGrip: the frame grips do not hide at idle")
+    idle_chrome = re.search(r"\.WindowFrame\.CompactHud\.IdleCompact \.WindowButton[^{]*\{([^}]*)\}", style)
+    if idle_chrome and "visibility: collapse" in idle_chrome.group(1):
+        errors.append(".IdleCompact .WindowButton: the chrome controls are hidden at idle")
+    idle_cost = re.search(r"\.WindowFrame\.CompactHud\.IdleCompact \.WindowCost[^{]*\{([^}]*)\}", style)
+    if idle_cost and "visibility: collapse" in idle_cost.group(1):
+        errors.append(".IdleCompact .WindowCost: the performance metric is hidden at idle")
+
+    # The context menu must paint above every window layer, not inside one of them.
+    for selector in (".ContextDismiss", ".ContextMenu"):
+        match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", style)
+        if not match:
+            errors.append(f"{selector}: missing style block")
+        else:
+            z = re.search(r"z-index:\s*(\d+)", match.group(1))
+            if not z or int(z.group(1)) < 800:
+                errors.append(f"{selector}: does not paint above the taskbar")
 
     if errors:
         for error in errors:
