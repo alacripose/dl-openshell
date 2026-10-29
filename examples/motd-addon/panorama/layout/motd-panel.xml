@@ -1,0 +1,12 @@
+<root>
+    <styles>
+        <include src="file://{resources}/styles/motd.css" />
+    </styles>
+    <Panel class="MotdRoot">
+        <Label class="MotdKicker" text="Server MOTD" />
+        <Label class="MotdTitle" text="Welcome" />
+        <Panel class="MotdRule" />
+        {{MOTD_LINES}}
+        <Label class="MotdFooter" text="dl-openshell demo addon · edit motd.txt and rebuild" />
+    </Panel>
+</root>

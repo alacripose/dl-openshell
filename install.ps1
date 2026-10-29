@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build the Openlock UI addon as a VPK and mount it from the game's own search paths.
+  Build the dl-openshell UI addon as a VPK and mount it from the game's own search paths.
 
 .DESCRIPTION
   The UI half is a normal Panorama mod packed as `pak01_dir.vpk`, so it is location-independent:
@@ -34,6 +34,39 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Windows marks a downloaded script and the default policy refuses to run it before a single line
+# of this file executes, so install.cmd is the double-click entry point. When the script does run,
+# every terminating error still has to be visible: right-click "Run with PowerShell" closes the
+# console as soon as the script exits, and a failed preflight would otherwise look like nothing
+# happened.
+function Show-InstallFailure {
+    param([string]$Message)
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        [void][System.Windows.Forms.MessageBox]::Show(
+            $Message, 'dl-openshell install failed',
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error)
+    } catch {
+        Write-Host "dl-openshell install failed: $Message"
+    }
+}
+
+trap {
+    $failure = $_.Exception.Message
+    if (Get-Command Write-BuildRecord -ErrorAction SilentlyContinue) {
+        try { Write-BuildRecord -Stage $script:buildStage -State 'failed' -Message $failure } catch { }
+    }
+    if (Get-Command Complete-InstallUi -ErrorAction SilentlyContinue) {
+        try { Complete-InstallUi -Ok $false -Message $failure } catch { }
+    }
+    Show-InstallFailure $failure
+    Write-Host "dl-openshell install failed: $failure"
+    exit 1
+}
 
 # The launcher name is read from Steam by the running client, never baked into the VPK. A build
 # copied to another player must show that player's name, not the builder's.
@@ -153,7 +186,7 @@ function Select-InstallGrade {
         [System.Windows.Forms.Application]::EnableVisualStyles()
 
         $form = New-Object System.Windows.Forms.Form
-        $form.Text = 'Openlock install · choose a grade'
+        $form.Text = 'dl-openshell install · choose a grade'
         $form.ClientSize = New-Object System.Drawing.Size(490, 286)
         $form.StartPosition = 'CenterScreen'
         $form.FormBorderStyle = 'FixedDialog'
@@ -216,6 +249,23 @@ function Select-InstallGrade {
     return 'dev'
 }
 
+function Add-InstallLog {
+    param([string]$Line)
+    if (-not $Line -or $null -eq $script:installUi) { return }
+
+    try {
+        $ui = $script:installUi
+        if ($ui.LastLog -eq $Line) { return }
+        $ui.LastLog = $Line
+        $ui.Log.AppendText('[' + (Get-Date).ToString('HH:mm:ss') + '] ' + $Line + "`r`n")
+        $ui.Log.SelectionStart = $ui.Log.TextLength
+        $ui.Log.ScrollToCaret()
+        [System.Windows.Forms.Application]::DoEvents()
+    } catch {
+        $script:installUi = $null
+    }
+}
+
 function Start-InstallUi {
     if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
 
@@ -224,49 +274,112 @@ function Start-InstallUi {
         Add-Type -AssemblyName System.Drawing
         [System.Windows.Forms.Application]::EnableVisualStyles()
 
+        # The installer is the minimal shell outside the game. It uses the same Deadlock
+        # palette the generated schemes give the in-game taskbar and windows: off-black body,
+        # dark-gray chrome, gold border, warm ink and the green launcher accent.
+        $offBlack = [System.Drawing.Color]::FromArgb(16, 19, 13)
+        $panel = [System.Drawing.Color]::FromArgb(26, 26, 26)
+        $title = [System.Drawing.Color]::FromArgb(46, 44, 39)
+        $border = [System.Drawing.Color]::FromArgb(68, 68, 68)
+        $gold = [System.Drawing.Color]::FromArgb(255, 237, 121)
+        $green = [System.Drawing.Color]::FromArgb(95, 230, 158)
+        $ink = [System.Drawing.Color]::FromArgb(255, 239, 215)
+        $muted = [System.Drawing.Color]::FromArgb(198, 198, 198)
+
         $form = New-Object System.Windows.Forms.Form
-        $form.Text = 'Openlock install'
-        $form.ClientSize = New-Object System.Drawing.Size(420, 124)
+        $form.Text = 'dl-openshell'
+        $form.ClientSize = New-Object System.Drawing.Size(640, 430)
         $form.StartPosition = 'CenterScreen'
         $form.FormBorderStyle = 'FixedDialog'
         $form.MaximizeBox = $false
         $form.MinimizeBox = $false
         $form.ControlBox = $false
         $form.TopMost = $true
+        $form.BackColor = $offBlack
+        $form.ForeColor = $ink
+
+        $taskbar = New-Object System.Windows.Forms.Panel
+        $taskbar.Location = New-Object System.Drawing.Point(0, 0)
+        $taskbar.Size = New-Object System.Drawing.Size(640, 32)
+        $taskbar.BackColor = $panel
+        $brand = New-Object System.Windows.Forms.Label
+        $brand.Location = New-Object System.Drawing.Point(12, 6)
+        $brand.Size = New-Object System.Drawing.Size(260, 20)
+        $brand.Font = [System.Drawing.Font]::new('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+        $brand.ForeColor = $green
+        $brand.Text = 'dl-openshell'
+        $scheme = New-Object System.Windows.Forms.Label
+        $scheme.Location = New-Object System.Drawing.Point(430, 7)
+        $scheme.Size = New-Object System.Drawing.Size(198, 18)
+        $scheme.TextAlign = 'MiddleRight'
+        $scheme.ForeColor = $muted
+        $scheme.Text = 'scheme  ·  deadlock'
+        $taskbar.Controls.AddRange(@($brand, $scheme))
 
         $heading = New-Object System.Windows.Forms.Label
-        $heading.Location = New-Object System.Drawing.Point(16, 14)
-        $heading.Size = New-Object System.Drawing.Size(388, 24)
-        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
-        $heading.Text = 'Openlock is installing'
+        $heading.Location = New-Object System.Drawing.Point(16, 46)
+        $heading.Size = New-Object System.Drawing.Size(608, 26)
+        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
+        $heading.ForeColor = $gold
+        $heading.Text = 'dl-openshell is installing'
 
         $detail = New-Object System.Windows.Forms.Label
-        $detail.Location = New-Object System.Drawing.Point(16, 42)
-        $detail.Size = New-Object System.Drawing.Size(388, 20)
+        $detail.Location = New-Object System.Drawing.Point(16, 76)
+        $detail.Size = New-Object System.Drawing.Size(608, 20)
+        $detail.ForeColor = $ink
         $detail.Text = 'starting'
 
+        $logLabel = New-Object System.Windows.Forms.Label
+        $logLabel.Location = New-Object System.Drawing.Point(16, 106)
+        $logLabel.Size = New-Object System.Drawing.Size(608, 18)
+        $logLabel.ForeColor = $green
+        $logLabel.Text = 'Log'
+
+        $log = New-Object System.Windows.Forms.TextBox
+        $log.Location = New-Object System.Drawing.Point(16, 126)
+        $log.Size = New-Object System.Drawing.Size(608, 214)
+        $log.Multiline = $true
+        $log.ReadOnly = $true
+        $log.ScrollBars = 'Vertical'
+        $log.WordWrap = $true
+        $log.BackColor = $offBlack
+        $log.ForeColor = $muted
+        $log.BorderStyle = 'FixedSingle'
+        $log.Font = [System.Drawing.Font]::new('Consolas', 9)
+
         $bar = New-Object System.Windows.Forms.ProgressBar
-        $bar.Location = New-Object System.Drawing.Point(16, 70)
-        $bar.Size = New-Object System.Drawing.Size(388, 18)
+        $bar.Location = New-Object System.Drawing.Point(16, 352)
+        $bar.Size = New-Object System.Drawing.Size(608, 18)
         $bar.Minimum = 0
         $bar.Maximum = 100
         $bar.Style = 'Continuous'
 
         $percent = New-Object System.Windows.Forms.Label
-        $percent.Location = New-Object System.Drawing.Point(16, 94)
-        $percent.Size = New-Object System.Drawing.Size(388, 18)
-        $percent.Text = '0%'
+        $percent.Location = New-Object System.Drawing.Point(16, 376)
+        $percent.Size = New-Object System.Drawing.Size(608, 18)
+        $percent.ForeColor = $gold
+        $percent.Text = '0%  ·  prepare'
 
-        $form.Controls.AddRange(@($heading, $detail, $bar, $percent))
+        $note = New-Object System.Windows.Forms.Label
+        $note.Location = New-Object System.Drawing.Point(16, 400)
+        $note.Size = New-Object System.Drawing.Size(608, 18)
+        $note.ForeColor = $muted
+        $note.Text = 'Close Deadlock before installing.'
+
+        $form.Controls.AddRange(@($taskbar, $heading, $detail, $logLabel, $log, $bar, $percent, $note))
         $form.Show()
         [System.Windows.Forms.Application]::DoEvents()
         $script:installUi = [pscustomobject]@{
             Form = $form
+            Taskbar = $taskbar
             Heading = $heading
             Detail = $detail
+            Log = $log
             Bar = $bar
             Percent = $percent
+            LastLog = ''
         }
+        Add-InstallLog "minimal shell ready · grade $script:installGrade · scheme deadlock"
         Update-InstallUi -Percent 0 -Stage 'prepare' -Message 'starting'
     } catch {
         $script:installUi = $null
@@ -283,7 +396,15 @@ function Update-InstallUi {
         $ui.Bar.Value = [Math]::Max(0, [Math]::Min(100, $Percent))
         $ui.Percent.Text = "$([Math]::Max(0, [Math]::Min(100, $Percent)))%  ·  $Stage"
         if ($Message) { $ui.Detail.Text = $Message }
-        $ui.Heading.Text = if ($State -eq 'failed') { 'Openlock install failed' } else { 'Openlock is installing' }
+        $ui.Heading.Text = if ($State -eq 'failed') { 'dl-openshell install failed' } else { 'dl-openshell is installing' }
+        $ui.Heading.ForeColor = if ($State -eq 'failed') {
+            [System.Drawing.Color]::FromArgb(236, 112, 104)
+        } elseif ($State -eq 'ok') {
+            [System.Drawing.Color]::FromArgb(132, 214, 138)
+        } else {
+            [System.Drawing.Color]::FromArgb(255, 237, 121)
+        }
+        if ($Message) { Add-InstallLog ("$Stage  ·  $Message") }
         [System.Windows.Forms.Application]::DoEvents()
     } catch {
         $script:installUi = $null
@@ -298,7 +419,7 @@ function Show-OpenlockToast {
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Drawing
         $tip = New-Object System.Windows.Forms.NotifyIcon
-        $tip.Text = 'Openlock'
+        $tip.Text = 'dl-openshell'
         $tip.Icon = if ($Kind -eq 'Error') { [System.Drawing.SystemIcons]::Error } else { [System.Drawing.SystemIcons]::Information }
         $tip.Visible = $true
         $tip.ShowBalloonTip(5000, $Title, $Text, $(if ($Kind -eq 'Error') {
@@ -328,7 +449,7 @@ function Complete-InstallUi {
         $script:installUi = $null
     }
 
-    Show-OpenlockToast -Title $(if ($Ok) { 'Openlock installed' } else { 'Openlock install failed' }) `
+    Show-OpenlockToast -Title $(if ($Ok) { 'dl-openshell installed' } else { 'dl-openshell install failed' }) `
         -Text $Message -Kind $(if ($Ok) { 'Info' } else { 'Error' })
 }
 
@@ -422,13 +543,6 @@ function Write-BuildRecord {
 
 $script:installGrade = Select-InstallGrade -Selected $Grade
 Start-InstallUi
-trap {
-    $failure = $_.Exception.Message
-    try { Write-BuildRecord -Stage $script:buildStage -State 'failed' -Message $failure } catch { }
-    Complete-InstallUi -Ok $false -Message $failure
-    Write-Host "Openlock install failed: $failure"
-    exit 1
-}
 
 Write-BuildRecord -Stage 'prepare' -State 'running' -Message 'assembling the client tree'
 

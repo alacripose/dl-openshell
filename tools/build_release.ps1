@@ -24,9 +24,10 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $dist = Join-Path $root 'dist\openlock_ui\pak01_dir.vpk'
 $release = Join-Path $root 'release'
-$playerVpk = Join-Path $release 'openlock-player.vpk'
-$checksum = Join-Path $release 'openlock-player.sha256'
+$playerVpk = Join-Path $release 'openshell-player.vpk'
+$checksum = Join-Path $release 'openshell-player.sha256'
 $installer = Join-Path $release 'install.ps1'
+$launcher = Join-Path $release 'install.cmd'
 $license = Join-Path $root 'LICENSE'
 
 if (-not $Tag) {
@@ -36,7 +37,8 @@ if (-not $Tag) {
 
 if (-not $SkipBuild) {
     Write-Host "Building the player VPK from $DeadlockRoot"
-    & (Join-Path $root 'install.ps1') -DeadlockRoot $DeadlockRoot -Grade player -NoUi
+    # No silent switch: a release build runs the same visible minimal shell a player sees.
+    & (Join-Path $root 'install.ps1') -DeadlockRoot $DeadlockRoot -Grade player
     if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed with exit code $LASTEXITCODE." }
 }
 
@@ -45,6 +47,9 @@ if (-not (Test-Path -LiteralPath $dist)) {
 }
 if (-not (Test-Path -LiteralPath $installer)) {
     throw "The release installer is missing at '$installer'."
+}
+if (-not (Test-Path -LiteralPath $launcher)) {
+    throw "The double-click launcher is missing at '$launcher'."
 }
 if (-not (Test-Path -LiteralPath $license)) {
     throw "The MIT license is missing at '$license'."
@@ -61,13 +66,13 @@ $bytes = (Get-Item -LiteralPath $playerVpk).Length
 
 # sha256sum format: the installer reads the first token. Keep the asset name so a human can
 # verify the downloaded file with the same line.
-[System.IO.File]::WriteAllText($checksum, "$hash  openlock-player.vpk`n",
+[System.IO.File]::WriteAllText($checksum, "$hash  openshell-player.vpk`n",
     (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Release VPK: $playerVpk ($bytes bytes)"
 Write-Host "SHA-256: $hash"
 Write-Host ''
-Write-Host 'Upload these three assets with:'
-Write-Host "  gh release create $Tag `"$playerVpk`" `"$checksum`" `"$installer`" --repo alacripose/dl-openshell --title `"Openlock $Tag`" --notes-file README.md"
+Write-Host 'Upload these assets with:'
+Write-Host "  gh release create $Tag `"$playerVpk`" `"$checksum`" `"$installer`" `"$launcher`" `"$license`" --repo alacripose/dl-openshell --title `"dl-openshell $Tag`" --notes-file README.md"
 Write-Host ''
-Write-Host 'The release installer expects the asset names openlock-player.vpk and openlock-player.sha256.'
+Write-Host 'The release installer expects the asset names openshell-player.vpk and openshell-player.sha256.'

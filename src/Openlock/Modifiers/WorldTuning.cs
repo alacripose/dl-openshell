@@ -27,7 +27,7 @@ public sealed class WorldTuning
         if (gravity is null || frictionVar is null)
         {
             Console.WriteLine(
-                $"[Openlock] world tuning refused: {(gravity is null ? GravityVar : FrictionVar)} not found on this build.");
+                $"[dl-openshell] world tuning refused: {(gravity is null ? GravityVar : FrictionVar)} not found on this build.");
             return;
         }
 

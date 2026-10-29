@@ -157,11 +157,21 @@ public sealed class ShpPackage
         public string LayoutPath { get; set; } = "";
 
         /// <summary>
-        /// The shell's content selector. A delivered XML layout wins over the package's closed
-        /// content kind, because the package's window is then drawn by that layout.
+        /// The package's source XML as a node tree, with its CSS classes already resolved. The
+        /// shell builds this itself, so a package delivered after the client loaded still draws
+        /// and keeps its controls clickable without a mounted resource path.
+        /// </summary>
+        [JsonPropertyName("liveTree")]
+        public List<LayoutTree.Node>? LiveTree { get; set; }
+
+        /// <summary>
+        /// The shell's content selector. A delivered XML layout or a live node tree wins over the
+        /// package's closed content kind, because the package's window is then drawn by that XML.
         /// </summary>
         [JsonPropertyName("view")]
-        public string View => string.IsNullOrEmpty(LayoutPath) ? Content : "addon-layout";
+        public string View => string.IsNullOrEmpty(LayoutPath) && LiveTree is not { Count: > 0 }
+            ? Content
+            : "addon-layout";
 
         /// <summary>The package that declared this window, set by the addon loader.</summary>
         [JsonPropertyName("addon")]

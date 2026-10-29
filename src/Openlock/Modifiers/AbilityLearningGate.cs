@@ -37,7 +37,7 @@ public sealed class AbilityLearningGate
 
         _applied[pawn.Handle] = prevent;
         Log.Write(
-            $"[Openlock] learning gate {(prevent ? "closed" : "opened")} for " +
+            $"[dl-openshell] learning gate {(prevent ? "closed" : "opened")} for " +
             $"{(string.IsNullOrEmpty(pawn.Controller?.PlayerName) ? $"hero {pawn.HeroID}" : pawn.Controller!.PlayerName)} " +
             $"({HeroAbilitySlots} hero ability slots)");
     }
@@ -55,7 +55,7 @@ public sealed class AbilityLearningGate
         }
 
         if (_applied.Values.Any(v => v))
-            Log.Write($"[Openlock] learning gate opened on {_applied.Count} pawn(s)");
+            Log.Write($"[dl-openshell] learning gate opened on {_applied.Count} pawn(s)");
 
         _applied.Clear();
     }

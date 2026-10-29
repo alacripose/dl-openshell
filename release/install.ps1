@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Install the verified Openlock player build beside deadlock.exe.
+  Install the verified dl-openshell player build beside deadlock.exe.
 
 .DESCRIPTION
   This is the file published as the `install.ps1` release asset. It needs no checkout, Python or
@@ -20,8 +20,7 @@ param(
     [string]$ReleaseRepo = 'alacripose/dl-openshell',
     [string]$ReleaseTag = 'latest',
     [string]$ReleaseBase = '',
-    [ValidateSet('player')]
-    [string]$Grade = 'player',
+    [string]$Grade = '',
     [switch]$NoUi,
     [switch]$KeepArchive
 )
@@ -55,8 +54,25 @@ if (-not $DeadlockRoot) {
     }
 }
 
+function Add-ShellLog {
+    param([string]$Line)
+    if (-not $Line -or $null -eq $script:shellUi) { return }
+
+    try {
+        $ui = $script:shellUi
+        if ($ui.LastLog -eq $Line) { return }
+        $ui.LastLog = $Line
+        $ui.Log.AppendText('[' + (Get-Date).ToString('HH:mm:ss') + '] ' + $Line + "`r`n")
+        $ui.Log.SelectionStart = $ui.Log.TextLength
+        $ui.Log.ScrollToCaret()
+        [System.Windows.Forms.Application]::DoEvents()
+    } catch {
+        $script:shellUi = $null
+    }
+}
+
 function Show-ShellUi {
-    param([string]$Title = 'Openlock', [string]$Message = 'starting')
+    param([string]$Title = 'dl-openshell', [string]$Message = 'starting')
     if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
 
     try {
@@ -64,59 +80,104 @@ function Show-ShellUi {
         Add-Type -AssemblyName System.Drawing
         [System.Windows.Forms.Application]::EnableVisualStyles()
 
+        # The same palette the generated shell schemes use, so the desktop installer reads as
+        # the same product: off-black body, dark-gray taskbar, gold border, green launcher mark.
+        $offBlack = [System.Drawing.Color]::FromArgb(16, 19, 13)
+        $panel = [System.Drawing.Color]::FromArgb(26, 26, 26)
+        $gold = [System.Drawing.Color]::FromArgb(255, 237, 121)
+        $green = [System.Drawing.Color]::FromArgb(95, 230, 158)
+        $ink = [System.Drawing.Color]::FromArgb(255, 239, 215)
+        $muted = [System.Drawing.Color]::FromArgb(198, 198, 198)
+
         $form = New-Object System.Windows.Forms.Form
         $form.Text = $Title
-        $form.ClientSize = New-Object System.Drawing.Size(470, 176)
+        $form.ClientSize = New-Object System.Drawing.Size(640, 430)
         $form.StartPosition = 'CenterScreen'
         $form.FormBorderStyle = 'FixedDialog'
         $form.MaximizeBox = $false
         $form.MinimizeBox = $false
         $form.ControlBox = $false
         $form.TopMost = $true
-        $form.BackColor = [System.Drawing.Color]::FromArgb(18, 20, 24)
-        $form.ForeColor = [System.Drawing.Color]::FromArgb(232, 235, 238)
+        $form.BackColor = $offBlack
+        $form.ForeColor = $ink
+
+        $taskbar = New-Object System.Windows.Forms.Panel
+        $taskbar.Location = New-Object System.Drawing.Point(0, 0)
+        $taskbar.Size = New-Object System.Drawing.Size(640, 32)
+        $taskbar.BackColor = $panel
+        $brand = New-Object System.Windows.Forms.Label
+        $brand.Location = New-Object System.Drawing.Point(12, 6)
+        $brand.Size = New-Object System.Drawing.Size(260, 20)
+        $brand.Font = [System.Drawing.Font]::new('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+        $brand.ForeColor = $green
+        $brand.Text = 'dl-openshell'
+        $scheme = New-Object System.Windows.Forms.Label
+        $scheme.Location = New-Object System.Drawing.Point(430, 7)
+        $scheme.Size = New-Object System.Drawing.Size(198, 18)
+        $scheme.TextAlign = 'MiddleRight'
+        $scheme.ForeColor = $muted
+        $scheme.Text = 'scheme  ·  deadlock'
+        $taskbar.Controls.AddRange(@($brand, $scheme))
 
         $heading = New-Object System.Windows.Forms.Label
-        $heading.Location = New-Object System.Drawing.Point(18, 16)
-        $heading.Size = New-Object System.Drawing.Size(434, 26)
+        $heading.Location = New-Object System.Drawing.Point(16, 46)
+        $heading.Size = New-Object System.Drawing.Size(608, 26)
         $heading.Font = [System.Drawing.Font]::new('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
-        $heading.ForeColor = [System.Drawing.Color]::FromArgb(240, 196, 84)
-        $heading.Text = 'Openlock'
+        $heading.ForeColor = $gold
+        $heading.Text = 'dl-openshell is installing'
 
         $detail = New-Object System.Windows.Forms.Label
-        $detail.Location = New-Object System.Drawing.Point(18, 48)
-        $detail.Size = New-Object System.Drawing.Size(434, 38)
-        $detail.Font = [System.Drawing.Font]::new('Segoe UI', 9)
+        $detail.Location = New-Object System.Drawing.Point(16, 76)
+        $detail.Size = New-Object System.Drawing.Size(608, 20)
+        $detail.ForeColor = $ink
         $detail.Text = $Message
 
+        $logLabel = New-Object System.Windows.Forms.Label
+        $logLabel.Location = New-Object System.Drawing.Point(16, 106)
+        $logLabel.Size = New-Object System.Drawing.Size(608, 18)
+        $logLabel.ForeColor = $green
+        $logLabel.Text = 'Log'
+
+        $log = New-Object System.Windows.Forms.TextBox
+        $log.Location = New-Object System.Drawing.Point(16, 126)
+        $log.Size = New-Object System.Drawing.Size(608, 214)
+        $log.Multiline = $true
+        $log.ReadOnly = $true
+        $log.ScrollBars = 'Vertical'
+        $log.WordWrap = $true
+        $log.BackColor = $offBlack
+        $log.ForeColor = $muted
+        $log.BorderStyle = 'FixedSingle'
+        $log.Font = [System.Drawing.Font]::new('Consolas', 9)
+
         $bar = New-Object System.Windows.Forms.ProgressBar
-        $bar.Location = New-Object System.Drawing.Point(18, 94)
-        $bar.Size = New-Object System.Drawing.Size(434, 14)
+        $bar.Location = New-Object System.Drawing.Point(16, 352)
+        $bar.Size = New-Object System.Drawing.Size(608, 18)
         $bar.Minimum = 0
         $bar.Maximum = 100
         $bar.Style = 'Continuous'
         $bar.Value = 0
 
         $percent = New-Object System.Windows.Forms.Label
-        $percent.Location = New-Object System.Drawing.Point(18, 116)
-        $percent.Size = New-Object System.Drawing.Size(434, 20)
-        $percent.Font = [System.Drawing.Font]::new('Segoe UI', 9)
-        $percent.ForeColor = [System.Drawing.Color]::FromArgb(160, 168, 178)
+        $percent.Location = New-Object System.Drawing.Point(16, 376)
+        $percent.Size = New-Object System.Drawing.Size(608, 18)
+        $percent.ForeColor = $gold
         $percent.Text = '0%  ·  starting'
 
         $note = New-Object System.Windows.Forms.Label
-        $note.Location = New-Object System.Drawing.Point(18, 140)
-        $note.Size = New-Object System.Drawing.Size(434, 20)
-        $note.Font = [System.Drawing.Font]::new('Segoe UI', 8)
-        $note.ForeColor = [System.Drawing.Color]::FromArgb(120, 128, 138)
+        $note.Location = New-Object System.Drawing.Point(16, 400)
+        $note.Size = New-Object System.Drawing.Size(608, 18)
+        $note.ForeColor = $muted
         $note.Text = 'Close Deadlock before installing.'
 
-        $form.Controls.AddRange(@($heading, $detail, $bar, $percent, $note))
+        $form.Controls.AddRange(@($taskbar, $heading, $detail, $logLabel, $log, $bar, $percent, $note))
         $form.Show()
         [System.Windows.Forms.Application]::DoEvents()
         $script:shellUi = [pscustomobject]@{
-            Form = $form; Heading = $heading; Detail = $detail; Bar = $bar; Percent = $percent; Note = $note
+            Form = $form; Taskbar = $taskbar; Heading = $heading; Detail = $detail; Log = $log
+            Bar = $bar; Percent = $percent; Note = $note; LastLog = ''
         }
+        Add-ShellLog "minimal shell ready · scheme deadlock"
     } catch {
         $script:shellUi = $null
         Write-Warning "shell window unavailable: $($_.Exception.Message)"
@@ -135,14 +196,15 @@ function Update-ShellUi {
         $ui.Percent.Text = "$value%  ·  $Stage"
         if ($Message) { $ui.Detail.Text = $Message }
         if ($State -eq 'failed') {
-            $ui.Heading.Text = 'Openlock install failed'
+            $ui.Heading.Text = 'dl-openshell install failed'
             $ui.Heading.ForeColor = [System.Drawing.Color]::FromArgb(236, 112, 104)
             $ui.Note.Text = 'Nothing was mounted. Read the message above, then run the installer again.'
         } elseif ($State -eq 'ok') {
-            $ui.Heading.Text = 'Openlock installed'
+            $ui.Heading.Text = 'dl-openshell installed'
             $ui.Heading.ForeColor = [System.Drawing.Color]::FromArgb(132, 214, 138)
             $ui.Note.Text = 'Start Deadlock. The shell boots from its own addons/mods archive.'
         }
+        if ($Message) { Add-ShellLog ("$Stage  ·  $Message") }
         [System.Windows.Forms.Application]::DoEvents()
     } catch {
         $script:shellUi = $null
@@ -157,7 +219,7 @@ function Show-Toast {
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Drawing
         $tip = New-Object System.Windows.Forms.NotifyIcon
-        $tip.Text = 'Openlock'
+        $tip.Text = 'dl-openshell'
         $tip.Icon = if ($Kind -eq 'Error') { [System.Drawing.SystemIcons]::Error } else { [System.Drawing.SystemIcons]::Information }
         $tip.Visible = $true
         $tip.ShowBalloonTip(5000, $Title, $Text, $(if ($Kind -eq 'Error') {
@@ -186,8 +248,83 @@ function Complete-ShellUi {
         } catch { }
         $script:shellUi = $null
     }
-    Show-Toast -Title $(if ($Ok) { 'Openlock installed' } else { 'Openlock install failed' }) `
+    Show-Toast -Title $(if ($Ok) { 'dl-openshell installed' } else { 'dl-openshell install failed' }) `
         -Text $Message -Kind $(if ($Ok) { 'Info' } else { 'Error' })
+}
+
+function Select-OpenShellGrade {
+    param([string]$Selected = '')
+
+    if ($Selected -in @('dev', 'observer', 'player')) { return $Selected }
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return 'player' }
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = 'dl-openshell install · choose a grade'
+        $form.ClientSize = New-Object System.Drawing.Size(520, 300)
+        $form.StartPosition = 'CenterScreen'
+        $form.FormBorderStyle = 'FixedDialog'
+        $form.MaximizeBox = $false
+        $form.MinimizeBox = $false
+        $form.TopMost = $true
+
+        $heading = New-Object System.Windows.Forms.Label
+        $heading.Location = New-Object System.Drawing.Point(18, 14)
+        $heading.Size = New-Object System.Drawing.Size(484, 26)
+        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+        $heading.Text = 'Choose the shell grade'
+
+        $choices = @(
+            @{ Id = 'dev'; Text = 'Dev — every Deadlock and Deadworks addon and shell window is available.' }
+            @{ Id = 'observer'; Text = 'Observer — hide the shell chrome so recordings stay clean; toasts still appear.' }
+            @{ Id = 'player'; Text = 'Player — keep your UI layout schemes and load the saved scheme on startup.' }
+        )
+
+        $radios = @()
+        $top = 50
+        foreach ($choice in $choices) {
+            $radio = New-Object System.Windows.Forms.RadioButton
+            $radio.Location = New-Object System.Drawing.Point(18, $top)
+            $radio.Size = New-Object System.Drawing.Size(484, 44)
+            $radio.Text = $choice.Text
+            $radio.Tag = $choice.Id
+            if ($choice.Id -eq 'player') { $radio.Checked = $true }
+            $form.Controls.Add($radio)
+            $radios += $radio
+            $top += 56
+        }
+
+        $ok = New-Object System.Windows.Forms.Button
+        $ok.Location = New-Object System.Drawing.Point(396, 240)
+        $ok.Size = New-Object System.Drawing.Size(106, 32)
+        $ok.Text = 'Install'
+        $form.Controls.Add($ok)
+        $form.Controls.Add($heading)
+        $form.AcceptButton = $ok
+        $form.Tag = 'player'
+
+        $ok.Add_Click({
+            $picked = $form.Tag
+            foreach ($radio in $radios) {
+                if ($radio.Checked) { $picked = [string]$radio.Tag; break }
+            }
+            $form.Tag = $picked
+            $form.Close()
+        }.GetNewClosure())
+
+        $form.ShowDialog() | Out-Null
+        $picked = [string]$form.Tag
+        $form.Dispose()
+        if ($picked -in @('dev', 'observer', 'player')) { return $picked }
+    } catch {
+        Write-Warning "grade dialog unavailable: $($_.Exception.Message)"
+    }
+
+    return 'player'
 }
 
 function Test-VpkString([byte[]]$Data, [int]$Start, [ref]$Next) {
@@ -290,7 +427,8 @@ New-Item -ItemType Directory -Force -Path $temp | Out-Null
 $downloadedVpk = Join-Path $temp 'pak01_dir.vpk'
 
 try {
-    Show-ShellUi -Message 'finding the Deadlock install'
+    $chosenGrade = Select-OpenShellGrade -Selected $Grade
+    Show-ShellUi -Message "grade $chosenGrade · finding the Deadlock install"
     Update-ShellUi -Percent 5 -Stage 'prepare' -Message 'finding the Deadlock install'
 
     if (-not $DeadlockRoot) {
@@ -314,27 +452,42 @@ try {
             $HashPath = (Resolve-Path $HashPath).Path
         }
     } else {
-        Update-ShellUi -Percent 12 -Stage 'download' -Message "downloading the verified player archive from $ReleaseRepo"
-        $errorText = Get-ReleaseAsset -Name 'openlock-player.vpk' -Destination $downloadedVpk
-        if ($errorText) {
-            throw "Could not download the player archive from ${ReleaseRepo}: $errorText"
+        # A complete release drop-in carries the player VPK and its checksum beside this script;
+        # using them makes the installer work offline and makes the same double-click path the
+        # release advertises. Otherwise fall back to the published assets.
+        $localVpk = Join-Path $PSScriptRoot 'openshell-player.vpk'
+        $localHash = Join-Path $PSScriptRoot 'openshell-player.sha256'
+        if ((Test-Path -LiteralPath $localVpk) -and (Test-Path -LiteralPath $localHash)) {
+            $VpkPath = (Resolve-Path $localVpk).Path
+            $HashPath = (Resolve-Path $localHash).Path
+            Update-ShellUi -Percent 20 -Stage 'verify' -Message 'using the player archive beside the installer'
+        } else {
+            Update-ShellUi -Percent 12 -Stage 'download' -Message "downloading the verified player archive from $ReleaseRepo"
+            $errorText = Get-ReleaseAsset -Name 'openshell-player.vpk' -Destination $downloadedVpk
+            if ($errorText) {
+                throw "Could not download the player archive from ${ReleaseRepo}: $errorText"
+            }
+            $checksumPath = Join-Path $temp 'openshell-player.sha256'
+            Update-ShellUi -Percent 32 -Stage 'download' -Message 'downloading the release checksum'
+            $errorText = Get-ReleaseAsset -Name 'openshell-player.sha256' -Destination $checksumPath
+            if ($errorText) {
+                throw "The release did not provide openshell-player.sha256, so the archive cannot be verified: $errorText"
+            }
+            $VpkPath = $downloadedVpk
+            $HashPath = $checksumPath
         }
-        $checksumPath = Join-Path $temp 'openlock-player.sha256'
-        Update-ShellUi -Percent 32 -Stage 'download' -Message 'downloading the release checksum'
-        $errorText = Get-ReleaseAsset -Name 'openlock-player.sha256' -Destination $checksumPath
-        if ($errorText) {
-            throw "The release did not provide openlock-player.sha256, so the archive cannot be verified: $errorText"
-        }
-        $expected = (Get-Content -LiteralPath $checksumPath -TotalCount 1).Trim().Split(' ')[0].ToLowerInvariant()
+    }
+
+    if ($HashPath) {
+        $expected = (Get-Content -LiteralPath $HashPath -TotalCount 1).Trim().Split(' ')[0].ToLowerInvariant()
         if ($expected -notmatch '^[0-9a-f]{64}$') {
             throw "The release checksum is not a SHA-256 value: '$expected'."
         }
-        $actual = (Get-FileHash -LiteralPath $downloadedVpk -Algorithm SHA256).Hash.ToLowerInvariant()
+        $actual = (Get-FileHash -LiteralPath $VpkPath -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($actual -ne $expected) {
-            throw "Release archive hash $actual does not match the published $expected; refusing to install."
+            throw "Archive hash $actual does not match the published $expected; refusing to install."
         }
         Write-Host "Verified release archive SHA-256 $actual"
-        $VpkPath = $downloadedVpk
     }
 
     Update-ShellUi -Percent 48 -Stage 'verify' -Message 'checking the archive tree'
@@ -406,7 +559,7 @@ try {
     Update-ShellUi -Percent 94 -Stage 'record' -Message 'writing the installed-build record'
     $record = [ordered]@{
         format = 'openlock.build/1'
-        grade = $Grade
+        grade = $chosenGrade
         stage = 'installed'
         state = 'ok'
         startedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
@@ -427,13 +580,13 @@ try {
     }
 
     Update-ShellUi -Percent 100 -Stage 'installed' -Message "installed $([Math]::Round($archiveBytes / 1MB, 2)) MB"
-    Complete-ShellUi -Ok $true -Message "Installed Openlock $Grade into addons/mods ($([Math]::Round($archiveBytes / 1MB, 2)) MB). Start Deadlock."
+    Complete-ShellUi -Ok $true -Message "Installed dl-openshell $chosenGrade into addons/mods ($([Math]::Round($archiveBytes / 1MB, 2)) MB). Start Deadlock."
     Write-Host "Installed $installedArchive"
     Write-Host "Mounted citadel/addons/mods from $gameinfo"
     exit 0
 } catch {
     $failure = $_.Exception.Message
-    Write-Host "Openlock install failed: $failure"
+    Write-Host "dl-openshell install failed: $failure"
     Complete-ShellUi -Ok $false -Message $failure
     exit 1
 } finally {

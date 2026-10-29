@@ -4,7 +4,7 @@
 // OpenlockStandaloneHost, where the shell's host() walk can read them.
 (function () {
     function log(text) {
-        try { $.Msg("[Openlock] server mount: ", text); } catch (e) {}
+        try { $.Msg("[dl-openshell] server mount: ", text); } catch (e) {}
     }
 
     function report(text) {

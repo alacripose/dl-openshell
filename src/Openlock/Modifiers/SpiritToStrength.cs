@@ -88,7 +88,7 @@ public sealed class SpiritToStrength
         }
         catch (Exception ex)
         {
-            Log.Write($"[Openlock] conversion state unreadable ({ex.GetType().Name}); starting empty");
+            Log.Write($"[dl-openshell] conversion state unreadable ({ex.GetType().Name}); starting empty");
             return [];
         }
     }
@@ -104,7 +104,7 @@ public sealed class SpiritToStrength
         }
         catch (Exception ex)
         {
-            Log.Write($"[Openlock] conversion state not saved ({ex.GetType().Name})");
+            Log.Write($"[dl-openshell] conversion state not saved ({ex.GetType().Name})");
         }
     }
 
@@ -142,7 +142,7 @@ public sealed class SpiritToStrength
     {
         if (!HeroBonuses.TryFind(pawn, out var modifier))
         {
-            Log.Write($"[Openlock] conversion ({reason}) REFUSED: no hero upgrade bonuses modifier on {pawn.HeroID}");
+            Log.Write($"[dl-openshell] conversion ({reason}) REFUSED: no hero upgrade bonuses modifier on {pawn.HeroID}");
             return;
         }
 
@@ -181,7 +181,7 @@ public sealed class SpiritToStrength
             state.BaselineHealth = curHealth - state.HealthAdded;
 
             Log.Write(
-                $"[Openlock] repair {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"}: " +
+                $"[dl-openshell] repair {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"}: " +
                 $"legacy state reconstructed (undid recorded deltas) weapon {curWeapon:0.##}->{state.BaselineWeapon:0.##}, " +
                 $"vitality {curArmor:0.##}->{state.BaselineArmor:0.##}, tech {curTech:0.##}->{state.BaselineTech:0.##}, " +
                 $"maxhealth {curHealth}->{state.BaselineHealth}; unrecorded applications cannot be undone");
@@ -199,7 +199,7 @@ public sealed class SpiritToStrength
             state.BaselineTech = _tech.Get(modifier.Handle);
             state.BaselineHealth = _maxHealthField.Get(pawn.Handle);
             Log.Write(
-                $"[Openlock] conversion ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
+                $"[dl-openshell] conversion ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
                 $"baseline captured: weapon={state.BaselineWeapon:0.##} armor={state.BaselineArmor:0.##} " +
                 $"tech={state.BaselineTech:0.##} maxhealth={state.BaselineHealth}");
         }
@@ -218,7 +218,7 @@ public sealed class SpiritToStrength
         if (fresh)
         {
             var techLive = TechIsLive(pawn, out var techDetail);
-            Log.Write($"[Openlock] conversion ({reason}) tech instrument {(techLive ? "LIVE" : "DEAD")}: {techDetail}");
+            Log.Write($"[dl-openshell] conversion ({reason}) tech instrument {(techLive ? "LIVE" : "DEAD")}: {techDetail}");
         }
 
         var changed = false;
@@ -263,14 +263,14 @@ public sealed class SpiritToStrength
         if (!changed)
         {
             Log.Write(
-                $"[Openlock] conversion ({reason}) STEADY {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
+                $"[dl-openshell] conversion ({reason}) STEADY {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
                 $"items=[{items}] worth={worth:0.##} | weapon={weaponAfter:0.##} vitality={armorAfter:0.##} " +
                 $"tech={techAfter:0.##} maxhealth={healthAfter}");
         }
         else
         {
             Log.Write(
-                $"[Openlock] conversion ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
+                $"[dl-openshell] conversion ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"} " +
                 $"items=[{items}] worth={worth:0.##} | " +
                 $"weapon {weaponBefore:0.##}->{weaponAfter:0.##} (target {targetWeapon:0.##}), " +
                 $"vitality {armorBefore:0.##}->{armorAfter:0.##} (target {targetArmor:0.##}), " +
@@ -303,7 +303,7 @@ public sealed class SpiritToStrength
 
         if (!HeroBonuses.TryFind(pawn, out var modifier))
         {
-            Log.Write($"[Openlock] restore ({reason}) deferred: no bonuses modifier on {pawn.HeroID}");
+            Log.Write($"[dl-openshell] restore ({reason}) deferred: no bonuses modifier on {pawn.HeroID}");
             return;
         }
 
@@ -315,7 +315,7 @@ public sealed class SpiritToStrength
         _maxHealthField.Set(pawn.Handle, state.BaselineHealth);
 
         Log.Write(
-            $"[Openlock] restore ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"}: " +
+            $"[dl-openshell] restore ({reason}) {pawn.Controller?.PlayerName ?? $"hero {pawn.HeroID}"}: " +
             $"weapon {before.Item1:0.##}->{_weapon.Get(modifier.Handle):0.##} (baseline {state.BaselineWeapon:0.##}), " +
             $"vitality {before.Item2:0.##}->{_armor.Get(modifier.Handle):0.##} (baseline {state.BaselineArmor:0.##}), " +
             $"tech {before.Item3:0.##}->{_tech.Get(modifier.Handle):0.##} (baseline {state.BaselineTech:0.##}), " +

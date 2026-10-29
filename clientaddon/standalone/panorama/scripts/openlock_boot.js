@@ -9,7 +9,7 @@
 // bar, a window, a toast). A duplicate boot is a no-op, not a second shell.
 (function () {
     function log(text) {
-        try { $.Msg("[Openlock] mount: ", text); } catch (e) {}
+        try { $.Msg("[dl-openshell] mount: ", text); } catch (e) {}
     }
 
     try {
