@@ -35,6 +35,9 @@
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
     var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
     var currentScheme = "";
+    // The idle/compact chrome is a behavior of the shell, not a grade gate. Echo the baked grade
+    // beside the transition so the client's own console can show whether a grade suppressed it.
+    var shellGrade = String((data.build && data.build.grade) || "dev");
 
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
@@ -913,14 +916,68 @@
         lastInteractionAt = Date.now();
         var f = frames[id];
         if (!f) return;
+        f.lastActiveAt = lastInteractionAt;
         f.frame.SetHasClass("IdleCompact", false);
         animateCompact(f, 0);
     }
 
+    // A per-window hover state, because this client exposes no cursor position at all:
+    // `$.MousePosition` is undefined, `GameUI` is absent and `$.GetCursorPosition` is undefined,
+    // which is why the pointer-rectangle probe alone can never restore a window here. The bound
+    // game panel is hit-tested by the client itself, so its own mouseover is the dependable
+    // trigger; the frame covers a shell-drawn window. A short hold after mouseout absorbs the
+    // out-then-over pair fired while moving from a window body onto its title bar.
+    function enterFrame(id, source) {
+        var f = frames[id];
+        if (!f) return;
+        if (!f.hovered) $.Msg("[Openlock] chrome hover: ", id, " over via ", source || "panel");
+        f.hovered = true;
+        f.hoverEnteredAt = Date.now();
+        f.hoveredUntil = 0;
+        f.lastActiveAt = f.hoverEnteredAt;
+        restoreChrome(id);
+    }
+
+    function leaveFrame(id, source) {
+        var f = frames[id];
+        if (!f) return;
+        var now = Date.now();
+        // Moving from a window body onto its title bar (or between title children) delivers the
+        // out before the next over on this client. A page that just entered must not be cleared
+        // by a stale out around the same pixel.
+        if ((num(f.hoverEnteredAt) || 0) > 0 && now - f.hoverEnteredAt < 80) {
+            f.hoveredUntil = now + 450;
+            return;
+        }
+        if (f.hovered) $.Msg("[Openlock] chrome hover: ", id, " out via ", source || "panel");
+        f.hovered = false;
+        f.hoveredUntil = now + 450;
+    }
+
+    function hoveredByPointer(f, now) {
+        if (!f) return false;
+        if (f.hovered) return true;
+        if ((num(f.hoveredUntil) || 0) > now) return true;
+        return pointerInsideFrame(f);
+    }
+
+    // The live panel stays in the game's tree, so this is the only hover target that covers the
+    // pixels the player sees without swallowing the panel's own clicks. A shell-drawn window is
+    // bound through its frame below.
+    function bindFrameHover(id, panel) {
+        if (!panel) return;
+        try {
+            panel.SetPanelEvent("onmouseover", function () { enterFrame(id, "panel"); });
+            panel.SetPanelEvent("onmouseout", function () { leaveFrame(id, "panel"); });
+            $.Msg("[Openlock] chrome hover bound: ", id, " via panel");
+        } catch (e) {
+            $.Msg("[Openlock] chrome hover REFUSED for '", id, "': ", String(e));
+        }
+    }
+
     // The window body can be transparent (a live game panel) and the frame is not hit-testable on
     // that path, so a mouseover on the chrome is not a dependable restore trigger. The pointer
-    // rectangle is: it is the exact box the player sees, and it keeps working while idle chrome
-    // is fully transparent.
+    // rectangle is the fallback for clients that expose a cursor; hover state is the live path.
     function pointerInsideFrame(f) {
         if (!f || !f.rect || !expanded) return false;
         var at = cursorPoint();
@@ -935,9 +992,18 @@
             if (!frames.hasOwnProperty(id)) continue;
             var f = frames[id];
             if (!f || !f.win || !(f.win.autoFrame || f.win.discovered)) continue;
-            var hovered = pointerInsideFrame(f);
-            if (hovered) lastInteractionAt = now;
-            var idle = !pointerDrag && !hovered && (now - lastInteractionAt) > 3200;
+            var hovered = hoveredByPointer(f, now);
+            // Each window owns its own idle clock. A hover on one window must not keep every
+            // other window's chrome expanded, and leaving this window must not reset the others.
+            if (hovered) f.lastActiveAt = now;
+            var idle = !pointerDrag && !hovered && (now - (num(f.lastActiveAt) || 0)) > 3200;
+            if (idle && !f.loggedIdle) {
+                f.loggedIdle = true;
+                $.Msg("[Openlock] chrome idle: ", id, " grade=", shellGrade);
+            } else if (!idle && f.loggedIdle) {
+                f.loggedIdle = false;
+                $.Msg("[Openlock] chrome restore: ", id, " grade=", shellGrade);
+            }
             f.frame.SetHasClass("IdleCompact", idle);
             var target = idle ? 1 : 0;
             if (Math.abs((num(f.idleMix) || 0) - target) > 0.001 || f.idleTarget !== target) {
@@ -1269,6 +1335,7 @@
             if (!natural) continue;
             var content = contentBounds(panel) || natural;
             bound[win.id] = { panel: panel, natural: natural, content: content };
+            bindFrameHover(win.id, panel);
             $.Msg("[Openlock] shell framed '", win.id, "' → ",
                 candidates[i].name || candidates[i].kind, " ", Math.round(natural.w), "×",
                 Math.round(natural.h), " content ", Math.round(content.w), "×", Math.round(content.h));
@@ -2008,10 +2075,19 @@
         });
     }
 
-    function bindDwell(panel, titleText, bodyText) {
+    // `winId` keeps the window's hover alive on the same elements that own the tooltip. The
+    // tooltip used to overwrite the title bar's restore handler, which is why hovering the bar
+    // never brought the chrome back on this client.
+    function bindDwell(panel, titleText, bodyText, winId) {
         if (!panel) return;
-        panel.SetPanelEvent("onmouseover", function () { dwellAt(titleText, bodyText, panel); });
-        panel.SetPanelEvent("onmouseout", hideDwell);
+        panel.SetPanelEvent("onmouseover", function () {
+            if (winId) enterFrame(winId, "dwell");
+            dwellAt(titleText, bodyText, panel);
+        });
+        panel.SetPanelEvent("onmouseout", function () {
+            hideDwell();
+            if (winId) leaveFrame(winId, "dwell");
+        });
     }
 
     function showDwell(win) {
@@ -2028,7 +2104,7 @@
         globalThis.OpenlockToast(title, why, "", true);
     }
 
-    function titleButton(parent, icon, onClick) {
+    function titleButton(parent, icon, onClick, winId) {
         // Move is a drag handle; the rest act on press. A press is also what the pointer probe
         // records, so a refused control is visible in the log instead of silently doing nothing.
         var b = addControl(parent, "WindowButton", "", onClick, icon !== "Move");
@@ -2081,7 +2157,7 @@
             Pin: ["Pin", "Keep this window visible while the shell is closed."],
             Close: ["Close", "Collapse the framed game panel, or close this shell window."]
         }[icon];
-        if (help) bindDwell(b, help[0], help[1]);
+        if (help) bindDwell(b, help[0], help[1], winId);
         return b;
     }
 
@@ -2134,7 +2210,8 @@
         // controls and white glyphs. After a few idle seconds only the outline and grips go away;
         // the chrome strip stays readable. The pointer-rect probe restores it on hover.
         if (win.autoFrame || win.discovered) frame.AddClass("CompactHud");
-        frame.SetPanelEvent("onmouseover", function () { restoreChrome(win.id); });
+        frame.SetPanelEvent("onmouseover", function () { enterFrame(win.id, "frame"); });
+        frame.SetPanelEvent("onmouseout", function () { leaveFrame(win.id, "frame"); });
         frame.SetPanelEvent("onmousedown", function () { restoreChrome(win.id); });
         frame.style.visibility = "collapse";
         // The local record below carries the cache; createFrame returns after it is built.
@@ -2164,18 +2241,17 @@
         // Standard window chrome, drawn with panels: minimize, maximize/restore, pin, close.
         // The client font has no coverage for the usual Unicode title-bar glyphs, so each icon is
         // a small shape instead of a typed codepoint.
-        var moveButton = titleButton(title, "Move", function () { focusWindow(win.id); });
+        var moveButton = titleButton(title, "Move", function () { focusWindow(win.id); }, win.id);
         makeDraggable(moveButton, win.id, "move");
-        var minButton = titleButton(title, "Minimize", function () { minimizeWindow(win.id); });
-        var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); });
-        var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); });
+        var minButton = titleButton(title, "Minimize", function () { minimizeWindow(win.id); }, win.id);
+        var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); }, win.id);
+        var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); }, win.id);
         if (pinned[win.id]) pinButton.AddClass("PinOn");
-        var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); });
+        var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); }, win.id);
 
-        title.SetPanelEvent("onmouseover", function () { restoreChrome(win.id); });
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
-        bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions");
-        bindDwell(titleLabel, win.title || win.id, "Frame  ·  " + (win.id || "") + "  ·  " + (win.content || "live"));
+        bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions", win.id);
+        bindDwell(titleLabel, win.title || win.id, "Frame  ·  " + (win.id || "") + "  ·  " + (win.content || "live"), win.id);
         title.SetPanelEvent("oncontextmenu", function () {
             var g = ensureGeometry(win);
             showContextMenu(win, g.x + 12, g.y + 6);
@@ -2203,7 +2279,7 @@
             grip.AddClass("ResizeGrip");
             grip.AddClass("Grip" + gripSpecs[gi][0]);
             bindDwell(grip, "Resize " + gripSpecs[gi][0],
-                "Drag this corner. Shell windows resize freely; game panels scale from their own width.");
+                "Drag this corner. Shell windows resize freely; game panels scale from their own width.", win.id);
             makeDraggable(grip, win.id, gripSpecs[gi][1]);
             grips.push(grip);
         }
@@ -2226,7 +2302,11 @@
             bodyVisible: "collapse",
             refusalVisible: "collapse"
         };
+        record.lastActiveAt = Date.now();
         frames[win.id] = record;
+        $.Msg("[Openlock] chrome frame: ", win.id, " controls=", record.buttons.length,
+            " grips=", record.grips.length, " compact=", !!(win.autoFrame || win.discovered),
+            " grade=", shellGrade);
         if (win.autoFrame || win.discovered) {
             record.idleMix = 0;
             paintCompact(record);
@@ -3718,7 +3798,8 @@
             false);
         $.Msg("[Openlock] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
             " commit=", (build.commit || "unknown"), " game=", (build.gameVersion || "unknown"),
-            " windows=", data.windows.length, " refusals=", data.refusals.length);
+            " windows=", data.windows.length, " refusals=", data.refusals.length,
+            " grade=", shellGrade, " chrome=idle3.2s");
     });
 
     $.Schedule(1.5, startUpdateJob);

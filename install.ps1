@@ -26,6 +26,10 @@ param(
     [switch]$ForcePackage,
     [bool]$Update = $true,
     [switch]$NoUi,
+    # The CSDK10 installer shell is the surface: launch.ps1 has already mounted it or is about to,
+    # so this process must not draw a window of its own. A boot-shell host is not a headless run -
+    # the build record it publishes is what that shell renders.
+    [switch]$BootShellHost,
     [ValidateSet('dev', 'observer', 'player')]
     [string]$Grade = '',
     [switch]$VpkOnly,
@@ -147,7 +151,7 @@ if (-not $source) {
     # published player VPK rather than compiling.
     $releaseInstaller = Join-Path $PSScriptRoot 'release\install.ps1'
     if (Test-Path -LiteralPath $releaseInstaller) {
-        $releaseArgs = @{ DeadlockRoot = $DeadlockRoot; NoUi = [bool]$NoUi }
+        $releaseArgs = @{ DeadlockRoot = $DeadlockRoot; NoUi = [bool]($NoUi -or $BootShellHost) }
         if ($Grade) { $releaseArgs.Grade = $Grade }
         & $releaseInstaller @releaseArgs
         exit $LASTEXITCODE
@@ -174,7 +178,7 @@ $script:buildVpkBytes = 0
 $script:buildMessage = ''
 $script:buildPackages = @()
 $script:installUi = $null
-$script:noUi = [bool]$NoUi
+$script:noUi = [bool]($NoUi -or $BootShellHost)
 $script:installGrade = 'dev'
 
 # The installer is the only Openlock surface when the game is closed. A small WinForms window
@@ -951,7 +955,14 @@ while ((Get-Date) -lt $deadline) {
 }
 $timedOut = (-not $packExited -and $stablePolls -lt 3)
 $packerWasRunning = -not $pack.HasExited
-$packExitCode = if ($pack.HasExited) { $pack.ExitCode } else { $null }
+$packExitCode = $null
+if ($pack.HasExited) {
+    # Start-Process can leave ExitCode null even after the child exits. Refresh before reading it
+    # so a successful Python packer is not announced as "exited with code " and treated as a
+    # warning by the boot shell.
+    $pack.Refresh()
+    if ($null -ne $pack.ExitCode) { $packExitCode = [int]$pack.ExitCode }
+}
 if ($packerWasRunning) { Stop-VpkPacker $pack }
 
 $archiveInfo = Get-Item -LiteralPath $archive -ErrorAction SilentlyContinue
@@ -974,7 +985,7 @@ if ($vpkError) {
 $archiveBytes = (Get-Item -LiteralPath $archive).Length
 if ($packerWasRunning) {
     Write-Host "CSDKCfgVPK wrote a valid $archiveBytes-byte archive and did not exit; terminated PID $($pack.Id)."
-} elseif ($packExitCode -ne 0) {
+} elseif ($null -ne $packExitCode -and $packExitCode -ne 0) {
     Write-Warning "CSDKCfgVPK exited with code $packExitCode after writing a valid archive; continuing."
 } else {
     Write-Host "CSDKCfgVPK wrote a valid $archiveBytes-byte archive."
