@@ -775,6 +775,47 @@
     z-index: 800;
 }
 
+/* The live installer stage. Non-interactive and small: the game's own top bar stays clickable
+   around it, and an idle install hides it completely. */
+.BuildStrip {
+    position: absolute;
+    horizontal-align: center;
+    vertical-align: top;
+    margin-top: 4px;
+    width: 340px;
+    height: fit-children;
+    padding: 4px 9px 5px 9px;
+    flow-children: down;
+    background-color: #100d09f2;
+    border: 1px solid #8a6f42;
+    border-top: 2px solid #e0b56a;
+    border-radius: 3px;
+    z-index: 900;
+    visibility: collapse;
+}
+
+.BuildStrip.Running {
+    visibility: visible;
+}
+
+.BuildStrip.Failed {
+    visibility: visible;
+    border-top-color: #d06a4e;
+}
+
+.BuildStage {
+    color: #f4e6c8;
+    font-size: 12px;
+    font-weight: bold;
+    horizontal-align: center;
+}
+
+.BuildDetail {
+    color: #a8977c;
+    font-size: 10px;
+    horizontal-align: center;
+}
+
 .Toast {
     width: 100%;
     margin-bottom: 6px;
@@ -800,6 +841,46 @@
 .ToastBody {
     color: #c9b89c;
     font-size: 11px;
+}
+
+/* Observer grade: the shell's own chrome is absent so a recording shows the game. XML sent by
+   an addon or a remote operator still lands in the toast stack, with its own live controls. */
+.GradeObserver #WindowLayer,
+.GradeObserver #PanelLayer,
+.GradeObserver #Taskbar,
+.GradeObserver #LauncherBar,
+.GradeObserver #DropGrid {
+    visibility: collapse;
+}
+
+.ObserverXmlToast {
+    position: relative;
+    min-height: 80px;
+}
+
+.ObserverXmlClose {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    width: 18px;
+    height: 18px;
+    background-color: #3a2416;
+    border: 1px solid #8a6f42;
+    border-radius: 2px;
+}
+
+.ObserverXmlClose Label {
+    color: #e0b56a;
+    font-size: 13px;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.ObserverXmlHost {
+    width: 100%;
+    height: 170px;
+    margin-top: 4px;
+    overflow: squish;
 }
 
 /* --- update modal -------------------------------------------------------- */

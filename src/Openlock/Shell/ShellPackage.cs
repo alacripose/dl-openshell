@@ -31,6 +31,7 @@ public sealed class ShellPackage
         public int Elevation = 1;
         public int Line;
         public int BehaviorLine;
+        public List<(string Label, string Command)> Controls = [];
     }
 
     public sealed record Refusal(string File, int Line, string Subject, string Why);
@@ -70,7 +71,24 @@ public sealed class ShellPackage
             return;
         }
 
-        var lines = File.ReadAllLines(path);
+        ReadRecipeText(path, File.ReadAllText(path), resolveContent: true);
+    }
+
+    /// <summary>
+    /// Reads a recipe that arrives as bytes rather than as a folder (a package inside a VPK).
+    /// Content ids are not resolved here: the addon loader validates the layout path it is
+    /// actually allowed to mount, and a content table for shell views would be a second answer.
+    /// </summary>
+    public static ShellPackage ParseRecipe(string file, string text)
+    {
+        var package = new ShellPackage();
+        package.ReadRecipeText(file, text, resolveContent: false);
+        return package;
+    }
+
+    private void ReadRecipeText(string path, string text, bool resolveContent)
+    {
+        var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         if (lines.Length == 0 || !lines[0].StartsWith("shploingus.recipe/", StringComparison.Ordinal))
         {
             Refusals.Add(new Refusal(path, 1, lines.FirstOrDefault() ?? "<empty>", "unknown recipe header"));
@@ -145,8 +163,11 @@ public sealed class ShellPackage
 
         // Content is resolved by one owner. A content id with no mounted source is a refusal on
         // the line that declared it, not a label that pretends the window has content.
-        foreach (var (window, line, content, why) in ShellContent.Refusals(this))
-            Refusals.Add(new Refusal(path, line, window, $"content '{content}': {why}"));
+        if (resolveContent)
+        {
+            foreach (var (window, line, content, why) in ShellContent.Refusals(this))
+                Refusals.Add(new Refusal(path, line, window, $"content '{content}': {why}"));
+        }
     }
 
     private static void ApplyWindowField(Window window, string[] fields, int line)
@@ -195,6 +216,10 @@ public sealed class ShellPackage
             case "theme-role": window.ThemeRole = value; break;
             case "pinnable": window.Pinnable = value.Equals("true", StringComparison.OrdinalIgnoreCase); break;
             case "record-id": window.RecordId = value; break;
+            case "control":
+                if (fields.Length >= 3 && fields[1].Trim().Length > 0 && fields[2].Trim().Length > 0)
+                    window.Controls.Add((fields[1].Trim(), fields[2].Trim()));
+                break;
         }
     }
 

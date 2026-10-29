@@ -28,16 +28,28 @@
     var dropGrid = root.FindChildTraverse("DropGrid");
     var toastStack = root.FindChildTraverse("ToastStack");
     var updateModal = root.FindChildTraverse("UpdateModal");
+    var buildStrip = root.FindChildTraverse("BuildStrip");
+    var buildStageLabel = root.FindChildTraverse("BuildStage");
+    var buildDetailLabel = root.FindChildTraverse("BuildDetail");
     var clockLabel = root.FindChildTraverse("Clock");
     var versionLabel = root.FindChildTraverse("VersionLabel");
     var schemeLabel = root.FindChildTraverse("SchemeLabel");
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
     var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
     var currentScheme = "";
+    var currentGrade = "dev";
+    var observerXmlPanels = {};
+    var observerXmlAt = 0;
     var savedProfiles = {};
     var layoutPayload = "";
     var layoutRequest = "";
     var layoutNoticesSeen = {};
+    var liveBuild = null;
+    var liveBuildRaw = "";
+    var liveUpdate = null;
+    var liveUpdateRaw = "";
+    var liveStatusWarned = {};
+    var addonPayload = "";
 
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
@@ -266,6 +278,28 @@
     // A scheme is a generated stylesheet block (openlock_schemes.css) plus one class on the shell
     // root. Switching is a class change, not a recolour of every panel, so the game keeps its frame
     // pacing while the palette moves.
+    // The installer chooses the grade once. Dev keeps every declared window and addon reachable;
+    // observer removes the shell's own chrome so a recording shows only the game and any XML
+    // surfaces an addon sends; player keeps the saved layout scheme available at startup.
+    function setGrade(grade) {
+        var value = String(grade || "").toLowerCase();
+        if (value !== "observer" && value !== "player") value = "dev";
+        currentGrade = value;
+        try {
+            root.RemoveClass("GradeDev");
+            root.RemoveClass("GradeObserver");
+            root.RemoveClass("GradePlayer");
+            root.AddClass(value === "observer" ? "GradeObserver" : value === "player" ? "GradePlayer" : "GradeDev");
+        } catch (e) {}
+        $.Msg("[Openlock] grade: ", currentGrade);
+    }
+
+    function gradeFromRecords() {
+        if (liveBuild && liveBuild.grade) return liveBuild.grade;
+        if (data.build && data.build.grade) return data.build.grade;
+        return "dev";
+    }
+
     function schemeById(id) {
         for (var i = 0; i < themes.schemes.length; i++) {
             if (themes.schemes[i].id === id) return themes.schemes[i];
@@ -1520,8 +1554,10 @@
         title.text = win.title || win.id;
 
         contextAction(contextMenu, "Open", function () { openWindow(win.id); });
-        contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
-        contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
+        if (hasControl(win, "minimize"))
+            contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
+        if (hasControl(win, "pin"))
+            contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
         if (isPanelWindow(win)) contextAction(contextMenu, "Launch layout", function () {
             var path = layoutForWindow(win);
             if (path) openLayout(path);
@@ -1532,7 +1568,8 @@
             uiCss.selector = "";
             openWindow("uitree");
         });
-        contextAction(contextMenu, "Close", function () { closeWindow(win.id); });
+        if (hasControl(win, "close"))
+            contextAction(contextMenu, "Close", function () { closeWindow(win.id); });
 
         // The layout is not measured until the next frame; use a conservative record now and let
         // the watch retire the menu as soon as the pointer leaves that box.
@@ -1692,6 +1729,18 @@
     }
 
 
+    // The package declares a window's title-bar controls (pin/minimize/maximize/close) in the
+    // same record as its geometry. A package compiled before controls were projected has no
+    // list at all, and keeps the old full chrome; an explicit empty list means the layout
+    // declared no title bar, so no control is invented for it.
+    function hasControl(win, kind) {
+        if (!win || win.controls === undefined) return true;
+        for (var i = 0; i < win.controls.length; i++) {
+            if (win.controls[i] && win.controls[i].kind === kind) return true;
+        }
+        return false;
+    }
+
     function createFrame(win) {
         if (frames[win.id]) return frames[win.id];
 
@@ -1731,14 +1780,18 @@
         // a small shape instead of a typed codepoint.
         var moveButton = titleButton(title, "Move", function () { focusWindow(win.id); });
         makeDraggable(moveButton, win.id, "move");
-        var minButton = titleButton(title, "Minimize", function () { minimizeWindow(win.id); });
-        var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); });
-        var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); });
-        if (pinned[win.id]) pinButton.AddClass("PinOn");
+        var minButton = hasControl(win, "minimize")
+            ? titleButton(title, "Minimize", function () { minimizeWindow(win.id); }) : null;
+        var maxButton = hasControl(win, "maximize")
+            ? titleButton(title, "Maximize", function () { toggleMaximize(win.id); }) : null;
+        var pinButton = hasControl(win, "pin")
+            ? titleButton(title, "Pin", function () { togglePin(win.id); }) : null;
+        if (pinButton && pinned[win.id]) pinButton.AddClass("PinOn");
         // The close button's right margin is wider than the others so the northeast grip has a
         // clear corner: the grip is 22 dp and the close button would otherwise sit on top of it.
-        var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); });
-        closeButton.AddClass("WindowClose");
+        var closeButton = hasControl(win, "close")
+            ? titleButton(title, "Close", function () { closeWindow(win.id); }) : null;
+        if (closeButton) closeButton.AddClass("WindowClose");
 
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions");
@@ -1816,6 +1869,14 @@
             return;
         }
 
+        // In observer grade the shell's windows are not drawn. A package XML surface is the
+        // exception: it is what an addon or a remote operator sends to show live stats, and it
+        // belongs in the toast stack rather than in window chrome.
+        if (currentGrade === "observer") {
+            if (win.layoutPath) showObserverXml(win);
+            return;
+        }
+
         var hidden = hiddenPanels[id];
         if (hidden) {
             try { hidden.style.visibility = "visible"; } catch (e) {}
@@ -1838,6 +1899,102 @@
         focusWindow(id);
         send("view", id);
     }
+
+    // Observer XML is a toast-shaped host for a package's delivered layout. It keeps the layout's
+    // own controls and scripts, so a remote sender can put live stats or external links there;
+    // the close affordance belongs to the shell so the XML cannot trap the observer.
+    function showObserverXml(win) {
+        if (!toastStack || !win || !win.layoutPath) return;
+        if (observerXmlPanels[win.id]) return;
+
+        var panel = $.CreatePanel("Panel", toastStack, "OpenlockObserverXml_" + safeId(win.id));
+        panel.AddClass("Toast");
+        panel.AddClass("ObserverXmlToast");
+        try {
+            panel.SetAttributeString("dw_observer_id", win.id);
+            panel.SetAttributeString("dw_observer_title", win.title || win.addonName || "Observer");
+            panel.SetAttributeString("dw_observer_data", observerXmlData(win));
+        } catch (e) {}
+
+        var title = $.CreatePanel("Label", panel, "");
+        title.AddClass("ToastTitle");
+        title.text = win.title || win.addonName || "Observer";
+
+        var close = $.CreatePanel("Panel", panel, "");
+        close.AddClass("ObserverXmlClose");
+        close.SetPanelEvent("onmouseactivate", function () {
+            try { panel.DeleteAsync(0); } catch (e) {}
+            delete observerXmlPanels[win.id];
+        });
+        var closeLabel = $.CreatePanel("Label", close, "");
+        closeLabel.text = "×";
+
+        var host = $.CreatePanel("Panel", panel, "");
+        host.AddClass("ObserverXmlHost");
+        try {
+            host.SetAttributeString("dw_observer_id", win.id);
+            host.SetAttributeString("dw_observer_data", observerXmlData(win));
+        } catch (e) {}
+        try {
+            host.BLoadLayout(win.layoutPath, false, false);
+        } catch (e) {
+            var refusal = $.CreatePanel("Label", panel, "");
+            refusal.AddClass("ToastBody");
+            refusal.text = "Observer XML refused: " + String(e);
+            $.Msg("[Openlock] observer XML REFUSED ", win.layoutPath, ": ", String(e));
+        }
+
+        observerXmlPanels[win.id] = { panel: panel, host: host };
+        updateObserverXml(true);
+    }
+
+    // An observer XML is deliberately not a second data API: the toast carries the same live
+    // records the Tools view reads, on an attribute the layout can read from its parent. A layout
+    // that wants extra external information keeps its own controls and links; this only makes the
+    // shell's live state reachable from the delivered XML.
+    function observerXmlData(win) {
+        var build = liveBuild || data.build || {};
+        var payload = {
+            format: "openlock.observer/1",
+            id: win && win.id ? win.id : "",
+            title: win && (win.title || win.addonName) ? (win.title || win.addonName) : "Observer",
+            build: build,
+            update: liveUpdate || data.update || { available: false },
+            packages: (data.addonPackages || []).length,
+            windows: (data.windows || []).length,
+            connected: connected(),
+            observedAt: new Date().toISOString ? new Date().toISOString() : ""
+        };
+        try { return JSON.stringify(payload); } catch (e) { return ""; }
+    }
+
+    function updateObserverXml(force) {
+        var now = Date.now();
+        if (!force && now - observerXmlAt < 2000) return;
+        observerXmlAt = now;
+
+        for (var id in observerXmlPanels) {
+            if (!observerXmlPanels.hasOwnProperty(id)) continue;
+            var record = observerXmlPanels[id];
+            var win = windowById(id);
+            var dataText = observerXmlData(win);
+            try { record.panel.SetAttributeString("dw_observer_data", dataText); } catch (e) {}
+            try { record.host.SetAttributeString("dw_observer_data", dataText); } catch (e) {}
+        }
+    }
+
+    // The server bridge, a console, or an addon can read the live record for one observer
+    // surface without duplicating the Tools view's parsing.
+    globalThis.OpenlockObserverData = function (id) {
+        var win = windowById(String(id || ""));
+        return win ? observerXmlData(win) : "";
+    };
+
+    // The server bridge or a console can address an observer surface by window id.
+    globalThis.OpenlockObserverXml = function (id) {
+        var win = windowById(String(id || ""));
+        if (win && win.layoutPath) showObserverXml(win);
+    };
 
     // --- arbitrary Panorama layouts -----------------------------------------
     // The package declares the windows the shell ships, but the client mounts hundreds more
@@ -1936,6 +2093,7 @@
     // bar when the HUD builds them. Only declared panel windows take part; a closed screen is not
     // a frame, and a window the player closed is left closed.
     function autoFrameOpen() {
+        if (currentGrade === "observer") return;
         var now = Date.now();
         for (var i = 0; i < data.windows.length; i++) {
             var win = data.windows[i];
@@ -2900,33 +3058,176 @@
         return true;
     }
 
+    function formatBytes(value) {
+        var bytes = Number(value) || 0;
+        if (bytes <= 0) return "0 B";
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KiB";
+        return (bytes / (1024 * 1024)).toFixed(2) + " MiB";
+    }
+
+    function renderBuildStrip() {
+        if (!buildStrip) return;
+
+        var state = liveBuild;
+        var phase = state ? String(state.state || (state.stage === "installed" ? "ok" : "running")) : "";
+        var running = phase === "running";
+        var failed = phase === "failed";
+
+        buildStrip.SetHasClass("Running", running);
+        buildStrip.SetHasClass("Failed", failed);
+        if (!running && !failed) return;
+
+        if (buildStageLabel) {
+            buildStageLabel.text = (failed ? "build failed · " : "building · ") +
+                String(state.stage || "unknown");
+        }
+        if (buildDetailLabel) {
+            var bits = [];
+            if (state.resources) bits.push(state.resources + " resource(s)");
+            if (state.vpkBytes) bits.push(formatBytes(state.vpkBytes));
+            if (state.message) bits.push(String(state.message));
+            if (state.updatedAt) bits.push(String(state.updatedAt));
+            buildDetailLabel.text = bits.join("  ·  ");
+        }
+    }
+
+    function refreshOpenWindow(id) {
+        var f = frames[id];
+        if (f && open[id] && f.win) renderOwn(f.win, f.body);
+    }
+
+    function refreshOpenTools() {
+        refreshOpenWindow("tools");
+    }
+
+    // A Deadworks addon ships its windows as real shploingus packages (SHPKG002/SHPKG003), either
+    // as .shpkg files or inside a VPK. The server discovers those frames, verifies their digest,
+    // and sends the validated window records here. The shell does not read archives or invent a
+    // layout path: it mounts the content kind and controls the package declared.
+    function syncAddons(force) {
+        var raw = attr("addons", "");
+        if (!force && raw === addonPayload) return;
+        addonPayload = raw;
+        if (!raw) return;
+
+        var payload = null;
+        try { payload = JSON.parse(raw); } catch (e) {
+            if (!liveStatusWarned.addons) {
+                liveStatusWarned.addons = true;
+                $.Msg("[Openlock] addon payload unreadable: ", String(e));
+            }
+            return;
+        }
+
+        if (!payload || payload.format !== "openlock.addons/2") {
+            $.Msg("[Openlock] addon payload ignored: unknown format");
+            return;
+        }
+
+        data.addonPackages = payload.packages || [];
+        var windows = payload.windows || [];
+        var added = 0;
+        for (var i = 0; i < windows.length; i++) {
+            var win = windows[i];
+            if (!win || !win.id || index[win.id]) continue;
+            data.windows.push(win);
+            index[win.id] = win;
+            added++;
+        }
+
+        if (added) {
+            $.Msg("[Openlock] addon windows merged: ", added, " from ", data.addonPackages.length, " package(s)");
+            refreshOpenWindow("mods");
+            refreshOpenWindow("__windows");
+            updateObserverXml(true);
+        }
+    }
+
+    // The server bridge copies the installer's records onto the shell host as dwv_build and
+    // dwv_update. An empty attribute is not an error: it means no live producer, and the window
+    // then says plainly that it is showing the record baked at pack time.
+    function syncLiveStatus(force) {
+        var raw = attr("build", "");
+        if (force || raw !== liveBuildRaw) {
+            liveBuildRaw = raw;
+            liveBuild = null;
+            if (raw) {
+                try { liveBuild = JSON.parse(raw); } catch (e) {
+                    if (!liveStatusWarned.build) {
+                        liveStatusWarned.build = true;
+                        $.Msg("[Openlock] build record unreadable: ", String(e));
+                    }
+                }
+            }
+            renderBuildStrip();
+            refreshOpenTools();
+            setGrade(gradeFromRecords());
+        }
+
+        var updateRaw = attr("update", "");
+        if (force || updateRaw !== liveUpdateRaw) {
+            liveUpdateRaw = updateRaw;
+            liveUpdate = null;
+            if (updateRaw) {
+                try { liveUpdate = JSON.parse(updateRaw); } catch (e) {
+                    if (!liveStatusWarned.update) {
+                        liveStatusWarned.update = true;
+                        $.Msg("[Openlock] update record unreadable: ", String(e));
+                    }
+                }
+            }
+            refreshOpenTools();
+        }
+
+        updateObserverXml();
+    }
+
+    function currentUpdate() {
+        return liveUpdate || data.update || {};
+    }
+
     function renderTools(body) {
-        var state = data.buildState || {};
+        var state = liveBuild || data.buildState || {};
         var stages = state.stages || [];
+        var phase = state.state || (state.stage === "installed" ? "ok" : "unknown");
 
         headingXd(body, "last VPK build");
+        rowXd(body, (liveBuild ? "live" : "baked") + "  ·  stage " + (state.stage || "unknown") +
+            "  ·  " + (state.state || "unknown") + "  ·  " +
+            (state.updatedAt || state.finishedAt || "no timestamp"), liveBuild ? "ViewLine" : "ViewMuted");
+        if (!liveBuild) {
+            rowXd(body, "no live producer on this shell; the rows below are the last record baked at pack time", "ViewMuted");
+        }
+        if (state.message) rowXd(body, state.message, "ViewMuted");
+        if (state.error) rowXd(body, state.error, "ViewMuted");
+
         if (stages.length) {
-            rowXd(body, "stage " + (state.stage || "unknown") + "  ·  " + (state.finishedAt || "no timestamp"), "ViewMuted");
             for (var s = 0; s < stages.length; s++) {
                 var stage = stages[s];
+                var ok = stage.ok === true || stage.state === "ok";
                 var detail = "";
                 if (stage.resources) detail = "  ·  " + stage.resources + " resource(s)";
-                if (stage.bytes) detail += "  ·  " + Math.round(stage.bytes / 1024) + " KiB";
-                rowXd(body, (stage.ok ? "[x] " : "[ ] ") + stage.name + detail, stage.ok ? "ViewLine" : "ViewMuted");
+                if (stage.bytes) detail += "  ·  " + formatBytes(stage.bytes);
+                if (stage.state) detail += "  ·  " + stage.state;
+                if (stage.startedAt) detail += "  ·  " + stage.startedAt +
+                    (stage.finishedAt ? " → " + stage.finishedAt : "");
+                rowXd(body, (ok ? "[x] " : stage.state === "failed" ? "[!] " : "[ ] ") +
+                    stage.name + detail, ok ? "ViewLine" : "ViewMuted");
             }
-        } else {
-            rowXd(body, "no build record yet — the next install writes shell/alpha-shell/build.json", "ViewMuted");
+        } else if (!state.message) {
+            rowXd(body, "no build record yet — the next install writes build.json beside the game", "ViewMuted");
         }
 
         if (state.vpk) {
             headingXd(body, "vpk");
-            rowXd(body, state.vpk + (state.vpkBytes ? "  ·  " + Math.round(state.vpkBytes / 1024) + " KiB" : ""));
+            rowXd(body, state.vpk + "  ·  " + formatBytes(state.vpkBytes));
             if (state.resources) rowXd(body, state.resources + " compiled resource(s)", "ViewMuted");
             if (state.path) rowXd(body, state.path, "ViewMuted");
         }
 
         headingXd(body, "update");
-        var update = data.update || {};
+        var update = currentUpdate();
         if (update.available) {
             rowXd(body, (update.version || "staged") + "  ·  " + (update.title || "Update ready"));
             if (update.notes) rowXd(body, update.notes, "ViewMuted");
@@ -3374,6 +3675,28 @@
                     mounts[s].mounts === "empty" || mounts[s].mounts === "missing" ? "ViewMuted" : "ViewLine");
             }
 
+            headingXd(body, "deadworks addon windows");
+            var addonPackages = data.addonPackages || [];
+            if (!addonPackages.length) {
+                rowXd(body, "no shploingus package (.shpkg) is mounted", "ViewMuted");
+            }
+            for (var ap = 0; ap < addonPackages.length; ap++) {
+                (function (pkg) {
+                    rowXd(body, (pkg.id || "?") + "  " + (pkg.version || "") + "  ·  " + (pkg.archive || ""), "ViewLine");
+                    var ids = pkg.windowIds || [];
+                    for (var iw = 0; iw < ids.length; iw++) {
+                        var addonWin = windowById(ids[iw]);
+                        if (!addonWin) continue;
+                        actionXd(body, "Open  " + (addonWin.title || addonWin.id), function () { openWindow(addonWin.id); });
+                    }
+                    var refusals = pkg.refusals || [];
+                    for (var ir = 0; ir < refusals.length; ir++) {
+                        rowXd(body, "REFUSED " + refusals[ir].file + ":" + refusals[ir].line + "  " +
+                            refusals[ir].subject + " — " + refusals[ir].why, "ViewMuted");
+                    }
+                })(addonPackages[ap]);
+            }
+
             headingXd(body, "mounted scheme extensions");
             var mountedSchemes = themes.extensions || [];
             if (!mountedSchemes.length) {
@@ -3395,6 +3718,23 @@
 
         if (kind === "tools") {
             renderTools(body);
+            return;
+        }
+
+        if (kind === "addon-layout") {
+            headingXd(body, win.addonName || win.addon || "addon layout");
+            if (!win.layoutPath) {
+                rowXd(body, "the package declares no delivered layout for this window", "ViewMuted");
+                return;
+            }
+            rowXd(body, win.layoutPath, "ViewMuted");
+            var addonHost = $.CreatePanel("Panel", body, "");
+            addonHost.AddClass("LayoutHost");
+            try {
+                addonHost.BLoadLayout(win.layoutPath, false, false);
+            } catch (e) {
+                globalThis.OpenlockToast("Addon layout refused", String(e), "", true);
+            }
             return;
         }
 
@@ -3531,6 +3871,7 @@
     var pollCount = 0;
     function poll() {
         pollCount++;
+        syncLiveStatus(false);
         var request = attr("layoutrequest", "");
         if (request && request !== layoutRequest) {
             layoutRequest = request;
@@ -3547,6 +3888,8 @@
             var f = frames[activeId];
             if (f && !isPanelWindow(f.win)) renderOwn(f.win, f.body);
         }
+
+        if ((pollCount % 4) === 0) syncAddons(false);
 
         // A framed panel can be destroyed and rebuilt by the game (the shop does this on every
         // open). Re-binding is the only reaction; a missing panel is a refusal in the window.
@@ -3625,9 +3968,12 @@
 
     setLauncherName();
     $.Schedule(2.0, setLauncherName);
+    setGrade(gradeFromRecords());
     applyScheme(themes.default, false);
     syncLayoutProfiles(true);
-    $.Schedule(0.6, function () { syncLayoutProfiles(true); });
+    syncLiveStatus(true);
+    syncAddons(true);
+    $.Schedule(0.6, function () { syncLayoutProfiles(true); syncLiveStatus(true); syncAddons(true); });
     renderBar();
     startClock();
 

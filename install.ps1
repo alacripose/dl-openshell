@@ -7,7 +7,7 @@
   The UI half is a normal Panorama mod packed as `pak01_dir.vpk`, so it is location-independent:
   one file mounts under whatever game directory the client is running from. This script assembles
   the content tree, packs it with the CSDK VPK tool,  installs the single archive into
-  game/citadel/addons/openlock_ui, and puts that directory in gameinfo.gi's SearchPaths. It also
+  game/citadel/addons/mods, and puts that directory in gameinfo.gi's SearchPaths. It also
   removes the loose-file copy an earlier install left behind, so exactly one source is mounted.
 
   The game must be closed when the search path changes: gameinfo.gi is read at launch. The VPK
@@ -25,6 +25,9 @@ param(
     [string]$PackageRef = '',
     [switch]$ForcePackage,
     [bool]$Update = $true,
+    [switch]$NoUi,
+    [ValidateSet('dev', 'observer', 'player')]
+    [string]$Grade = '',
     [switch]$VpkOnly,
     [switch]$Compile,
     [int]$PackTimeoutSeconds = 30
@@ -64,7 +67,10 @@ $DeadlockRoot = (Resolve-Path $DeadlockRoot).Path.TrimEnd('\')
 $game = Join-Path $DeadlockRoot 'game'
 $citadel = Join-Path $game 'citadel'
 $gameinfo = Join-Path $citadel 'gameinfo.gi'
-$addonRoot = Join-Path $citadel 'addons\openlock_ui'
+# Openlock owns a dedicated addon root. A mod manager may rewrite any shared `pak01_dir.vpk`
+# path, so the shell does not install over or rename a file another manager owns: it creates
+# `citadel/addons/mods` and mounts that directory only.
+$addonRoot = Join-Path $citadel 'addons\mods'
 
 if (-not (Test-Path $gameinfo)) {
     throw "gameinfo.gi not found at '$gameinfo'. The installer will not restore a backup without asking; verify the game files so Steam writes a clean copy, then run this again."
@@ -96,11 +102,335 @@ if (-not $SourceRoot -and $RepoUrl -and -not ($sourceCandidates | Where-Object {
 
 $source = $sourceCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $source) {
-    throw "clientaddon not found. Pass -SourceRoot, set OPENLOCK_SOURCE, or pass -RepoUrl."
+    # The release asset is the standalone installer. A checkout root placed beside the game uses
+    # that same path instead of failing on the absent source tree; it verifies and mounts the
+    # published player VPK rather than compiling.
+    $releaseInstaller = Join-Path $PSScriptRoot 'release\install.ps1'
+    if (Test-Path -LiteralPath $releaseInstaller) {
+        $releaseArgs = @{ DeadlockRoot = $DeadlockRoot; NoUi = [bool]$NoUi }
+        if ($Grade) { $releaseArgs.Grade = $Grade }
+        & $releaseInstaller @releaseArgs
+        exit $LASTEXITCODE
+    }
+
+    throw "clientaddon not found. Use the install.ps1 published in the GitHub release (it downloads the verified player VPK), or pass -SourceRoot / -RepoUrl."
 }
 $repoRoot = Split-Path $source -Parent
 $build = Join-Path $repoRoot 'dist\openlock_ui'
 $archive = Join-Path $build 'pak01_dir.vpk'
+
+# The installer publishes the work it is actually doing. The shell reads this record through the
+# server bridge (or its baked fallback), so every stage, byte count and final VPK size is a value
+# the tool wrote, never a value the window invented. Two copies are written: the repository one
+# is the durable record, and the game/bin/win64 one is where a running server looks for it.
+$buildRecordPath = Join-Path $repoRoot 'shell\alpha-shell\build.json'
+$liveBuildPath = Join-Path $game 'bin\win64\openlock.build.json'
+$script:buildStarted = Get-Date
+$script:buildStage = 'prepare'
+$script:buildState = 'running'
+$script:buildStages = @()
+$script:buildResources = 0
+$script:buildVpkBytes = 0
+$script:buildMessage = ''
+$script:buildPackages = @()
+$script:installUi = $null
+$script:noUi = [bool]$NoUi
+$script:installGrade = 'dev'
+
+# The installer is the only Openlock surface when the game is closed. A small WinForms window
+# shows the stage the record is actually in, and a tray balloon reports the final result. The UI
+# is deliberately optional: a non-interactive or CI run still publishes the same record and
+# never waits for a window.
+function Select-InstallGrade {
+    param([string]$Selected = '')
+
+    if ($Selected) { return $Selected }
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return 'dev' }
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = 'Openlock install · choose a grade'
+        $form.ClientSize = New-Object System.Drawing.Size(490, 286)
+        $form.StartPosition = 'CenterScreen'
+        $form.FormBorderStyle = 'FixedDialog'
+        $form.MaximizeBox = $false
+        $form.MinimizeBox = $false
+        $form.TopMost = $true
+
+        $heading = New-Object System.Windows.Forms.Label
+        $heading.Location = New-Object System.Drawing.Point(16, 12)
+        $heading.Size = New-Object System.Drawing.Size(458, 24)
+        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+        $heading.Text = 'Choose the shell grade'
+
+        $choices = @(
+            @{ Id = 'dev'; Text = 'Dev  —  every Deadlock and Deadworks addon and shell window is available.' }
+            @{ Id = 'observer'; Text = 'Observer  —  hide the shell chrome and windows so recordings stay clean; toasts still appear.' }
+            @{ Id = 'player'; Text = 'Player  —  keep your UI layout schemes and load the saved scheme automatically on startup.' }
+        )
+
+        $radios = @()
+        $top = 46
+        foreach ($choice in $choices) {
+            $radio = New-Object System.Windows.Forms.RadioButton
+            $radio.Location = New-Object System.Drawing.Point(16, $top)
+            $radio.Size = New-Object System.Drawing.Size(458, 42)
+            $radio.Text = $choice.Text
+            $radio.Tag = $choice.Id
+            if ($choice.Id -eq 'dev') { $radio.Checked = $true }
+            $form.Controls.Add($radio)
+            $radios += $radio
+            $top += 54
+        }
+
+        $ok = New-Object System.Windows.Forms.Button
+        $ok.Location = New-Object System.Drawing.Point(374, 226)
+        $ok.Size = New-Object System.Drawing.Size(100, 30)
+        $ok.Text = 'Install'
+        $form.Controls.Add($ok)
+        $form.Controls.Add($heading)
+        $form.AcceptButton = $ok
+
+        $form.Tag = 'dev'
+        $ok.Add_Click({
+            $picked = $form.Tag
+            foreach ($radio in $radios) {
+                if ($radio.Checked) { $picked = [string]$radio.Tag; break }
+            }
+            $form.Tag = $picked
+            $form.Close()
+        }.GetNewClosure())
+
+        $form.ShowDialog() | Out-Null
+        $picked = [string]$form.Tag
+        $form.Dispose()
+        if ($picked -in @('dev', 'observer', 'player')) { return $picked }
+    } catch {
+        Write-Warning "grade dialog unavailable: $($_.Exception.Message)"
+    }
+
+    return 'dev'
+}
+
+function Start-InstallUi {
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = 'Openlock install'
+        $form.ClientSize = New-Object System.Drawing.Size(420, 124)
+        $form.StartPosition = 'CenterScreen'
+        $form.FormBorderStyle = 'FixedDialog'
+        $form.MaximizeBox = $false
+        $form.MinimizeBox = $false
+        $form.ControlBox = $false
+        $form.TopMost = $true
+
+        $heading = New-Object System.Windows.Forms.Label
+        $heading.Location = New-Object System.Drawing.Point(16, 14)
+        $heading.Size = New-Object System.Drawing.Size(388, 24)
+        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+        $heading.Text = 'Openlock is installing'
+
+        $detail = New-Object System.Windows.Forms.Label
+        $detail.Location = New-Object System.Drawing.Point(16, 42)
+        $detail.Size = New-Object System.Drawing.Size(388, 20)
+        $detail.Text = 'starting'
+
+        $bar = New-Object System.Windows.Forms.ProgressBar
+        $bar.Location = New-Object System.Drawing.Point(16, 70)
+        $bar.Size = New-Object System.Drawing.Size(388, 18)
+        $bar.Minimum = 0
+        $bar.Maximum = 100
+        $bar.Style = 'Continuous'
+
+        $percent = New-Object System.Windows.Forms.Label
+        $percent.Location = New-Object System.Drawing.Point(16, 94)
+        $percent.Size = New-Object System.Drawing.Size(388, 18)
+        $percent.Text = '0%'
+
+        $form.Controls.AddRange(@($heading, $detail, $bar, $percent))
+        $form.Show()
+        [System.Windows.Forms.Application]::DoEvents()
+        $script:installUi = [pscustomobject]@{
+            Form = $form
+            Heading = $heading
+            Detail = $detail
+            Bar = $bar
+            Percent = $percent
+        }
+        Update-InstallUi -Percent 0 -Stage 'prepare' -Message 'starting'
+    } catch {
+        $script:installUi = $null
+        Write-Warning "installer window unavailable: $($_.Exception.Message)"
+    }
+}
+
+function Update-InstallUi {
+    param([int]$Percent, [string]$Stage, [string]$Message, [string]$State = 'running')
+    if ($null -eq $script:installUi) { return }
+
+    try {
+        $ui = $script:installUi
+        $ui.Bar.Value = [Math]::Max(0, [Math]::Min(100, $Percent))
+        $ui.Percent.Text = "$([Math]::Max(0, [Math]::Min(100, $Percent)))%  ·  $Stage"
+        if ($Message) { $ui.Detail.Text = $Message }
+        $ui.Heading.Text = if ($State -eq 'failed') { 'Openlock install failed' } else { 'Openlock is installing' }
+        [System.Windows.Forms.Application]::DoEvents()
+    } catch {
+        $script:installUi = $null
+    }
+}
+
+function Show-OpenlockToast {
+    param([string]$Title, [string]$Text, [string]$Kind = 'Info')
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $tip = New-Object System.Windows.Forms.NotifyIcon
+        $tip.Text = 'Openlock'
+        $tip.Icon = if ($Kind -eq 'Error') { [System.Drawing.SystemIcons]::Error } else { [System.Drawing.SystemIcons]::Information }
+        $tip.Visible = $true
+        $tip.ShowBalloonTip(5000, $Title, $Text, $(if ($Kind -eq 'Error') {
+            [System.Windows.Forms.ToolTipIcon]::Error } else { [System.Windows.Forms.ToolTipIcon]::Info }))
+        for ($i = 0; $i -lt 25; $i++) {
+            [System.Windows.Forms.Application]::DoEvents()
+            Start-Sleep -Milliseconds 100
+        }
+        $tip.Visible = $false
+        $tip.Dispose()
+    } catch {
+        Write-Warning "installer toast unavailable: $($_.Exception.Message)"
+    }
+}
+
+function Complete-InstallUi {
+    param([bool]$Ok, [string]$Message)
+
+    if ($null -ne $script:installUi) {
+        Update-InstallUi -Percent $(if ($Ok) { 100 } else { 0 }) -Stage $(if ($Ok) { 'installed' } else { 'failed' }) `
+            -Message $Message -State $(if ($Ok) { 'ok' } else { 'failed' })
+        Start-Sleep -Milliseconds 700
+        try {
+            $script:installUi.Form.Close()
+            $script:installUi.Form.Dispose()
+        } catch { }
+        $script:installUi = $null
+    }
+
+    Show-OpenlockToast -Title $(if ($Ok) { 'Openlock installed' } else { 'Openlock install failed' }) `
+        -Text $Message -Kind $(if ($Ok) { 'Info' } else { 'Error' })
+}
+
+function Write-BuildRecord {
+    param(
+        [string]$Stage = '',
+        [string]$State = 'running',
+        [int]$Resources = -1,
+        [long]$VpkBytes = -1,
+        [string]$Message = '',
+        [object[]]$Packages = $null
+    )
+
+    if ($Stage) { $script:buildStage = $Stage }
+    if ($State) { $script:buildState = $State }
+    if ($Resources -ge 0) { $script:buildResources = $Resources }
+    if ($VpkBytes -ge 0) { $script:buildVpkBytes = $VpkBytes }
+    if ($Message) { $script:buildMessage = $Message }
+    if ($null -ne $Packages) { $script:buildPackages = @($Packages) }
+
+    $now = Get-Date
+    if ($Stage) {
+        $found = $false
+        foreach ($row in $script:buildStages) {
+            if ($row.name -ne $Stage) { continue }
+            $found = $true
+            if ($State -eq 'running') {
+                $row.state = 'running'
+                $row.startedAt = $now.ToString('HH:mm:ss')
+            } elseif ($State -eq 'ok') {
+                $row.state = 'ok'
+                $row.finishedAt = $now.ToString('HH:mm:ss')
+            } elseif ($State -eq 'failed') {
+                $row.state = 'failed'
+                $row.finishedAt = $now.ToString('HH:mm:ss')
+            }
+        }
+        if (-not $found) {
+            $stageFinished = ''
+            if ($State -ne 'running') { $stageFinished = $now.ToString('HH:mm:ss') }
+            $script:buildStages += [ordered]@{
+                name = $Stage
+                state = $State
+                startedAt = $now.ToString('HH:mm:ss')
+                finishedAt = $stageFinished
+            }
+        }
+    }
+
+    $finishedAt = ''
+    if ($script:buildState -eq 'ok') { $finishedAt = $now.ToString('yyyy-MM-dd HH:mm:ss') }
+    $record = [ordered]@{
+        format = 'openlock.build/1'
+        grade = $script:installGrade
+        stage = $script:buildStage
+        state = $script:buildState
+        startedAt = $script:buildStarted.ToString('yyyy-MM-dd HH:mm:ss')
+        updatedAt = $now.ToString('yyyy-MM-dd HH:mm:ss')
+        finishedAt = $finishedAt
+        vpk = 'dist/openlock_ui/pak01_dir.vpk'
+        vpkBytes = $script:buildVpkBytes
+        resources = $script:buildResources
+        path = 'citadel/addons/mods/pak01_dir.vpk'
+        stages = $script:buildStages
+        message = $script:buildMessage
+        packages = $script:buildPackages
+    }
+
+    $json = $record | ConvertTo-Json -Depth 6
+    foreach ($path in @($buildRecordPath, $liveBuildPath)) {
+        try {
+            $parent = Split-Path $path -Parent
+            if (-not (Test-Path $parent)) { continue }
+            [System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding($false)))
+        } catch {
+            Write-Warning "could not publish build record '$path': $($_.Exception.Message)"
+        }
+    }
+
+    $percent = switch ($script:buildStage) {
+        'prepare' { 10 }
+        'compile' { 40 }
+        'pack' { 72 }
+        'install' { 90 }
+        'installed' { 100 }
+        default { 5 }
+    }
+    if ($script:buildState -eq 'failed') { $percent = [Math]::Min($percent, 99) }
+    Update-InstallUi -Percent $percent -Stage $script:buildStage -Message $script:buildMessage -State $script:buildState
+}
+
+$script:installGrade = Select-InstallGrade -Selected $Grade
+Start-InstallUi
+trap {
+    $failure = $_.Exception.Message
+    try { Write-BuildRecord -Stage $script:buildStage -State 'failed' -Message $failure } catch { }
+    Complete-InstallUi -Ok $false -Message $failure
+    Write-Host "Openlock install failed: $failure"
+    exit 1
+}
+
+Write-BuildRecord -Stage 'prepare' -State 'running' -Message 'assembling the client tree'
 
 # Read one NUL-terminated string from a VPK directory tree. Returns $null when the tree ends
 # before a terminator, which is how Test-VpkArchive tells a truncated tree from an empty string.
@@ -330,6 +660,8 @@ if ($missing.Count -gt 0) {
     throw "Layout includes with no file in the package: $($missing -join '; ')"
 }
 
+Write-BuildRecord -Stage 'prepare' -State 'ok' -Message 'client tree assembled'
+
 # 3. Compile. The shipping client resolves `panorama/layout/base_hud.vxml_c`, not an .xml source:
 #    a source-only archive draws nothing. Compiling is therefore part of the install, and the
 #    override is only accepted once every compiled artifact the layout names is on disk.
@@ -347,6 +679,7 @@ if (-not $Compile) {
 
 $compiledCount = 0
 if (Test-Path $compiler) {
+    Write-BuildRecord -Stage 'compile' -State 'running' -Message 'compiling Panorama resources'
     if (Test-Path $sdkContent) { Remove-Item $sdkContent -Recurse -Force }
     if (Test-Path $sdkBuilt) { Remove-Item $sdkBuilt -Recurse -Force }
     New-Item -ItemType Directory -Force -Path (Join-Path $sdkContent 'panorama') | Out-Null
@@ -402,6 +735,7 @@ if (Test-Path $compiler) {
     }
 
     Write-Host "Compiled $($compiled.Count) Panorama resources with $compiler"
+    Write-BuildRecord -Stage 'compile' -State 'ok' -Resources $compiledCount -Message "compiled $compiledCount Panorama resources"
 }
 
 # 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
@@ -413,6 +747,7 @@ $packLog = Join-Path $env:TEMP ('openlock-vpk-' + [guid]::NewGuid().ToString('N'
 $packErr = Join-Path $env:TEMP ('openlock-vpk-' + [guid]::NewGuid().ToString('N') + '.err.log')
 $packArgs = '"' + $build + '" "' + $archive + '"'
 $packTimeout = [Math]::Max(5, $PackTimeoutSeconds)
+Write-BuildRecord -Stage 'pack' -State 'running' -Message 'packing pak01_dir.vpk'
 Write-Host "Packing with $VpkTool"
 try {
     $pack = Start-Process -FilePath $VpkTool -ArgumentList $packArgs -WorkingDirectory $repoRoot `
@@ -438,6 +773,7 @@ while ((Get-Date) -lt $deadline) {
             $lastLength = $item.Length
         }
         if ($stablePolls -ge 3) { break }
+        Write-BuildRecord -Stage 'pack' -State 'running' -VpkBytes $item.Length -Message 'packing pak01_dir.vpk'
     } else {
         $stablePolls = 0
     }
@@ -473,10 +809,12 @@ if ($packerWasRunning) {
     Write-Host "CSDKCfgVPK wrote a valid $archiveBytes-byte archive."
 }
 Remove-Item -LiteralPath $packLog,$packErr -Force -ErrorAction SilentlyContinue
+Write-BuildRecord -Stage 'pack' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount -Message "packed $archiveBytes bytes"
 
 # 5. Install the archive as the only source. A loose copy of the same layout names beside the
 #    archive is a duplicate answer for `base_hud`; the shipping client reads the compiled resource
 #    from the archive, so the loose tree is removed rather than kept as a second authority.
+Write-BuildRecord -Stage 'install' -State 'running' -VpkBytes $archiveBytes -Message 'installing the archive'
 $builtHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
 New-Item -ItemType Directory -Force -Path $addonRoot | Out-Null
 $installedArchive = Join-Path $addonRoot 'pak01_dir.vpk'
@@ -490,6 +828,7 @@ if ($installedError) {
     throw "Installed VPK is not readable: $installedError"
 }
 Write-Host "Installed VPK SHA-256 $builtHash matches the built archive."
+Write-BuildRecord -Stage 'install' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount -Message "installed $archiveBytes bytes"
 $legacy = Join-Path $addonRoot 'panorama'
 if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force }
 
@@ -644,8 +983,8 @@ if ($PackageRepo.Count -gt 0) {
             throw "package '$id' vpk '$vpkRel' is not a readable VPK: $structureError"
         }
 
-        $packageMountRel = 'citadel/addons/openlock_packages/' + $id
-        $packageMount = Join-Path $citadel ('addons\openlock_packages\' + $id)
+        $packageMountRel = 'citadel/addons/mods/packages/' + $id
+        $packageMount = Join-Path $citadel ('addons\mods\packages\' + $id)
         New-Item -ItemType Directory -Force -Path $packageMount | Out-Null
         Copy-Item -LiteralPath $vpkFull (Join-Path $packageMount 'pak01_dir.vpk') -Force
         $packageMounts += $packageMountRel
@@ -673,12 +1012,13 @@ $text = [System.IO.File]::ReadAllText($gameinfo)
 $hadBom = $text.Length -gt 0 -and $text[0] -eq [char]0xFEFF
 if ($hadBom) { $text = $text.Substring(1) }
 $lines = [System.Collections.Generic.List[string]]($text -split "`r?`n")
-$entry = "`t`t`tGame`t`tcitadel/addons/openlock_ui"
+$entry = "`t`t`tGame`t`tcitadel/addons/mods"
 
 # Drop any previous entry so the script is idempotent. Companion package mounts are rewritten from
 # the packages installed in this run, so an uninstalled package cannot keep a stale search path.
 $lines = [System.Collections.Generic.List[string]]($lines | Where-Object {
-    $_ -notmatch 'citadel/addons/openlock_ui' -and $_ -notmatch 'citadel/addons/openlock_packages/'
+    $_ -notmatch 'citadel/addons/openlock_ui' -and $_ -notmatch 'citadel/addons/openlock_packages/' -and
+        $_ -notmatch 'citadel/addons/mods(?:/|\s|$)'
 })
 
 # A verified stock gameinfo has SearchPaths but no addon path. Mount this addon's own
@@ -720,28 +1060,13 @@ if ($check.Length -ge 3 -and $check[0] -eq 0xEF -and $check[1] -eq 0xBB -and $ch
     throw 'gameinfo.gi was written with a BOM; Deadlock cannot parse that and will crash at launch.'
 }
 
-Write-Host "Mounted citadel/addons/openlock_ui from $gameinfo"
+Write-Host "Mounted citadel/addons/mods from $gameinfo"
 if ($hadBom) { Write-Host 'Removed the UTF-8 BOM the previous install left on gameinfo.gi.' }
 
 # 7. Leave the build record the Tools window reads. The next data generation embeds it; this
 #    record is also useful on its own when an install is inspected without launching the client.
-$archiveInfo = Get-Item $archive
-$buildState = [ordered]@{
-    stage = 'installed'
-    finishedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm')
-    vpk = 'dist/openlock_ui/pak01_dir.vpk'
-    vpkBytes = $archiveInfo.Length
-    resources = $compiledCount
-    path = 'citadel/addons/openlock_ui/pak01_dir.vpk'
-    stages = @(
-        [ordered]@{ name = 'compile'; ok = $true; resources = $compiledCount },
-        [ordered]@{ name = 'pack'; ok = $true; bytes = $archiveInfo.Length },
-        [ordered]@{ name = 'install'; ok = $true }
-    )
-    packages = @($installedPackages)
-}
-$buildPath = Join-Path $repoRoot 'shell\alpha-shell\build.json'
-if (-not (Test-Path (Split-Path $buildPath -Parent))) { $buildPath = Join-Path $build 'build.json' }
-[System.IO.File]::WriteAllText($buildPath, ($buildState | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host "Wrote build record $buildPath"
+Write-BuildRecord -Stage 'installed' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount `
+    -Packages $installedPackages -Message "installed $archiveBytes bytes"
+Write-Host "Wrote build record $buildRecordPath and $liveBuildPath"
 Write-Host "Start the game. The shell boots from pak01_dir.vpk; the server is optional."
+Complete-InstallUi -Ok $true -Message "Installed $([Math]::Round($archiveBytes / 1MB, 2)) MB to addons/mods/pak01_dir.vpk · grade $script:installGrade."

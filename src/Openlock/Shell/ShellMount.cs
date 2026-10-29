@@ -23,6 +23,10 @@ public sealed class ShellMount
     private readonly HashSet<int> _announced = [];
     private readonly Dictionary<int, AddonState> _lastState = [];
 
+    private BuildStatus _build = new("");
+    private AddonPackages _addons = new();
+    private string _lastBuildLog = "";
+
     private ShellPackage? _package;
     private LayoutProfiles? _layouts;
     private string _active = "";
@@ -33,12 +37,16 @@ public sealed class ShellMount
     public bool Mounted => _package is not null;
     public IReadOnlyList<ShellPackage.Refusal> Refusals => _package?.Refusals ?? [];
     public IReadOnlyList<ShellPackage.Window> Windows => _package?.Windows ?? [];
+    public IReadOnlyList<ShpPackage.Window> AddonWindows => _addons.Windows;
     public string LayoutDirectory => _layouts?.DirectoryPath ?? "";
 
     public void Load(string root)
     {
         _package = ShellPackage.Load(root);
         _layouts = new LayoutProfiles(root);
+        _build = new BuildStatus(root);
+        _build.Poll();
+        _addons = AddonPackages.Discover(_plugin.Config);
         _active = _package.Tabs.FirstOrDefault() ?? _package.Windows.FirstOrDefault()?.Id ?? "";
 
         Log.Write(
@@ -46,6 +54,14 @@ public sealed class ShellMount
             $"{_package.Tabs.Count} tabs, bar {_package.Bar ?? "none"}, {_package.Filed.Count} filed, " +
             $"{_package.Pins.Count} pins, {_package.Refusals.Count} refusal(s)");
         Log.Write($"[Openlock] layout profiles: {_layouts.DirectoryPath}");
+        Log.Write(
+            $"[Openlock] addon packages: {_addons.Packages.Count} package(s), {_addons.Windows.Count} window(s), " +
+            $"{_addons.RefusalCount} refusal(s)");
+        foreach (var package in _addons.Packages)
+            Log.Write($"[Openlock] addon package {package.Id} {package.Version}: {package.WindowIds.Count} window(s) at {package.Archive}");
+        foreach (var package in _addons.Packages)
+            foreach (var refusal in package.Refusals)
+                Log.Write($"[Openlock] addon REFUSED {refusal.File}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
 
         foreach (var refusal in _package.Refusals)
             Log.Write($"[Openlock] shell REFUSED {Rel(root, refusal.File)}:{refusal.Line} {refusal.Subject}: {refusal.Why}");
@@ -57,6 +73,19 @@ public sealed class ShellMount
             return;
 
         foreach (var window in _package.Windows)
+        {
+            var id = window.Id;
+            UI.Panel(RootPanel).On("view:" + id, e =>
+            {
+                _active = id;
+                SendWindow(id, e.Caller);
+            });
+        }
+
+        // Addon windows are opened by the same view event as package windows. Registering them
+        // here is what lets a click inside an addon layout reach the server without a second
+        // routing table owned by the addon.
+        foreach (var window in _addons.Windows)
         {
             var id = window.Id;
             UI.Panel(RootPanel).On("view:" + id, e =>
@@ -110,8 +139,10 @@ public sealed class ShellMount
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
         PublishLayout(controller);
+        PublishBuildStatus(controller);
+        PublishAddons(controller);
         SendWindow(_active, controller);
-        Log.Write($"[Openlock] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} windows declared");
+        Log.Write($"[Openlock] shell mounted for {controller.PlayerName}: active '{_active}', {_package.Windows.Count} + {_addons.Windows.Count} addon window(s)");
     }
 
     public void Open(CCitadelPlayerController? controller)
@@ -129,7 +160,40 @@ public sealed class ShellMount
         UI.Panel(RootPanel).LoadXml(controller.Recipients, LayoutPath);
         UI.Panel(RootPanel).Set(controller.Recipients, "paths", string.Join("\n", _plugin.AddonReport));
         PublishLayout(controller);
+        PublishBuildStatus(controller);
+        PublishAddons(controller);
         SendWindow(_active, controller);
+    }
+
+    /// <summary>
+    /// Opens a delivered package XML as an observer surface. The shell decides how to present it:
+    /// observer grade mounts it in the toast stack, dev grade opens its window. The record is the
+    /// same package window the addon loader validated, never a caller-supplied layout path.
+    /// </summary>
+    public int ShowObserver(string windowId)
+    {
+        var window = _addons.WindowById(windowId);
+        if (window is null || string.IsNullOrEmpty(window.LayoutPath))
+            return 0;
+
+        var sent = 0;
+        foreach (var controller in Players.GetAll())
+        {
+            if (controller.IsBot)
+                continue;
+
+            _active = windowId;
+            UI.Panel(RootPanel).Set(controller.Recipients, "active", windowId);
+            UI.Panel(RootPanel).Set(controller.Recipients, "view", "");
+            UI.Panel(RootPanel).Set(controller.Recipients, "body", "");
+            UI.Panel(RootPanel).Set(controller.Recipients, "refusal", "");
+            sent++;
+        }
+
+        Log.Write(sent > 0
+            ? $"[Openlock] observer XML '{windowId}' sent to {sent} shell(s) at {window.LayoutPath}"
+            : $"[Openlock] observer XML '{windowId}' has no connected shell");
+        return sent;
     }
 
     public void Collapse(CCitadelPlayerController? controller)
@@ -146,6 +210,18 @@ public sealed class ShellMount
     {
         if (_package is null)
             return;
+
+        var buildChanged = _build.Poll();
+        if (buildChanged)
+        {
+            if (!string.Equals(_build.BuildJson, _lastBuildLog, StringComparison.Ordinal))
+            {
+                _lastBuildLog = _build.BuildJson;
+                Log.Write(_build.HasBuild
+                    ? $"[Openlock] build status published ({_build.BuildJson.Length} bytes)"
+                    : "[Openlock] build status cleared; shell uses its baked record");
+            }
+        }
 
         foreach (var controller in Players.GetAll())
         {
@@ -175,9 +251,14 @@ public sealed class ShellMount
             if (state is AddonState.Ready && _announced.Add(controller.Slot))
             {
                 PublishLayout(controller);
+                PublishBuildStatus(controller);
+                PublishAddons(controller);
                 SendWindow(_active, controller);
                 Log.Write($"[Openlock] shell addon ready for {controller.PlayerName}; active '{_active}' re-sent");
             }
+
+            if (buildChanged)
+                PublishBuildStatus(controller);
         }
     }
 
@@ -266,6 +347,24 @@ public sealed class ShellMount
     }
 
     /// <summary>
+    /// Sends the installer's own records. Empty values are deliberate: they clear a stale
+    /// attribute and let the shell fall back to the record baked into its package.
+    /// </summary>
+    private void PublishBuildStatus(CCitadelPlayerController controller)
+    {
+        // Both fields are always sent. The poll only calls this when a record changed (or a
+        // client just mounted), and a per-client cache here would let one player's update
+        // suppress another player's.
+        UI.Panel(RootPanel).Set(controller.Recipients, "build", _build.BuildJson);
+        UI.Panel(RootPanel).Set(controller.Recipients, "update", _build.UpdateJson);
+    }
+
+    private void PublishAddons(CCitadelPlayerController controller)
+    {
+        UI.Panel(RootPanel).Set(controller.Recipients, "addons", _addons.PayloadJson());
+    }
+
+    /// <summary>
     /// Asks each connected shell to publish its current geometry through the same layout event
     /// the Save button uses. This is the operator path for verifying persistence without moving
     /// a window by hand.
@@ -293,6 +392,17 @@ public sealed class ShellMount
     {
         if (controller is null || _package is null)
             return;
+
+        // Addon windows are already in the client's addon payload. Sending a content resolution
+        // for them would replace their own layout with a refusal from the shell's content table.
+        if (_addons.WindowById(windowId) is not null)
+        {
+            UI.Panel(RootPanel).Set(controller.Recipients, "active", windowId);
+            UI.Panel(RootPanel).Set(controller.Recipients, "view", "");
+            UI.Panel(RootPanel).Set(controller.Recipients, "body", "");
+            UI.Panel(RootPanel).Set(controller.Recipients, "refusal", "");
+            return;
+        }
 
         var window = _package.WindowById(windowId);
         if (window is null)

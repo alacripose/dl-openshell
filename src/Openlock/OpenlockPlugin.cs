@@ -214,12 +214,16 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
     public override void OnGameFrame(bool simulating, bool firstTick, bool lastTick)
     {
+        // The shell is a menu surface as much as a match surface. Its build/addon status and the
+        // client addon readiness sample must run while the client is in a menu, where a player
+        // installs or inspects a build; the simulation-only work below stays gated.
+        _shell.Tick();
+
         if (!simulating || !Config.Enabled)
             return;
 
         _watch.Tick();
         _abilityHud.Tick();
-        _shell.Tick();
 
         // The engine's own learning gate: with it closed the upgrade never happens, so there is
         // nothing to revert afterwards. Innates are outside the four hero ability slots.
@@ -419,6 +423,29 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
 
     [Command("openlock-layout", Description = "Openlock layout profiles: status | save")]
     public void CmdLayoutDashed(Caller caller, string verb = "status") => CmdLayout(caller, verb);
+
+    [Command("openlock_observer", Description = "Show a package XML observer surface on connected shells")]
+    public void CmdObserver(Caller caller, string windowId = "")
+    {
+        var id = (windowId ?? "").Trim();
+        if (id.Length == 0)
+        {
+            var available = _shell.AddonWindows.Where(w => !string.IsNullOrEmpty(w.LayoutPath)).Take(12)
+                .Select(w => w.Id).ToArray();
+            caller.Reply(available.Length == 0
+                ? "[OPENLOCK] no package XML observer surface is loaded"
+                : "[OPENLOCK] usage: openlock_observer <window-id>; available: " + string.Join(", ", available));
+            return;
+        }
+
+        var sent = _shell.ShowObserver(id);
+        caller.Reply(sent == 0
+            ? $"[OPENLOCK] observer XML '{id}' is not a loaded package window with a mounted XML layout"
+            : $"[OPENLOCK] observer XML '{id}' sent to {sent} shell(s)");
+    }
+
+    [Command("openlock-observer", Description = "Show a package XML observer surface on connected shells")]
+    public void CmdObserverDashed(Caller caller, string windowId = "") => CmdObserver(caller, windowId);
 
     [Command("openlock_ui", Description = "Openlock shell panel: open | hide")]
     public void CmdUi(Caller caller, string verb = "open")
