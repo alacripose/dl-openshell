@@ -81,7 +81,20 @@ def main() -> int:
             errors.append(f"{node_id}: pointer container blocked by ancestor '{blocker}'")
 
     script = SCRIPT.read_text(encoding="utf-8")
-    for helper in ("addControl", "titleButton", "showObserverXml"):
+    # The reduced CSDK 10 client (the host installer shell) exposes no GameUI. A drag that only
+    # probes GameUI is refused at runtime, which is how the installer lost pointer drags. Refuse
+    # the package at build time instead of shipping a shell whose buttons cannot be dragged.
+    if "$.MousePosition" not in script:
+        errors.append(
+            "openlock_shell.js: no $.MousePosition cursor probe; the host installer would refuse drags"
+        )
+    # A decorative label or icon left hit-testable sits over its own button and swallows the
+    # press. That is the title-bar glyph regression; refuse it at build time.
+    if "l.hittest = false" not in script:
+        errors.append("addControl: label is hit-testable and would swallow the button press")
+    if "i.hittest = false" not in script:
+        errors.append("titleButton: icon is hit-testable and would swallow the glyph press")
+    for helper in ("addControl", "titleButton"):
         if f"function {helper}" not in script and f"{helper} =" not in script:
             errors.append(f"{helper}: expected pointer helper is missing")
 
