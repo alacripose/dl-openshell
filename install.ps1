@@ -921,10 +921,11 @@ if (Test-Path $compiler) {
     Write-BuildRecord -Stage 'compile' -State 'ok' -Resources $compiledCount -Message "compiled $compiledCount Panorama resources"
 }
 
-# 3b. Live tools update. The CSDK10 tools client reads loose compiled `_c` resources from the
-#     mounted addon directory when it reloads a map, while the packed VPK stays open and cannot be
-#     replaced. Copy only the compiled resources, never the VPK, and let the running client pick
-#     them up on its next map reload. This is the tools host path; a shipping install still packs.
+# 3b. Live tools update. The mounted VPK resolves before the loose tree on the CSDK10 client:
+#     leaving a stale archive beside fresh `_c` files is a split authority, and the client keeps
+#     reading the archive. Copy the loose resources for inspection, then pack and replace the
+#     archive below. The fallback in step 5 can replace a held archive in place; the client still
+#     needs a map reload, never a restart.
 if ($Live) {
     $liveRoot = Join-Path $addonRoot 'panorama'
     $compiledRoot = Join-Path $build 'panorama'
@@ -938,11 +939,8 @@ if ($Live) {
         $liveCount++
     }
     if ($liveCount -lt 1) { throw 'Live install compiled no resources to copy.' }
-    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
-        -Message "live compiled $liveCount resources for the next map reload"
-    Write-Host "Live install: $liveCount compiled resource(s) in $liveRoot; reload the map to read them."
-    Write-Host 'The packed VPK and gameinfo.gi were not touched.'
-    return
+    Write-Host "Live install: $liveCount compiled resource(s) in $liveRoot."
+    Write-Host 'Live install: packing and replacing the mounted archive; the client reads the archive first.'
 }
 
 # 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
