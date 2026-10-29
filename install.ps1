@@ -752,7 +752,7 @@ if (-not $SdkRoot) {
 #    its own base_hud and base_dashboard, both built from the stock host roots, plus a legacy shell
 #    entry generated from the live shell at pack time. The workaround for the older parser therefore
 #    never exists inside the live layouts, sheet or script.
-$toolsTarget = Test-Path (Join-Path $DeadlockRoot 'content\citadel_addons')
+$toolsTarget = Test-Path (Join-Path $DeadlockRoot 'game\citadel_addons')
 if (Test-Path $build) { Remove-Item $build -Recurse -Force }
 $contentLayout = Join-Path $build 'panorama\layout'
 $contentScripts = Join-Path $build 'panorama\scripts'
