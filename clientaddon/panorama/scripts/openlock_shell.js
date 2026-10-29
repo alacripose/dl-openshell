@@ -98,6 +98,7 @@
     var reportedRefusals = {};
 
     var frames = {};      // id -> { frame, title, meta, body, refusal, win }
+    var lastInteractionAt = Date.now();
     var maximized = {};   // id -> geometry before the maximize click
     var minimized = {};   // id -> chrome hidden, window still open on the bar
     var open = {};        // id -> true
@@ -144,16 +145,28 @@
     }
 
     function hudRoot() {
+        // Panorama's absolute root answers FindChildTraverse but returns no children from any
+        // ordinary parent, so a walk that starts there visits zero panels. The game HUD is the
+        // ancestor named 'Hud' (CitadelHud); the live mount is a sibling of it under the window
+        // root, the tools mount is inside it.
         var top = root;
         var depth = 0;
         while (top && depth < 30) {
+            var id = "";
+            try { id = top.id || ""; } catch (e) { id = ""; }
+            var cls = classesOf(top);
+            if (id === "Hud" || /citadelhud/i.test(cls)) return top;
+            try {
+                var found = top.FindChildTraverse("Hud");
+                if (found && found !== root && !isShellPanel(found)) return found;
+            } catch (e) {}
             var up = null;
             try { up = top.GetParent(); } catch (e) { break; }
             if (!up) break;
             top = up;
             depth++;
         }
-        return top;
+        return root;
     }
 
     function isShellPanel(panel) {
@@ -252,7 +265,12 @@
     function panelVisible(panel) {
         if (!panel) return false;
         try {
-            if (panel.IsVisible) return !!panel.IsVisible();
+            if (panel.IsVisible && !panel.IsVisible()) return false;
+        } catch (e) {}
+        // A scoreboard or alternate HUD can be laid out and IsVisible while fully transparent.
+        // Framing it would put chrome around a screen the player cannot see.
+        try {
+            if (typeof panel.GetOpacity === "function" && panel.GetOpacity() < 0.01) return false;
         } catch (e) {}
         try { return panel.visible !== false; } catch (e) { return true; }
     }
@@ -421,7 +439,7 @@
 
     // --- the bar -------------------------------------------------------------
 
-    function addControl(parent, cls, label, onClick) {
+    function addControl(parent, cls, label, onClick, press) {
         var p = $.CreatePanel("Panel", parent, "");
         p.AddClass(cls);
         p.hittest = true;
@@ -432,7 +450,13 @@
         // and swallows the click, which is exactly how the title-bar glyphs stopped working.
         l.hittest = false;
         if (cls === "ShellTab") l.AddClass("ShellTabLabel");
-        p.SetPanelEvent("onmouseactivate", onClick);
+        // A title glyph is a press target, not a click target: on the reduced tools build the
+        // activate event can be lost when the title's drag poll owns the pointer. Press is
+        // immediate and works on both clients; tabs and menu rows keep the click path.
+        p.SetPanelEvent(press ? "onmousedown" : "onmouseactivate", function () {
+            lastInteractionAt = Date.now();
+            onClick();
+        });
         return p;
     }
 
@@ -516,6 +540,10 @@
     function setRect(record, x, y, w, h) {
         var frame = record.frame;
         var key = Math.round(x) + "|" + Math.round(y) + "|" + Math.round(w) + "|" + Math.round(h);
+        // The pointer-rect probe reads the same box the frame occupies. Panorama's mouseover is
+        // not delivered reliably to an ancestor that is not itself hit-testable, so an idle HUD
+        // frame is restored from its rectangle rather than from an event on a transparent child.
+        record.rect = { x: x, y: y, w: w, h: h };
         if (record.rectKey === key) {
             perf.skips++;
             return;
@@ -523,7 +551,7 @@
         record.rectKey = key;
         frame.style.marginLeft = Math.round(x) + "px";
         frame.style.marginTop = Math.round(y) + "px";
-        frame.style.width = Math.max(120, Math.round(w)) + "px";
+        frame.style.width = Math.max(48, Math.round(w)) + "px";
         frame.style.height = Math.max(TITLE_DP, Math.round(h)) + "px";
         perf.writes += 4;
     }
@@ -551,6 +579,39 @@
         perf.writes++;
     }
 
+    // A top-row HUD element (the game's own top bar is the common one) must not have its chrome
+    // clipped by the shell bar. Rather than jumping the panel down by the missing pixels, keep
+    // the player's geometry and ease a display offset onto the panel and its frame. The offset is
+    // zero again as soon as the window is dragged clear, so a layout save still stores the point
+    // the player chose.
+    function startShiftAnimation(id) {
+        var record = frames[id];
+        if (!record || record.shiftAnim) return;
+        record.shiftAnim = true;
+        var last = Date.now();
+
+        function tick() {
+            var f = frames[id];
+            var win = windowById(id);
+            if (!f || !win || !expanded) {
+                if (f) f.shiftAnim = false;
+                return;
+            }
+            var now = Date.now();
+            var dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+            last = now;
+            var target = num(f.targetShiftY) || 0;
+            var current = num(f.shiftY) || 0;
+            var next = current + (target - current) * Math.min(1, dt * 14);
+            if (Math.abs(target - next) < 0.5) next = target;
+            f.shiftY = next;
+            applyWindow(win);
+            if (Math.abs(target - next) >= 0.5) $.Schedule(0.016, tick);
+            else f.shiftAnim = false;
+        }
+        $.Schedule(0.016, tick);
+    }
+
     // A game panel is not reparented. `natural` is its own rect before the shell touches it; the
     // transform's centre-based scale correction keeps the frame's top-left on the declared point
     // without depending on the panel's transform-origin.
@@ -561,6 +622,18 @@
             return false;
         }
         if (pinned[win.id]) enforcePinnedVisibility(win.id);
+
+        // The HUD moves and resizes while a match runs (the top bar pushes down when the shell
+        // opens, the ability panel appears, the health bar rebuilds). A rect sampled once at bind
+        // is how chrome ended up around empty space. Re-sample twice a second; the frame follows
+        // the pixels the player sees, not the layout from the moment the window was framed.
+        var sampled = Date.now();
+        if (!b.sampledAt || sampled - b.sampledAt > 500) {
+            var fresh = naturalOf(b.panel);
+            if (fresh) b.natural = fresh;
+            b.content = contentBounds(b.panel) || b.natural;
+            b.sampledAt = sampled;
+        }
 
         var nat = b.natural;
         if (!g.init) {
@@ -579,17 +652,28 @@
             g.init = true;
         }
 
-        // The chrome is drawn above the content; keep it on screen for a HUD element that lives
-        // at the very top or left edge (the minimap is at 10,10 in the stock layout), and keep a
-        // grab area on screen when a window was dragged past the right or bottom edge.
+        // Keep a grab area on screen when a window was dragged past the right or bottom edge.
         g.x = clamp(g.x, 4, Math.max(4, screenW - 160));
-        // The title bar is drawn CHROME_DP above the content. Keep it below the taskbar instead
-        // of letting the bar slice through the top-row HUD frames.
-        g.y = clamp(g.y, SHELL_TOP_DP + CHROME_DP, Math.max(SHELL_TOP_DP + CHROME_DP, screenH - 80));
+        g.y = clamp(g.y, 0, Math.max(0, screenH - 80));
+
+        // The title bar is drawn above the content. A compact HUD title is 16 dp; a shell window
+        // carries the full title and meta. If the content is in the shell bar's row, ease the
+        // whole window down until the chrome fits; the panel follows the frame, so its own
+        // controls remain where the player can see them.
+        var chrome = (win.autoFrame || win.discovered) ? 16 : CHROME_DP;
+        var dockTop = SHELL_TOP_DP + chrome;
+        var needShift = Math.max(0, dockTop - g.y);
+        if (record.shiftY === undefined) record.shiftY = 0;
+        record.targetShiftY = needShift;
+        if (Math.abs(record.shiftY - needShift) > 0.5) startShiftAnimation(win.id);
 
         var scale = clamp(g.w / nat.w, 0.08, 4);
-        var tx = g.x - nat.x - (nat.w - nat.w * scale) / 2;
-        var ty = g.y - nat.y - (nat.h - nat.h * scale) / 2;
+        var dispX = g.x;
+        var dispY = g.y + (num(record.shiftY) || 0);
+        var dispW = nat.w * scale;
+        var dispH = nat.h * scale;
+        var tx = dispX - nat.x - (nat.w - nat.w * scale) / 2;
+        var ty = dispY - nat.y - (nat.h - nat.h * scale) / 2;
 
         var transform = "translate3d(" + tx + "px," + ty + "px,0px) scale3d(" +
             scale + "," + scale + ",1)";
@@ -605,7 +689,26 @@
             }
         }
 
-        setRect(record, g.x, g.y - CHROME_DP, g.w, nat.h * scale + CHROME_DP);
+        // The chrome is drawn around the content the player can actually see, then clipped
+        // against the screen. The panel's transparent reserve stays untouched; only the frame
+        // and title follow the visible rectangle.
+        var content = b.content || { x: nat.x, y: nat.y, w: nat.w, h: nat.h };
+        var contentLeft = dispX + (content.x - nat.x) * scale;
+        var contentTop = dispY + (content.y - nat.y) * scale;
+        var contentW = content.w * scale;
+        var contentH = content.h * scale;
+        var left = Math.max(0, contentLeft);
+        var top = Math.max(0, contentTop);
+        var right = Math.min(screenW, contentLeft + contentW);
+        var bottom = Math.min(screenH, contentTop + contentH);
+        if (right - left < 24 || bottom - top < 20) {
+            setFrameVisible(record, false);
+            return false;
+        }
+        setFrameVisible(record, expanded && !minimized[win.id]);
+        var titleTop = Math.max(0, top - chrome);
+        record.frame.SetHasClass("Narrow", (right - left) < 260);
+        setRect(record, left, titleTop, right - left, bottom - titleTop);
         return true;
     }
 
@@ -743,6 +846,106 @@
         $.Schedule(0.001, frameTick);
     }
 
+    function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    // Panorama rejects CSS transitions with a cubic-bezier function, so the fallback is eased
+    // here. The title strip shrinks from 16 dp to 10 dp and fades while the compact controls
+    // fade out; the next pointer interaction runs the same curve back to the expanded state.
+    function paintCompact(f) {
+        if (!f || !f.titleBar) return;
+        var e = easeInOut(clamp(num(f.idleMix) || 0, 0, 1));
+        // The frame is the 1 px outline and the corner grips: those are the only parts that go
+        // away at idle. The chrome stays on screen as a compact black-and-white strip, with its
+        // controls and its native-size performance readout. The title text is the one label that
+        // is suppressed at this scale; the strip itself remains a solid line. Hovering scales
+        // the controls back to full size and restores the normal title on the same ease curve.
+        f.titleBar.style.height = (16 - 2 * e) + "px";
+        f.titleBar.style.opacity = "1";
+        var scale = 1 - 0.1 * e;
+        try { f.frame.style.opacity = String(num(f.baseOpacity) || 1); } catch (err) {}
+        try { f.title.style.opacity = String(1 - e); } catch (err) {}
+        try { f.title.style.transform = "scale3d(" + scale + "," + scale + ",1)"; } catch (err) {}
+        try { f.title.style.visibility = e > 0.92 ? "collapse" : "visible"; } catch (err) {}
+        var buttons = f.buttons || [];
+        for (var i = 0; i < buttons.length; i++) {
+            try { buttons[i].style.opacity = "1"; } catch (err) {}
+            try { buttons[i].style.transform = "scale3d(" + scale + "," + scale + ",1)"; } catch (err) {}
+        }
+        var cost = f.cost || null;
+        if (cost) {
+            try {
+                // Real pixels, not a miniature: the performance readout keeps its native size.
+                cost.style.opacity = "1";
+                cost.style.fontSize = "10px";
+            } catch (err) {}
+        }
+        try { f.frame.SetHasClass("IdleCompact", e > 0.5); } catch (err) {}
+    }
+
+    function animateCompact(f, target) {
+        if (!f || !f.win || !(f.win.autoFrame || f.win.discovered)) return;
+        if (f.idleAnim) {
+            f.idleTarget = target;
+            return;
+        }
+        f.idleAnim = true;
+        f.idleTarget = target;
+        var last = Date.now();
+        function tick() {
+            var now = Date.now();
+            var dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+            last = now;
+            var current = num(f.idleMix) || 0;
+            var step = dt / 0.32;
+            if (current < f.idleTarget) current = Math.min(f.idleTarget, current + step);
+            else current = Math.max(f.idleTarget, current - step);
+            f.idleMix = current;
+            paintCompact(f);
+            if (Math.abs(current - f.idleTarget) > 0.001) $.Schedule(0.016, tick);
+            else f.idleAnim = false;
+        }
+        tick();
+    }
+
+    function restoreChrome(id) {
+        lastInteractionAt = Date.now();
+        var f = frames[id];
+        if (!f) return;
+        f.frame.SetHasClass("IdleCompact", false);
+        animateCompact(f, 0);
+    }
+
+    // The window body can be transparent (a live game panel) and the frame is not hit-testable on
+    // that path, so a mouseover on the chrome is not a dependable restore trigger. The pointer
+    // rectangle is: it is the exact box the player sees, and it keeps working while idle chrome
+    // is fully transparent.
+    function pointerInsideFrame(f) {
+        if (!f || !f.rect || !expanded) return false;
+        var at = cursorPoint();
+        if (!at) return false;
+        var r = f.rect;
+        return at.x >= r.x && at.x <= r.x + r.w && at.y >= r.y && at.y <= r.y + r.h;
+    }
+
+    function updateCompactChrome() {
+        var now = Date.now();
+        for (var id in frames) {
+            if (!frames.hasOwnProperty(id)) continue;
+            var f = frames[id];
+            if (!f || !f.win || !(f.win.autoFrame || f.win.discovered)) continue;
+            var hovered = pointerInsideFrame(f);
+            if (hovered) lastInteractionAt = now;
+            var idle = !pointerDrag && !hovered && (now - lastInteractionAt) > 3200;
+            f.frame.SetHasClass("IdleCompact", idle);
+            var target = idle ? 1 : 0;
+            if (Math.abs((num(f.idleMix) || 0) - target) > 0.001 || f.idleTarget !== target) {
+                animateCompact(f, target);
+            }
+        }
+    }
+
     function frameClock() {
         frameClockAt = Date.now();
         if (!frameTicks) {
@@ -754,7 +957,10 @@
             pointerProbe.text = "ptr " + (p ? (Math.round(p.x) + "," + Math.round(p.y)) : "NONE") +
                 " | ev " + lastPointerEvent + " | " + apiProbe();
         }
-        $.Schedule(1, frameClock);
+        updateCompactChrome();
+        // A hover has to be noticed before the next second ticks, or the controls feel dead.
+        // When the shell is closed there is no chrome to restore, so keep the idle wake at 1 s.
+        $.Schedule(expanded ? 0.1 : 1, frameClock);
     }
 
     function applyWindow(win) {
@@ -831,6 +1037,7 @@
         var opacity = String(clamp((num(win.opacity) || 930) / 1000, 0.2, 1));
         if (f.lastOpacity !== opacity) {
             f.lastOpacity = opacity;
+            f.baseOpacity = Number(opacity);
             f.frame.style.opacity = opacity;
             perf.writes++;
         } else {
@@ -930,6 +1137,112 @@
         return { x: x, y: y, w: w, h: h };
     }
 
+    // Deadlock HUD containers reserve large transparent rectangles for fade/position math. The
+    // AbilitiesContainer, for example, is a full-width 400 dp panel whose actual buttons are a
+    // few hundred pixels at the bottom. Framing the container drew chrome around empty space.
+    // Union the rectangles of its visible leaf descendants instead, with short labels clipped to
+    // their text width; that is the part of the panel the player can actually see.
+    // A HUD branch can be laid out and IsVisible while an ancestor fades it to zero. Reading the
+    // opacity chain is what keeps a scoreboard card out of the top bar's content rectangle.
+    function ancestorPaints(panel, stop) {
+        var p = panel;
+        var depth = 0;
+        while (p && p !== stop && depth++ < 12) {
+            try { if (p.IsVisible && !p.IsVisible()) return false; } catch (e) {}
+            try {
+                if (typeof p.GetOpacity === "function" && p.GetOpacity() < 0.01) return false;
+            } catch (e) {}
+            try {
+                var style = p.style;
+                if (style && style.opacity !== undefined && style.opacity !== null && style.opacity !== "") {
+                    var value = parseFloat(String(style.opacity));
+                    if (!isNaN(value) && value < 0.01) return false;
+                }
+            } catch (e) {}
+            try { p = p.GetParent(); } catch (e) { return true; }
+        }
+        return true;
+    }
+
+    function contentBounds(panel) {
+        var whole = naturalOf(panel);
+        if (!whole) return null;
+
+        var left = 1e9, top = 1e9, right = -1e9, bottom = -1e9;
+        var found = false;
+        var stack = [panel];
+        var visited = 0;
+
+        while (stack.length && visited++ < 700) {
+            var p = stack.pop();
+            var count = 0;
+            try { count = p.GetChildCount(); } catch (e) { continue; }
+
+            var visibleChildren = 0;
+            for (var i = 0; i < count; i++) {
+                var child = null;
+                try { child = p.GetChild(i); } catch (e) { child = null; }
+                if (child && panelVisible(child)) {
+                    visibleChildren++;
+                    stack.push(child);
+                }
+            }
+            if (visibleChildren > 0) continue;
+            if (p === panel) continue;
+            if (!ancestorPaints(p, panel)) continue;
+
+            var n = naturalOf(p);
+            if (!n || n.w < 8 || n.h < 8) continue;
+
+            // A full-screen transparent image or fade cover is not the content of the window.
+            if (n.w > screenW * 0.85 && n.h > screenH * 0.85) continue;
+
+            var x = n.x;
+            var y = n.y;
+            var w = n.w;
+            var h = n.h;
+            var text = null;
+            try { text = p.text; } catch (e) { text = null; }
+            if (typeof text === "string") {
+                if (!text.replace(/\s+/g, "")) continue;
+                // A Label reports its parent's assigned width, not the width of its glyphs.
+                w = Math.min(w, Math.max(12, text.length * 7 + 8));
+            }
+
+            found = true;
+            if (x < left) left = x;
+            if (y < top) top = y;
+            if (x + w > right) right = x + w;
+            if (y + h > bottom) bottom = y + h;
+        }
+
+        if (!found) return whole;
+        return {
+            x: Math.max(whole.x, left),
+            y: Math.max(whole.y, top),
+            w: Math.max(8, Math.min(whole.x + whole.w, right) - Math.max(whole.x, left)),
+            h: Math.max(8, Math.min(whole.y + whole.h, bottom) - Math.max(whole.y, top))
+        };
+    }
+
+    function overlapsFramedContent(rect, id) {
+        if (!rect) return false;
+        var area = rect.w * rect.h;
+        for (var key in bound) {
+            if (!bound.hasOwnProperty(key) || key === id) continue;
+            var b = bound[key];
+            if (!b || !b.content) continue;
+            var other = b.content;
+            var w = Math.min(rect.x + rect.w, other.x + other.w) - Math.max(rect.x, other.x);
+            var h = Math.min(rect.y + rect.h, other.y + other.h) - Math.max(rect.y, other.y);
+            if (w <= 0 || h <= 0) continue;
+            var overlap = w * h;
+            var otherArea = other.w * other.h;
+            if (overlap > Math.min(area, otherArea) * 0.35) return true;
+        }
+        return false;
+    }
+
     function ownedByAnother(panel, id) {
         for (var key in bound) {
             if (!bound.hasOwnProperty(key) || key === id) continue;
@@ -954,16 +1267,23 @@
             if (ownedByAnother(panel, win.id)) continue;
             var natural = naturalOf(panel);
             if (!natural) continue;
-            bound[win.id] = { panel: panel, natural: natural };
+            var content = contentBounds(panel) || natural;
+            bound[win.id] = { panel: panel, natural: natural, content: content };
             $.Msg("[Openlock] shell framed '", win.id, "' → ",
                 candidates[i].name || candidates[i].kind, " ", Math.round(natural.w), "×",
-                Math.round(natural.h));
+                Math.round(natural.h), " content ", Math.round(content.w), "×", Math.round(content.h));
             return bound[win.id];
         }
         return null;
     }
 
     function releasePanel(id) {
+        var record = frames[id];
+        if (record) {
+            record.shiftY = undefined;
+            record.targetShiftY = 0;
+            record.shiftAnim = false;
+        }
         var b = bound[id];
         if (!b) return;
         // Put the game's panel back where it belongs. The player's placement is geometry and is
@@ -1130,54 +1450,75 @@
         return cls || ("panel_" + index);
     }
 
+    // Every visible HUD surface, not only the direct children of one container. Deadlock nests
+    // the top bar, health and ability readouts inside full-screen HUD containers; a direct-child
+    // sweep framed the minimap and ability panel but never reached those. Walk bounded branches,
+    // stop at the first panel that is a surface in its own right, and descend only through the
+    // containers that are too large to be a window.
     function hudWindowCandidates() {
         var container = hudRoot();
         if (!container) return [];
 
-        for (var depth = 0; depth < 3; depth++) {
-            var kids = [];
+        var found = [];
+        var visited = 0;
+        function walk(parent, depth) {
+            if (!parent || visited > 900 || depth > 7) return;
             var count = 0;
-            try { count = container.GetChildCount(); } catch (e) { count = 0; }
-
-            // A full-screen game screen is a window in its own right, even when it contains a
-            // tree of child panels. Hero select, the hideout dashboard and the shop are screens;
-            // the transparent HUD root is not. Only a screen-named container is promoted here.
-            var containerId = "";
-            try { containerId = container.id || ""; } catch (e) { containerId = ""; }
-            var containerCls = classesOf(container);
-            var containerText = (containerId + " " + containerCls).toLowerCase();
-            var containerArea = num(container.actuallayoutwidth) * num(container.actuallayoutheight);
-            if (container !== root && panelVisible(container) &&
-                hasReadableName(containerId, containerCls) &&
-                isHudSurface(containerId, containerCls, false) &&
-                /(select|dashboard|screen|lobby|hideout|match|hero)/.test(containerText) &&
-                containerArea > screenW * screenH * 0.5) {
-                kids.push(container);
-                return kids;
-            }
+            try { count = parent.GetChildCount(); } catch (e) { return; }
 
             for (var i = 0; i < count; i++) {
                 var child = null;
-                try { child = container.GetChild(i); } catch (e) { child = null; }
-                if (!child || isShellPanel(child) || !panelVisible(child)) continue;
-                if (num(child.actuallayoutwidth) * num(child.actuallayoutheight) < 900) continue;
-                kids.push(child);
-            }
+                try { child = parent.GetChild(i); } catch (e) { child = null; }
+                if (!child || child === root || isShellPanel(child) || !panelVisible(child)) continue;
+                visited++;
 
-            if (kids.length >= 3) return kids;
+                var id = "";
+                try { id = child.id || ""; } catch (e) { id = ""; }
+                var cls = classesOf(child);
+                if (isTransientHud(id, cls)) continue;
 
-            // An app with one full-screen HUD container needs one level of descent before its
-            // windows are the children; stop when there is nothing larger to descend into.
-            var big = null;
-            var bigArea = 0;
-            for (var k = 0; k < kids.length; k++) {
-                var area = num(kids[k].actuallayoutwidth) * num(kids[k].actuallayoutheight);
-                if (area > bigArea) { bigArea = area; big = kids[k]; }
+                var w = num(child.actuallayoutwidth);
+                var h = num(child.actuallayoutheight);
+                // A HUD window is a region with room for a title bar. Icons, team-score
+                // counters and reticles are controls inside a region, not windows of their own.
+                if (w < 80 || h < 40) continue;
+                var area = w * h;
+                var text = (id + " " + cls).toLowerCase();
+                // TopBar is the transparent wrapper around the real top-bar controls. Framing the
+                // wrapper drew a 500 dp black rectangle; descend and frame the controls.
+                if (/(^|\s)topbar(\s|$)/.test(text) && area > screenW * screenH * 0.2) {
+                    walk(child, depth + 1);
+                    continue;
+                }
+                var screenish = /(select|dashboard|screen|lobby|hideout|match|hero)/.test(text);
+                // A HUD window is a region the player reads, not an effect drawn over it. The
+                // reticle, damage radar, cast/clip warnings and chat feed are controls inside a
+                // region; framing each one produced a wall of overlapping title bars.
+                var windowish = /(top.?bar|hudtopbar|teamscore|health|shield|ability|abilities|minimap|soul|gold|level|shop|inventory|quickbuy|objective|courier|portrait|stash|roster|timer|status|score|map)/.test(text);
+                var effect = /(crosshair|reticle|damage|radar|clip|cast|zipline|aura|modifier|feed|chat|ping|backer|playercontents|objectives|levelup|level_rewards|notice|announce|tooltip|fade|loading)/.test(text);
+                var named = windowish && !effect && hasReadableName(id, cls) && isHudSurface(id, cls, false);
+
+                // A full-screen screen is one window; do not carve its contents into chrome.
+                if (named && screenish && area > screenW * screenH * 0.45) {
+                    found.push(child);
+                    continue;
+                }
+
+                // A surface gets one frame. Its own children are its content, not more windows.
+                if (named && area <= screenW * screenH * 0.45) {
+                    found.push(child);
+                    $.Msg("[Openlock] hud surface '", id || cls, "' ", Math.round(w), "×", Math.round(h));
+                    continue;
+                }
+
+                // A large or unnamed container carries the surfaces below it.
+                if (depth < 7) walk(child, depth + 1);
             }
-            if (!big) return kids;
-            container = big;
         }
-        return [];
+
+        walk(container, 0);
+        $.Msg("[Openlock] hud walk: ", found.length, " surface(s) of ", visited, " panel(s) visited");
+        return found;
     }
 
     // A panel the package already declares belongs to that window, whether or not the window has
@@ -1202,7 +1543,10 @@
                 var c = cands[j];
                 if (c.kind === "id" && id === c.name) return true;
                 if (c.kind === "class" && classes.indexOf(c.name) >= 0) return true;
-                if (c.kind === "token" && haystack.indexOf(c.name) >= 0) return true;
+                // A token is a fallback for binding, not proof of ownership. "abilities" also
+                // occurs in health_and_abilities_container, and treating that as the declared
+                // ability window left the health bar and upgrade panel with no chrome at all.
+                if (c.kind === "token" && (id === c.name || classes.indexOf(c.name) >= 0)) return true;
             }
         }
         return false;
@@ -1441,38 +1785,50 @@
     // one-shot pass, but it is now deferred and yields between frames: the shell paints, then the
     // largest twelve panels acquire chrome over the next few ticks. This is the click-to-open
     // hang, not a rendering cost.
+    var discoveringHud = false;
+    var hudDiscoverAt = 0;
+
     function discoverHudWindows() {
+        if (discoveringHud) return;
+        discoveringHud = true;
+        hudDiscoverAt = Date.now();
         var candidates = hudWindowCandidates();
         candidates.sort(function (a, b) {
             return (num(b.actuallayoutwidth) * num(b.actuallayoutheight)) -
                 (num(a.actuallayoutwidth) * num(a.actuallayoutheight));
         });
-        // Every named top-level surface, not an arbitrary twelve. Wrappers are skipped here too;
-        // the stream below is what finds the controls inside them.
         candidates = candidates.filter(function (panel) {
             var id = hudPanelName(panel, 0);
             var cls = classesOf(panel);
             var area = num(panel.actuallayoutwidth) * num(panel.actuallayoutheight);
             var screenish = /(select|dashboard|screen|lobby|hideout|match|hero)/.test(
                 (id + " " + cls).toLowerCase());
-            // Full-screen managers and HUD roots are containers, not windows. A full-screen
-            // screen (hero select, dashboard) is the window; its chrome is the screen's chrome.
             if (area > screenW * screenH * 0.45 && !screenish) return false;
             return hasReadableName(id, cls) && isHudSurface(id, cls, false) &&
                 !isTransientHud(id, cls);
-        }).slice(0, 32);
+        }).slice(0, 40);
         var at = 0;
 
         function step() {
-            if (!expanded || at >= candidates.length) return;
+            if (!expanded || at >= candidates.length) {
+                discoveringHud = false;
+                hudDiscoverAt = Date.now();
+                return;
+            }
             var panel = candidates[at];
             var ordinal = at;
             at++;
 
             if (!isDeclaredPanel(panel) && !ownedByAnother(panel, "") &&
+                !panelAlreadyFramed(panel) &&
                 !isTransientHud(hudPanelName(panel, ordinal), classesOf(panel))) {
                 var key = "hud:" + hudPanelName(panel, ordinal).replace(/[^A-Za-z0-9_]/g, "_");
                 var nat = naturalOf(panel);
+                var content = nat ? contentBounds(panel) : null;
+                if (content && overlapsFramedContent(content, key)) {
+                    $.Schedule(0.02, step);
+                    return;
+                }
                 if (nat && !index[key] && !dismissed[key]) {
                     var win = {
                         id: key,
@@ -1507,6 +1863,10 @@
             }
 
             if (at < candidates.length) $.Schedule(0.02, step);
+            else {
+                discoveringHud = false;
+                hudDiscoverAt = Date.now();
+            }
         }
         step();
     }
@@ -1555,6 +1915,7 @@
     function showContextMenu(win, x, y) {
         closeContextMenu();
         if (!win) return;
+        hideDwell();
 
         // A full-screen dismiss surface sits just under the menu: a click anywhere outside a
         // menu row lands here and closes it. Menu rows are above it, so selecting one does not.
@@ -1563,7 +1924,9 @@
         contextDismiss.SetPanelEvent("onmouseactivate", function () { closeContextMenu(); });
 
         var left = Math.max(8, Math.min(screenW - 190, x));
-        var top = Math.max(SHELL_TOP_DP, Math.min(screenH - 240, y));
+        // Open below the title bar, not on top of it. The menu is its own layer above every
+        // window; the title stays visible and the menu cannot sit under a frame's own chrome.
+        var top = Math.max(SHELL_TOP_DP, Math.min(screenH - 280, y));
         contextMenu = $.CreatePanel("Panel", root, "OpenlockContextMenu");
         contextMenu.AddClass("ContextMenu");
         contextMenu.style.marginLeft = left + "px";
@@ -1666,7 +2029,9 @@
     }
 
     function titleButton(parent, icon, onClick) {
-        var b = addControl(parent, "WindowButton", "", onClick);
+        // Move is a drag handle; the rest act on press. A press is also what the pointer probe
+        // records, so a refused control is visible in the log instead of silently doing nothing.
+        var b = addControl(parent, "WindowButton", "", onClick, icon !== "Move");
         var i = $.CreatePanel("Panel", b, "");
         i.AddClass("WindowIcon");
         i.AddClass("Icon" + icon);
@@ -1721,6 +2086,7 @@
     }
 
     function toggleMaximize(id) {
+        $.Msg("[Openlock] maximize press: ", id);
         var win = windowById(id);
         var f = frames[id];
         if (!win || !f) {
@@ -1764,6 +2130,12 @@
         frame.AddClass("WindowFrame");
         if (isPanel) frame.AddClass("PanelWindow");
         if (win["theme-role"] === "hud") frame.AddClass("HudRole");
+        // Automatically drawn HUD windows get the compact schema: no frame outline, black square
+        // controls and white glyphs. After a few idle seconds only the outline and grips go away;
+        // the chrome strip stays readable. The pointer-rect probe restores it on hover.
+        if (win.autoFrame || win.discovered) frame.AddClass("CompactHud");
+        frame.SetPanelEvent("onmouseover", function () { restoreChrome(win.id); });
+        frame.SetPanelEvent("onmousedown", function () { restoreChrome(win.id); });
         frame.style.visibility = "collapse";
         // The local record below carries the cache; createFrame returns after it is built.
 
@@ -1798,14 +2170,15 @@
         var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); });
         var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); });
         if (pinned[win.id]) pinButton.AddClass("PinOn");
-        titleButton(title, "Close", function () { closeWindow(win.id); });
+        var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); });
 
+        title.SetPanelEvent("onmouseover", function () { restoreChrome(win.id); });
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions");
         bindDwell(titleLabel, win.title || win.id, "Frame  ·  " + (win.id || "") + "  ·  " + (win.content || "live"));
         title.SetPanelEvent("oncontextmenu", function () {
             var g = ensureGeometry(win);
-            showContextMenu(win, g.x + 8, g.y - CHROME_DP + 8);
+            showContextMenu(win, g.x + 12, g.y + 6);
         });
         makeDraggable(title, win.id, "move");
 
@@ -1838,6 +2211,8 @@
         var record = {
             frame: frame,
             title: titleLabel,
+            titleBar: title,
+            buttons: [moveButton, minButton, maxButton, pinButton, closeButton],
             meta: metaLabel,
             cost: costLabel,
             body: body,
@@ -1852,6 +2227,10 @@
             refusalVisible: "collapse"
         };
         frames[win.id] = record;
+        if (win.autoFrame || win.discovered) {
+            record.idleMix = 0;
+            paintCompact(record);
+        }
         return record;
     }
 
@@ -2013,6 +2392,7 @@
     }
 
     function closeWindow(id) {
+        $.Msg("[Openlock] close press: ", id);
         var f = frames[id];
         var b = bound[id];
         // Closing a frame around a live game panel collapses that panel, not only its chrome.
@@ -2179,6 +2559,7 @@
     // --- pointer move / resize -----------------------------------------------
 
     function minimizeWindow(id) {
+        $.Msg("[Openlock] minimize press: ", id);
         var f = frames[id];
         if (!f) {
             refuseFeature("Minimize refused", "no frame owns window '" + id + "'");
@@ -2196,7 +2577,9 @@
     function cursorPoint() {
         var p = null;
         try {
-            if (typeof $ !== "undefined" && typeof $.MousePosition === "function") p = $.MousePosition();
+            if (typeof $ !== "undefined" && $.MousePosition) {
+                p = typeof $.MousePosition === "function" ? $.MousePosition() : $.MousePosition;
+            }
         } catch (e) {}
         if (!p) {
             try {
@@ -2297,14 +2680,52 @@
     // cursor position and button state, so a drag is a bounded poll: mousedown captures the
     // start point, a scheduled tick reads the pointer and writes the new rectangle, and release
     // ends it. No grid, no engine drop target, no cell snapping.
-    function beginPointerDrag(id, mode) {
+    function pointFromEventArgs(args) {
+        if (!args || !args.length) return null;
+        for (var i = 0; i < args.length && i < 4; i++) {
+            var value = args[i];
+            if (!value) continue;
+            if (typeof value === "number" && typeof args[i + 1] === "number") {
+                return { x: num(value), y: num(args[i + 1]) };
+            }
+            if (typeof value !== "object") continue;
+            var keys = (["x", "y", "cursorX", "cursorY", "mouseX", "mouseY", "position"]);
+            for (var k = 0; k < keys.length; k++) {
+                if (value[keys[k]] !== undefined) {
+                    var point = value[keys[k]];
+                    if (point && point.x !== undefined && point.y !== undefined) {
+                        return { x: num(point.x), y: num(point.y) };
+                    }
+                    if (k === 0 && value.y !== undefined) return { x: num(value.x), y: num(value.y) };
+                    if (k === 1 && value.x !== undefined) return { x: num(value.x), y: num(value.y) };
+                }
+            }
+        }
+        return null;
+    }
+
+    function beginPointerDrag(id, mode, eventArgs) {
         var win = windowById(id);
         lastPointerEvent = "down " + mode;
         if (!win) { endPointerDrag(false); return; }
-        var at = cursorPoint();
+        var at = cursorPoint() || pointFromEventArgs(eventArgs);
         if (!at) {
+            var probe = "$:" + (typeof $) +
+                " MousePosition:" + (typeof $ !== "undefined" ? typeof $.MousePosition : "absent") +
+                " GameUI:" + (typeof GameUI !== "undefined" ? typeof GameUI.GetCursorPosition : "absent") +
+                " GetCursorPosition:" + (typeof $ !== "undefined" ? typeof $.GetCursorPosition : "absent");
+            try {
+                var raw = (typeof $.MousePosition === "function") ? $.MousePosition() : $.MousePosition;
+                probe += " raw:" + (raw === null ? "null" : typeof raw) +
+                    " x:" + (raw && raw.x !== undefined ? typeof raw.x : "absent") +
+                    " y:" + (raw && raw.y !== undefined ? typeof raw.y : "absent");
+                if (raw && raw.x !== undefined) probe += " value:" + String(raw.x) + "," + String(raw.y);
+            } catch (rawError) {
+                probe += " raw-threw:" + String(rawError);
+            }
+            $.Msg("[Openlock] drag cursor probes: ", probe);
             refuseFeature("Drag refused",
-                "this client does not expose GameUI.GetCursorPosition; the pointer probe above the window says which API is missing");
+                "no cursor API returned a position on this client (" + probe + ")");
             return;
         }
         var g = ensureGeometry(win);
@@ -2345,7 +2766,10 @@
             // onmousedown starts the poll. SetDraggable is deliberately NOT called: it hands the
             // panel to the engine's drag-and-drop layer, which is where the 100 dp cell snap came
             // from, and it does not deliver a JS drag event this build can use.
-            panel.SetPanelEvent("onmousedown", function () { beginPointerDrag(id, mode); });
+            panel.SetPanelEvent("onmousedown", function () {
+                $.Msg("[Openlock] mousedown args: ", probeArgs(arguments));
+                beginPointerDrag(id, mode, arguments);
+            });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
         } catch (e) {
             refuseFeature("Drag refused", "the engine rejected the drag binding: " + String(e));
@@ -2586,6 +3010,24 @@
         for (var t = 0; t < tools.length; t++) {
             rowXd(body, tools[t].name + (tools[t].exists ? "  present" : "  missing") + "  ·  " + tools[t].path,
                 tools[t].exists ? "ViewLine" : "ViewMuted");
+        }
+
+        headingXd(body, "game and tools installs on this machine");
+        var installs = data.installs || [];
+        if (!installs.length) {
+            rowXd(body, "no other install carries a Deadlock gameinfo", "ViewMuted");
+        }
+        for (var i = 0; i < installs.length; i++) {
+            var install = installs[i];
+            var shellText = install.shell === "mounted" ? "shell mounted"
+                : install.shell === "installed, not mounted" ? "shell installed, not mounted"
+                : "shell not installed";
+            var sizeText = install.vpkBytes ? "  ·  " + Math.round(install.vpkBytes / 1024) + " KiB" : "";
+            rowXd(body, install.kind + "  " + install.path, install.shell === "not installed" ? "ViewMuted" : "ViewLine");
+            rowXd(body, "    " + shellText + sizeText +
+                "  ·  " + install.toolsPresent + "/" + install.toolsTotal + " tools" +
+                (install.version ? "  ·  " + install.version : ""),
+                install.shell === "not installed" ? "ViewMuted" : "ViewLine");
         }
     }
 
@@ -3196,10 +3638,17 @@
 
         // Screens that came on screen after the shell opened (shop, map, escape menu) join the
         // layout while the shell is open. The check is every other second, not every poll.
-        // Only the small autoFrame set is retried here. HUD discovery is a one-shot sweep on
-        // open (or the explicit Scan action), never part of the 2s poll.
+        // Only the small autoFrame set is retried here.
         if (expanded && (pollCount % 4) === 0) autoFrameOpen();
         if (expanded && (pollCount % 4) === 2) scanPopups();
+
+        // HUD panels are added and removed by the game while a match runs (the health bar moves,
+        // the ability bar appears, the top bar rebuilds). Re-run the bounded surface walk every
+        // few seconds so chrome follows what is actually visible, not only what existed at open.
+        if (expanded && (pollCount % 8) === 4 && !discoveringHud &&
+            Date.now() - hudDiscoverAt > 4000) {
+            discoverHudWindows();
+        }
 
         $.Schedule(0.5, poll);
     }

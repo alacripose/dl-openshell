@@ -11120,6 +11120,35 @@ var SHELL = {
       "exists": true
     }
   ],
+  "installs": [
+    {
+      "path": "D:/SteamLibrary/steamapps/common/Deadlock",
+      "kind": "game",
+      "shell": "mounted",
+      "vpkBytes": 1064333,
+      "toolsPresent": 1,
+      "toolsTotal": 3,
+      "version": "installed"
+    },
+    {
+      "path": "D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10",
+      "kind": "tools",
+      "shell": "mounted",
+      "vpkBytes": 1092786,
+      "toolsPresent": 2,
+      "toolsTotal": 3,
+      "version": "installed"
+    },
+    {
+      "path": "H:/SteamLibrary/steamapps/common/Deadlock",
+      "kind": "game",
+      "shell": "not installed",
+      "vpkBytes": 0,
+      "toolsPresent": 0,
+      "toolsTotal": 3,
+      "version": ""
+    }
+  ],
   "layouts": [
     "panorama/layout/ability_hud_element_cast.xml",
     "panorama/layout/ability_hud_element_lock_on.xml",
@@ -11592,14 +11621,14 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "c547ad6",
+    "commit": "e041911",
     "branch": "main",
     "dirty": true,
     "gameVersion": "6821",
-    "generatedAt": "2026-10-28 22:23",
-    "grade": "player",
+    "generatedAt": "2026-10-29 01:38",
+    "grade": "dev",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  c547ad6+  ·  game 6821"
+    "label": "v0.7.0  ·  e041911+  ·  game 6821"
   },
   "themes": {
     "default": "deadlock",
@@ -11734,25 +11763,49 @@ var SHELL = {
   },
   "buildState": {
     "format": "openlock.build/1",
-    "grade": "player",
-    "stage": "prepare",
-    "state": "running",
-    "startedAt": "2026-10-28 22:23:10",
-    "updatedAt": "2026-10-28 22:23:11",
-    "finishedAt": "",
+    "grade": "dev",
+    "stage": "installed",
+    "state": "ok",
+    "startedAt": "2026-10-29 01:18:55",
+    "updatedAt": "2026-10-29 01:19:04",
+    "finishedAt": "2026-10-29 01:19:04",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 0,
-    "resources": 0,
+    "vpkBytes": 1064333,
+    "resources": 11,
     "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
         "name": "prepare",
-        "state": "running",
-        "startedAt": "22:23:11",
-        "finishedAt": ""
+        "state": "ok",
+        "startedAt": "01:18:55",
+        "finishedAt": "01:19:01"
+      },
+      {
+        "name": "compile",
+        "state": "ok",
+        "startedAt": "01:19:01",
+        "finishedAt": "01:19:03"
+      },
+      {
+        "name": "pack",
+        "state": "ok",
+        "startedAt": "01:19:03",
+        "finishedAt": "01:19:04"
+      },
+      {
+        "name": "install",
+        "state": "ok",
+        "startedAt": "01:19:04",
+        "finishedAt": "01:19:04"
+      },
+      {
+        "name": "installed",
+        "state": "ok",
+        "startedAt": "01:19:04",
+        "finishedAt": "01:19:04"
       }
     ],
-    "message": "assembling the client tree",
+    "message": "installed 1064333 bytes",
     "packages": []
   },
   "update": {
