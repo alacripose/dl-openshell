@@ -22,6 +22,13 @@
         <!-- The bar (alpha-shell D-2) sits above both layers. Panorama paints siblings in order,
              and a live panel at the top of the screen was painting over the bar and its buttons. -->
         <Panel id="Taskbar" class="Taskbar">
+            <Panel id="PreloadStrip" class="PreloadStrip">
+                <Label id="PreloadLabel" class="PreloadLabel" text="preloading modules" />
+                <Panel id="PreloadModules" class="PreloadModules" />
+                <Panel class="PreloadTrack">
+                    <Panel id="PreloadFill" class="PreloadFill" />
+                </Panel>
+            </Panel>
             <Panel id="TabStrip" class="TabStrip" />
             <Panel class="TaskbarSpacer" />
             <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">

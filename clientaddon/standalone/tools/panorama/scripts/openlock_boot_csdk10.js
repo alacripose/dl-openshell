@@ -26,8 +26,14 @@
             depth++;
         }
 
-        if (globalThis.__openlockCsdk10Mounted) {
-            log("already mounted this session");
+        // The host is one per layout tree. base_hud and base_dashboard can both run this script;
+        // a second host would draw a second taskbar and two sets of frames over the same pixels,
+        // which reads as the bar flickering between two positions. Yield to the host already
+        // mounted in this tree before choosing a root.
+        var mountedHost = null;
+        try { mountedHost = top.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        if (mountedHost && mountedHost.GetChildCount() > 0) {
+            log("shell already mounted in this tree; yielding");
             return;
         }
 
@@ -40,6 +46,36 @@
             log("REFUSED: no Dashboard or Hud host root");
             return;
         }
+
+        var mountKey = String(hostRoot.id || "root");
+
+        // Dashboard and Hud are separate roots and the client can load either first. A single
+        // session flag put the shell only in whichever loaded first, so the dashboard showed no
+        // shell after the HUD had mounted. Each root owns one host; reopening a root is a no-op.
+        // The reduced tools build exposes no shared client object (Game and Steam are absent), so
+        // the map below can only dedupe within one JS context. Separate layout trees each get
+        // their own shell and report their mount line in the console.
+        var mountedRoots = globalThis.__openlockCsdk10MountedRoots;
+        if (!mountedRoots) {
+            mountedRoots = {};
+            globalThis.__openlockCsdk10MountedRoots = mountedRoots;
+        }
+        if (mountedRoots[mountKey]) {
+            log("already mounted into " + mountKey);
+            return;
+        }
+        // Claim before the panel exists. Two Hud loads can interleave inside one frame, and a
+        // claim written after BLoadLayout is too late for the second one.
+        mountedRoots[mountKey] = true;
+
+        var claimId = "OpenlockMountClaim_" + mountKey;
+        var claimed = null;
+        try { claimed = top.FindChildTraverse(claimId); } catch (e) {}
+        if (claimed) {
+            log("mount already claimed for " + mountKey);
+            return;
+        }
+        try { $.CreatePanel("Panel", top, claimId); } catch (e) {}
 
         var host = null;
         try { host = hostRoot.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
@@ -63,6 +99,7 @@
 
         host.style.width = "100%";
         host.style.height = "100%";
+        host.style.zIndex = "10000";
         host.hittest = false;
         host.hittestchildren = true;
 
@@ -78,9 +115,9 @@
             return;
         }
 
-        globalThis.__openlockCsdk10Mounted = true;
+        mountedRoots[mountKey] = true;
         globalThis.__openlockShellMounted = true;
-        log("legacy shell mounted from " + (hostRoot.id || "host root"));
+        log("legacy shell mounted from " + mountKey);
     } catch (e) {
         log("REFUSED: " + String(e));
     }
