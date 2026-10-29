@@ -31,14 +31,6 @@
     var buildStrip = root.FindChildTraverse("BuildStrip");
     var buildStageLabel = root.FindChildTraverse("BuildStage");
     var buildDetailLabel = root.FindChildTraverse("BuildDetail");
-    var installBar = root.FindChildTraverse("InstallBar");
-    var installStateLabel = root.FindChildTraverse("InstallState");
-    var installDetailLabel = root.FindChildTraverse("InstallDetail");
-    var installGrades = {
-        dev: root.FindChildTraverse("InstallGradeDev"),
-        observer: root.FindChildTraverse("InstallGradeObserver"),
-        player: root.FindChildTraverse("InstallGradePlayer")
-    };
     var clockLabel = root.FindChildTraverse("Clock");
     var versionLabel = root.FindChildTraverse("VersionLabel");
     var schemeLabel = root.FindChildTraverse("SchemeLabel");
@@ -3108,69 +3100,6 @@
         }
     }
 
-    // --- installer surface -----------------------------------------------------
-    // The installer's records and this surface are one package. A record is a small JSON object
-    // (stage, state, percent, message, grade); the installer sends it through a declared engine
-    // event, and a click writes one OPENLOCK_ACTION line through CitadelConCommand. Neither path
-    // invents an event name or moves the cursor.
-    var installRecordData = null;
-
-    function hostConsole(command) {
-        try {
-            $.DispatchEvent("CitadelConCommand", command);
-            return true;
-        } catch (e) {
-            $.Msg("[dl-openshell] host command REFUSED: ", String(e));
-            return false;
-        }
-    }
-
-    function refreshInstallBar() {
-        if (!installBar) return;
-
-        var record = installRecordData || liveBuild || null;
-        var state = record ? String(record.state || "waiting") : "waiting";
-        var stage = record ? String(record.stage || "") : "";
-        var percent = record ? Number(record.percent) : NaN;
-
-        for (var id in installGrades) {
-            if (!installGrades.hasOwnProperty(id) || !installGrades[id]) continue;
-            installGrades[id].SetHasClass("Active", id === currentGrade);
-        }
-
-        if (installStateLabel) {
-            installStateLabel.text = state === "ok" || state === "installed" ? "installed" : state;
-        }
-        if (installDetailLabel) {
-            var bits = [];
-            if (stage) bits.push(stage);
-            if (isFinite(percent)) bits.push(Math.round(percent) + "%");
-            if (record && record.message) bits.push(String(record.message));
-            if (!bits.length) bits.push(connected() ? "ready" : "client-only · no host loaded");
-            installDetailLabel.text = bits.join("  ·  ");
-        }
-    }
-
-    globalThis.OpenlockSelectGrade = function (grade) {
-        setGrade(grade);
-        refreshInstallBar();
-        $.Msg("[dl-openshell] action grade: ", currentGrade);
-        hostConsole("echo OPENLOCK_ACTION:grade:" + currentGrade);
-        globalThis.OpenlockToast("Grade", currentGrade + " selected", "", false);
-        return currentGrade;
-    };
-
-    globalThis.OpenlockRequestInstall = function () {
-        var grade = currentGrade;
-        var bridged = connected();
-        $.Msg("[dl-openshell] action install: ", grade, " host=", bridged ? "connected" : "none");
-        hostConsole("echo OPENLOCK_ACTION:install:" + grade);
-        if (installDetailLabel) installDetailLabel.text = "install requested · " + grade;
-        globalThis.OpenlockToast("Install", "grade " + grade +
-            (bridged ? " · request sent to the host" : " · no host in this client"), "", !bridged);
-        return grade;
-    };
-
     function refreshOpenWindow(id) {
         var f = frames[id];
         if (f && open[id] && f.win) renderOwn(f.win, f.body);
@@ -3240,7 +3169,6 @@
                 }
             }
             renderBuildStrip();
-            refreshInstallBar();
             refreshOpenTools();
             setGrade(gradeFromRecords());
         }
@@ -4164,11 +4092,6 @@
     // from this line instead of from a guess in the package.
     // The live-panel inventory is streamed from the UI tree now, not a synchronous 8000-node
     // walk at boot. A large HUD must never hold the first frame.
-
-    if (installBar) {
-        refreshInstallBar();
-        $.Schedule(1.0, refreshInstallBar);
-    }
 
     render();
     poll();

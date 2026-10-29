@@ -11,7 +11,7 @@ emitted with the file and the line it was written on, so the Refusals window and
 the console show the same list the server logs.
 
 Usage:
-    python tools/gen_shell_data.py [package-dir] [output-js]
+    python tools/gen_shell_data.py [package-dir] [output-js] [gameinfo] [output-schemes-css]
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ import gen_shell_theme  # noqa: E402  (the theme generator is a sibling tool, no
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "shell" / "alpha-shell"
 OUTPUT = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "clientaddon" / "panorama" / "scripts" / "openlock_shell_data.js"
+SCHEMES_OUTPUT = Path(sys.argv[4]) if len(sys.argv) > 4 else None
 
 
 def read_recipe(path: Path):
@@ -643,7 +644,7 @@ def main():
     # @define table. The generator writes the stylesheet as a side effect; the data here is what
     # the shell reads to name the schemes and to say why one is unavailable.
     try:
-        themes = gen_shell_theme.generate(PACKAGE_DIR, gameinfo, search_paths)
+        themes = gen_shell_theme.generate(PACKAGE_DIR, gameinfo, search_paths, SCHEMES_OUTPUT)
         recipe["themes"] = themes
         recipe["refusals"].extend(themes.get("refusals", []))
     except Exception as error:  # a broken theme is a refusal, not a build crash

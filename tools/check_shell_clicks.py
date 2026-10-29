@@ -27,8 +27,6 @@ REQUIRED_CLICK_PATHS = (
     "WindowsButton",
     "LauncherButton",
     "SchemeButton",
-    "InstallGradeDev",
-    "InstallButton",
 )
 
 # Containers that host clickable children but have no handler of their own.

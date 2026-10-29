@@ -20,8 +20,7 @@
     <scripts>
         <include src="file://{resources}/scripts/openlock_boot.js" />
     </scripts>
-    <Panel class="WindowRoot" hittest="false" hittestchildren="true"
-           disallowedstyleflags="hover,descendantfocus">
+    <Panel class="WindowRoot" hittest="false" disallowedstyleflags="hover,descendantfocus">
         <CitadelHud id="Hud" hittest="false" />
         <Panel id="OpenlockStandaloneHost" hittest="false" hittestchildren="true"
                style="width: 100%; height: 100%; z-index: 10000;" />
