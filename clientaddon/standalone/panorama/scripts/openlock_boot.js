@@ -65,9 +65,32 @@
             return;
         }
 
+        // The shell has to live in the host's own window tree, not beside it. A sibling anchor
+        // paints above <CitadelDB>/<CitadelHud>, but this Panorama routes pointer input through
+        // the host root's own window stack, so a sibling surface draws and never activates. Moving
+        // the anchor into the host root makes it the last child there: above every host window,
+        // and inside the tree that owns the cursor.
+        var hostRoot = null;
+        try { hostRoot = hud.FindChildTraverse("Dashboard"); } catch (e) {}
+        if (!hostRoot) {
+            try { hostRoot = hud.FindChildTraverse("Hud"); } catch (e) {}
+        }
+        if (hostRoot) {
+            try {
+                if (host.GetParent && host.GetParent() !== hostRoot) {
+                    host.SetParent(hostRoot);
+                    log("anchor moved into " + (hostRoot.id || "host root"));
+                }
+            } catch (e) {
+                log("anchor move refused: " + String(e));
+            }
+        }
+
         host.style.width = "100%";
         host.style.height = "100%";
-        host.style.zIndex = "10000";
+        // Paint order, not z-index: the anchor is the last child of the host root, so it is above
+        // <CitadelHud> and <CitadelDB>. The reduced CSDK 10 panorama parser rejects z-index, and a
+        // z-index in a sibling does not move a panel past a later sibling on a build that ignores it.
         host.hittest = false;
         host.hittestchildren = true;
 

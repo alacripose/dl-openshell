@@ -19,8 +19,9 @@
              panel's real rect and the panel is moved and scaled with a transform. -->
         <Panel id="PanelLayer" class="PanelLayer" hittest="false" hittestchildren="true" />
 
-        <!-- The bar (alpha-shell D-2) sits above both layers. Panorama paints siblings in order,
-             and a live panel at the top of the screen was painting over the bar and its buttons. -->
+        <!-- The bar (alpha-shell D-2) sits above both layers. Panorama paints siblings in order:
+             windows, then panel chrome, then the bar, then the installer strip. That order is the
+             z-order strategy; nothing here depends on a z-index the older parser may reject. -->
         <Panel id="Taskbar" class="Taskbar">
             <Panel id="TabStrip" class="TabStrip" />
             <Panel class="TaskbarSpacer" />
@@ -51,6 +52,38 @@
         <Panel id="BuildStrip" class="BuildStrip" hittest="false" hittestchildren="false">
             <Label id="BuildStage" class="BuildStage" />
             <Label id="BuildDetail" class="BuildDetail" />
+        </Panel>
+
+        <!-- The installer's control surface. It is part of the shell package, not a second UI:
+             the same file is mounted by the live game and by the reduced CSDK 10 tools client.
+             Grade is client state; Install asks the host to proceed through the client's own
+             console command path (CitadelConCommand), so the installer sees an OPENLOCK_ACTION
+             line and no synthetic input is sent to the desktop. -->
+        <Panel id="InstallBar" class="InstallBar" hittest="true" hittestchildren="true">
+            <Panel class="InstallHead">
+                <Label class="InstallTitle" text="dl-openshell install" />
+                <Label id="InstallState" class="InstallState" text="waiting" />
+            </Panel>
+            <Label id="InstallDetail" class="InstallDetail" text="waiting for the installer" />
+            <Panel class="InstallControls">
+                <Panel id="InstallGradeDev" class="InstallGrade Active"
+                       onmouseactivate="OpenlockSelectGrade('dev')">
+                    <Label class="InstallGradeLabel" text="Dev" />
+                </Panel>
+                <Panel id="InstallGradeObserver" class="InstallGrade"
+                       onmouseactivate="OpenlockSelectGrade('observer')">
+                    <Label class="InstallGradeLabel" text="Observer" />
+                </Panel>
+                <Panel id="InstallGradePlayer" class="InstallGrade"
+                       onmouseactivate="OpenlockSelectGrade('player')">
+                    <Label class="InstallGradeLabel" text="Player" />
+                </Panel>
+                <Panel class="InstallSpacer" />
+                <Panel id="InstallButton" class="InstallAction"
+                       onmouseactivate="OpenlockRequestInstall()">
+                    <Label class="InstallActionLabel" text="Install" />
+                </Panel>
+            </Panel>
         </Panel>
 
         <Panel id="UpdateModal" class="UpdateModal">

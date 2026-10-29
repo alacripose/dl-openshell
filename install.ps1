@@ -715,20 +715,25 @@ if (-not $VpkTool) {
     }
 }
 
+$pythonPacker = Join-Path $repoRoot 'tools\pack_vpk.py'
 if (-not $VpkTool -or -not (Test-Path $VpkTool)) {
-    throw 'CSDKCfgVPK.exe not found. Pass -VpkTool or set OPENLOCK_SDK.'
+    if (-not (Test-Path $pythonPacker)) {
+        throw 'CSDKCfgVPK.exe not found. Pass -VpkTool, set OPENLOCK_SDK, or keep tools/pack_vpk.py for the built-in packer.'
+    }
+    $VpkTool = $pythonPacker
 }
+$vpkWithPython = $VpkTool.EndsWith('.py', [System.StringComparison]::OrdinalIgnoreCase)
 if (-not $SdkRoot) {
     throw 'resourcecompiler.exe not found. Pass -SdkRoot or set OPENLOCK_SDK.'
 }
 
 # 1. Assemble the content tree.
 #
-#    There is exactly one stock-layout override: `base_hud.xml`, the client's root HUD layout.
-#    It is the agnostic mount — loaded in the menu and in a match — and its <CitadelHud> child
-#    keeps every stock game window. A mode-specific layout (hud_hideout, base_dashboard) is
-#    deliberately not touched: those are other mods' hook, and a partial copy of one is what
-#    leaves the client with no HUD to draw.
+#    Two stock roots are mounted, and both are the game's own layout plus the shell anchor:
+#    `base_hud.xml` keeps every <CitadelHud> window, and `base_dashboard.xml` keeps the client's
+#    <CitadelDB id="Dashboard">. The reduced CSDK 10 tools client still loads the dashboard root;
+#    a build that replaces it ignores the file. Neither copy removes a host child, so there is no
+#    half-HUD left behind. Other mode-specific roots (hud_hideout) stay untouched.
 if (Test-Path $build) { Remove-Item $build -Recurse -Force }
 $contentLayout = Join-Path $build 'panorama\layout'
 $contentScripts = Join-Path $build 'panorama\scripts'
@@ -740,6 +745,7 @@ Copy-Item (Join-Path $source 'panorama\scripts\*.js') $contentScripts -Force
 Copy-Item (Join-Path $source 'panorama\styles\*.css') $contentStyles -Force
 Copy-Item (Join-Path $source 'standalone\panorama\scripts\openlock_boot.js') $contentScripts -Force
 Copy-Item (Join-Path $source 'standalone\panorama\layout\base_hud.xml') $contentLayout -Force
+Copy-Item (Join-Path $source 'standalone\panorama\layout\base_dashboard.xml') $contentLayout -Force
 
 # Fonts and stock art stay the game's. The addon supplies layouts, scripts, styles and the one
 # root HUD mount; a file under panorama/fonts here would override the client's own font set and
@@ -753,10 +759,11 @@ if ($fontOverrides.Count -gt 0) {
 
 # A second stock override would be a second answer for one layout name. Refuse it here rather
 # than let search-path order decide which copy the client parses.
+$allowedOverrides = @('base_hud.xml', 'base_dashboard.xml')
 $stockOverrides = @(Get-ChildItem (Join-Path $source 'standalone\panorama\layout') -Filter *.xml |
-    Where-Object { $_.Name -ne 'base_hud.xml' })
+    Where-Object { $allowedOverrides -notcontains $_.Name })
 if ($stockOverrides.Count -gt 0) {
-    throw "Only base_hud.xml may override a stock layout; refusing: $($stockOverrides.Name -join ', ')"
+    throw "Only $($allowedOverrides -join ' and ') may override a stock layout; refusing: $($stockOverrides.Name -join ', ')"
 }
 
 # 2. Every include each layout names must exist in the tree that is about to be packed. A missing
@@ -806,6 +813,7 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_shell_server.xml',
         'panorama\layout\openlock_hud.xml',
         'panorama\layout\base_hud.xml',
+        'panorama\layout\base_dashboard.xml',
         'panorama\scripts\openlock_shell.js',
         'panorama\scripts\openlock_server_mount.js',
         'panorama\scripts\openlock_hud.js',
@@ -837,6 +845,7 @@ if (Test-Path $compiler) {
     # which is the whole HUD, so this is a hard failure here rather than a discovery at launch.
     $required = @(
         'panorama\layout\base_hud.vxml_c',
+        'panorama\layout\base_dashboard.vxml_c',
         'panorama\layout\openlock_shell.vxml_c',
         'panorama\layout\openlock_shell_server.vxml_c',
         'panorama\scripts\openlock_server_mount.vjs_c',
@@ -864,12 +873,18 @@ $packTimeout = [Math]::Max(5, $PackTimeoutSeconds)
 Write-BuildRecord -Stage 'pack' -State 'running' -Message 'packing pak01_dir.vpk'
 Write-Host "Packing with $VpkTool"
 try {
-    $pack = Start-Process -FilePath $VpkTool -ArgumentList $packArgs -WorkingDirectory $repoRoot `
-        -PassThru -NoNewWindow -RedirectStandardOutput $packLog -RedirectStandardError $packErr
+    if ($vpkWithPython) {
+        # Same content directory and archive path as the SDK packer; Python exits when done.
+        $pack = Start-Process -FilePath $Python -ArgumentList ('"' + $VpkTool + '" "' + $build + '" "' + $archive + '"') `
+            -WorkingDirectory $repoRoot -PassThru -NoNewWindow -RedirectStandardOutput $packLog -RedirectStandardError $packErr
+    } else {
+        $pack = Start-Process -FilePath $VpkTool -ArgumentList $packArgs -WorkingDirectory $repoRoot `
+            -PassThru -NoNewWindow -RedirectStandardOutput $packLog -RedirectStandardError $packErr
+    }
 } catch {
-    throw "Could not start CSDKCfgVPK at '$VpkTool': $($_.Exception.Message)"
+    throw "Could not start the VPK packer at '$VpkTool': $($_.Exception.Message)"
 }
-if (-not $pack) { throw 'CSDKCfgVPK did not start.' }
+if (-not $pack) { throw 'The VPK packer did not start.' }
 
 $deadline = (Get-Date).AddSeconds($packTimeout)
 $lastLength = -1
