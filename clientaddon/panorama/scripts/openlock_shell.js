@@ -1022,6 +1022,9 @@
     // fade out; the next pointer interaction runs the same curve back to the expanded state.
     function paintCompact(f) {
         if (!f || !f.titleBar) return;
+        // The compact schema belongs to automatic HUD windows only. A shell window keeps its
+        // full title height even when hover runs the restore path.
+        if (!f.win || !(f.win.autoFrame || f.win.discovered)) return;
         var e = easeInOut(clamp(num(f.idleMix) || 0, 0, 1));
         // The frame is the 1 px outline and the corner grips: those are the only parts that go
         // away at idle. The chrome stays on screen as a compact black-and-white strip, with its
