@@ -101,6 +101,7 @@ public sealed class ShellMount
                 $"windows={e.ArgAt(1, "?")} ignored={e.ArgAt(2, "?")}"));
         UI.Panel(RootPanel).On("layout-load", e => LoadLayout(e));
         UI.Panel(RootPanel).On("layout-reset", e => ResetLayout(e));
+        UI.Panel(RootPanel).On("layout-export", e => ExportLayout(e));
         UI.Panel(RootPanel).On("layer", e => HandleLayerAction(e));
         UI.Panel(RootPanel).On("pick", e =>
             Log.Write($"[dl-openshell] picker selected '{e.ArgAt(0, "?")}' by {NameOf(e.Caller)}"));
@@ -427,14 +428,14 @@ public sealed class ShellMount
         Log.Write(
             $"[dl-openshell] layout SAVE raw args={e.Args.Length} len={raw.Length} " +
             $"text='{(raw.Length > 300 ? raw[..300] + "…" : raw)}'");
-        if (!_layouts.TryParse(raw, out var scheme, out var windows, out var why))
+        if (!_layouts.TryParse(raw, out var scheme, out var windows, out var state, out var why))
         {
             Log.Write($"[dl-openshell] layout SAVE REFUSED by {NameOf(caller)}: {why}");
             PublishLayout(caller, "layout not saved: " + why);
             return;
         }
 
-        if (!_layouts.Save(scheme, windows, out why))
+        if (!_layouts.Save(scheme, windows, state, out why))
         {
             Log.Write($"[dl-openshell] layout SAVE FAILED scheme={scheme} by {NameOf(caller)}: {why}");
             PublishLayout(caller, "layout not saved: " + why);
@@ -443,7 +444,8 @@ public sealed class ShellMount
 
         Log.Write(
             $"[dl-openshell] layout saved scheme={scheme} windows={windows.Count} " +
-            $"file={_layouts.PathFor(scheme)} by {NameOf(caller)}");
+            $"active='{state.Active}' tab='{state.Tab}' pinned={state.Pinned.Count} " +
+            $"minimized={state.Minimized.Count} file={_layouts.PathFor(scheme)} by {NameOf(caller)}");
         if (caller is not null)
             UI.Panel(RootPanel).Set(caller.Recipients, "layoutrequest", "");
         PublishLayout(caller, $"layout saved · {scheme} · {windows.Count} windows");
@@ -491,6 +493,32 @@ public sealed class ShellMount
 
         Log.Write($"[dl-openshell] layout reset scheme={scheme} by {NameOf(e.Caller)}");
         PublishLayout(e.Caller, $"layout reset · {scheme} · package defaults");
+    }
+
+    private void ExportLayout(UIEvent e)
+    {
+        if (_layouts is null)
+            return;
+
+        var scheme = (e.ArgAt(0) ?? "").Trim().ToLowerInvariant();
+        if (!LayoutProfiles.IsValidScheme(scheme))
+        {
+            Log.Write($"[dl-openshell] layout EXPORT REFUSED by {NameOf(e.Caller)}: invalid scheme '{scheme}'");
+            PublishLayout(e.Caller, "layout not exported: invalid scheme");
+            return;
+        }
+
+        if (!_layouts.Export(scheme, out var path, out var why))
+        {
+            Log.Write($"[dl-openshell] layout EXPORT FAILED scheme={scheme} by {NameOf(e.Caller)}: {why}");
+            PublishLayout(e.Caller, "layout not exported: " + why);
+            return;
+        }
+
+        Log.Write($"[dl-openshell] layout exported scheme={scheme} file={path} by {NameOf(e.Caller)}");
+        if (e.Caller is not null)
+            UI.Panel(RootPanel).Set(e.Caller.Recipients, "layoutexport", path);
+        PublishLayout(e.Caller, $"layout exported · {scheme} · {path}");
     }
 
     private void PublishLayout(CCitadelPlayerController? controller, string? notice = null)

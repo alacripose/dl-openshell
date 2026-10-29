@@ -187,6 +187,19 @@
     // Per-window experimental skin: the actual Deadlock elements are painted inline, which is
     // the only way to override the game's own stylesheet without editing its layouts.
     var liveSkin = {};          // window id -> { on: true, writes: [] }
+    // A composite game panel (AbilitiesContainer and friends) is one window to the host but many
+    // drawables to the player. A split records the component windows so each cell can be framed,
+    // moved, themed and saved on its own. The parent keeps its package row and tab.
+    var splitCells = {};        // parent id -> [{ id, key, panel, label }]
+    var themedPanels = [];      // { panel, writes, label, cellId } inline scheme paint on a cell
+    var layoutProfiles = {};    // scheme -> { window id: { x, y, w, h } }
+    var layoutNotices = [];
+    var layoutExportPath = "";
+    var lastLayoutRaw = "";
+    var lastLayoutRequest = "";
+    var lastLayoutExport = "";
+    var layoutLoadedFor = "";
+    var layoutRetries = {};
 
     for (var wi = 0; wi < data.windows.length; wi++) index[data.windows[wi].id] = data.windows[wi];
     for (var pi = 0; pi < data.pins.length; pi++) pinned[data.pins[pi]] = true;
@@ -453,6 +466,15 @@
         paletteDirty = true;
         applyPalettePaint();
         refreshLiveSkins();
+        refreshThemedPanels();
+        // Profiles are per scheme. Switching palette restores that scheme's saved arrangement
+        // when the host has already published it; a profile that arrives later is applied by the
+        // poll. A scheme with no profile clears the marker so switching back restores it again.
+        if (layoutProfiles[scheme.id]) {
+            if (layoutLoadedFor !== scheme.id) applyLayoutProfile(scheme.id, false);
+        } else {
+            layoutLoadedFor = "";
+        }
         if (schemeLabel) schemeLabel.text = String(scheme.id).charAt(0).toUpperCase();
         if (announce) {
             var ext = scheme.extensions ? scheme.extensions.length : 0;
@@ -671,6 +693,7 @@
         paletteDirty = true;
         applyPalettePaint();
         refreshLiveSkins();
+        refreshThemedPanels();
         logPerf("info", "palette " + scheme.id + " " + entry.slot + " -> " + next);
     }
 
@@ -679,6 +702,7 @@
         paletteDirty = true;
         applyPalettePaint();
         refreshLiveSkins();
+        refreshThemedPanels();
         logPerf("info", "palette " + scheme.id + " reset to schema");
     }
 
@@ -687,6 +711,98 @@
         if (!skin) return;
         restoreStyles(skin.writes);
         delete liveSkin[id];
+    }
+
+    // --- per-cell scheme paint ----------------------------------------------
+    // The window skin matches the scheme's rules against classes. A cell is addressed directly:
+    // the Picker knows which panel the player touched, so the palette can be written on that
+    // drawable even when the game's own class names do not appear in any .theme rule. Shape is
+    // still owned by the form: .ThemedCell radius comes from the active .form, so switching
+    // shape restyles every themed cell without the palette re-coupling to geometry.
+    function themedRecordFor(panel) {
+        for (var i = 0; i < themedPanels.length; i++) {
+            if (themedPanels[i].panel === panel) return themedPanels[i];
+        }
+        return null;
+    }
+
+    function paintThemedPanel(record) {
+        if (!record || !record.panel || !alive(record.panel)) return false;
+        var scheme = schemeById(currentScheme);
+        if (!scheme) return false;
+        restoreStyles(record.writes);
+        record.writes = [];
+        var panel = record.panel;
+        var isText = false;
+        try { isText = typeof panel.text === "string" && !!panel.text; } catch (e) { isText = false; }
+        // A Label carries text ink only; a panel carries the surface and its edge. Painting a
+        // background behind a label would turn every picked stat into a coloured slab.
+        if (isText) {
+            writeStyle(record.writes, panel, "color", paletteValue(scheme, "ink"));
+        } else {
+            writeStyle(record.writes, panel, "background-color", paletteValue(scheme, "panel"));
+            writeStyle(record.writes, panel, "border-color", paletteValue(scheme, "borderStrong"));
+        }
+        try { panel.AddClass("ThemedCell"); } catch (e) {}
+        return true;
+    }
+
+    function isThemedPanel(panel) {
+        return !!themedRecordFor(panel);
+    }
+
+    function themePanel(panel, label) {
+        if (!panel || !alive(panel)) return false;
+        var record = themedRecordFor(panel);
+        if (!record) {
+            record = { panel: panel, writes: [], label: label || "cell" };
+            themedPanels.push(record);
+        }
+        paintThemedPanel(record);
+        // A split cell keeps the intent, not only the inline writes: the HUD rebuilds its panels
+        // on shop and map transitions, and a new panel has none of the old inline values.
+        var owner = windowForPanel(panel);
+        if (owner && owner.cellWindow) owner.themed = true;
+        logPerf("info", "cell theme: " + (label || "cell") + " with " + currentScheme);
+        return true;
+    }
+
+    function clearPanelTheme(panel) {
+        var record = themedRecordFor(panel);
+        if (!record) return false;
+        restoreStyles(record.writes);
+        try { panel.RemoveClass("ThemedCell"); } catch (e) {}
+        var owner = windowForPanel(panel);
+        if (owner && owner.cellWindow) owner.themed = false;
+        for (var i = 0; i < themedPanels.length; i++) {
+            if (themedPanels[i] === record) { themedPanels.splice(i, 1); break; }
+        }
+        return true;
+    }
+
+    function refreshThemedPanels() {
+        for (var i = themedPanels.length - 1; i >= 0; i--) {
+            var record = themedPanels[i];
+            if (!record.panel || !alive(record.panel)) {
+                themedPanels.splice(i, 1);
+                continue;
+            }
+            paintThemedPanel(record);
+        }
+    }
+
+    function togglePanelTheme(panel, label) {
+        if (!panel || !alive(panel)) return false;
+        if (isThemedPanel(panel)) {
+            clearPanelTheme(panel);
+            globalThis.OpenlockToast("Cell theme", "Restored " + (label || "the element") + " to the game's rendering.", "", false);
+            return false;
+        }
+        if (!themePanel(panel, label)) return false;
+        globalThis.OpenlockToast("Cell theme",
+            "Painted " + (label || "the element") + " with " + currentScheme + " and the " + currentForm + " shape.",
+            "", false);
+        return true;
     }
 
     function applyLiveSkin(win) {
@@ -904,13 +1020,23 @@
         // and swallows the click, which is exactly how the title-bar glyphs stopped working.
         l.hittest = false;
         if (cls === "ShellTab") l.AddClass("ShellTabLabel");
-        // A title glyph is a press target, not a click target: on the reduced tools build the
-        // activate event can be lost when the title's drag poll owns the pointer. Press is
-        // immediate and works on both clients; tabs and menu rows keep the click path.
-        p.SetPanelEvent(press ? "onmousedown" : "onmouseactivate", function () {
-            lastInteractionAt = Date.now();
+        // A title glyph must work on both clients. The shipping client dispatches activate after
+        // a press; the reduced tools client can lose that event while the title's drag poll owns
+        // the pointer. Bind both, with a short guard so one press does not run the action twice.
+        var firedAt = 0;
+        function fire() {
+            var now = Date.now();
+            if (press && now - firedAt < 250) return;
+            firedAt = now;
+            lastInteractionAt = now;
             onClick();
-        });
+        }
+        if (press) {
+            p.SetPanelEvent("onmousedown", fire);
+            p.SetPanelEvent("onmouseactivate", fire);
+        } else {
+            p.SetPanelEvent("onmouseactivate", fire);
+        }
         return p;
     }
 
@@ -921,6 +1047,21 @@
         if (extraClass) tab.AddClass(extraClass);
         if (windowId === activeTab) tab.AddClass("Active");
         if (pinned[windowId]) tab.AddClass("Pinned");
+        if (win) {
+            bindDwell(tab, (win.title || windowId),
+                "Taskbar entry. Left-click opens it; right-click for window actions.", windowId);
+            tab.SetPanelEvent("oncontextmenu", function () {
+                var at = null;
+                try {
+                    var pos = tab.GetPositionWithinWindow();
+                    if (pos) at = { x: num(pos.x !== undefined ? pos.x : pos[0]),
+                        y: num(pos.y !== undefined ? pos.y : pos[1]) };
+                } catch (e) {
+                    at = null;
+                }
+                showContextMenu(win, at ? at.x : 12, at ? at.y + 26 : SHELL_TOP_DP);
+            });
+        }
         return tab;
     }
 
@@ -951,6 +1092,16 @@
             listed[pins[p]] = true;
         }
 
+        // A split container has cells instead of a frame. Its tab stays the way back to the
+        // whole set; the cells themselves are listed only when focused, pinned or minimized so
+        // six ability cells do not turn the bar into a second row.
+        for (var splitId in splitCells) {
+            if (!splitCells.hasOwnProperty(splitId) || !open[splitId] || listed[splitId]) continue;
+            var splitWin = windowById(splitId);
+            addTab(splitId, "[" + splitCells[splitId].length + "] " + ((splitWin && splitWin.title) || splitId));
+            listed[splitId] = true;
+        }
+
         // Every open frame owns a taskbar entry, including a discovered panel and a minimized
         // window. Without this row a minimize from the title bar had no way back.
         for (var id in frames) {
@@ -958,7 +1109,7 @@
             var win = windowById(id);
             // A discovered HUD control still owns a frame and a Windows row, but forty of them
             // must not turn the bar into a second row. Minimized and focused ones stay in reach.
-            if (win && win.live && !minimized[id] && focused !== id && !pinned[id]) continue;
+            if (win && (win.live || win.cellWindow) && !minimized[id] && focused !== id && !pinned[id]) continue;
             addTab(id, (minimized[id] ? "_ " : "") + ((win && win.title) || id));
             listed[id] = true;
         }
@@ -1786,6 +1937,12 @@
     function applyWindow(win) {
         var f = frames[win.id];
         if (!f) return;
+        // The container's own frame is replaced by its cells. Keep the binding (the cells are its
+        // children) but draw no chrome around the whole container.
+        if (splitCells[win.id] && splitCells[win.id].length) {
+            setFrameVisible(f, false);
+            return;
+        }
         perf.applies++;
         var started = nowMs();
 
@@ -1841,6 +1998,11 @@
                 return;
             }
             var ok = applyPanelRect(win, f, g);
+            // A themed cell survives the game rebuilding its panel: the player asked for that
+            // element painted, not for one particular native panel object.
+            if (win.cellWindow && win.themed && bound[win.id] && !isThemedPanel(bound[win.id].panel)) {
+                themePanel(bound[win.id].panel, win.title || win.id);
+            }
             // A skin belongs to the element it was written on. If the game rebuilt the panel, the
             // old writes are gone with it and the new one is painted once, not on every poll.
             var skin = liveSkin[win.id];
@@ -2478,6 +2640,144 @@
         bound[id] = { panel: entry.panel, natural: { x: entry.x, y: entry.y, w: entry.w, h: entry.h } };
         openWindow(id);
         globalThis.OpenlockToast("Window framed", base + " · " + Math.round(entry.w) + "×" + Math.round(entry.h), id, false);
+    }
+
+    // --- component cells -----------------------------------------------------
+    // A live window can be one panel with many drawables inside it (AbilitiesContainer is the
+    // clearest example: health, shield, four slots and their labels share one transparent root).
+    // Splitting replaces the one screen-sized frame with a frame per visible component. The game
+    // panel is never reparented or rebuilt; each cell frame binds the child that already draws.
+    function cellIdFor(parentId, key) {
+        return "cell:" + parentId + ":" + key;
+    }
+
+    function componentParts(panel) {
+        var out = [];
+        function walk(p, level) {
+            var count = childCountOf(p);
+            if (count < 0) return;
+            var parentSize = layoutSize(p);
+            for (var i = 0; i < count; i++) {
+                var child = null;
+                try { child = p.GetChild(i); } catch (e) { child = null; }
+                if (!child || isShellPanel(child) || !panelVisible(child)) continue;
+                var rect = naturalOf(child);
+                if (!rect || rect.w < 12 || rect.h < 12) continue;
+                // A full-size transparent wrapper is a container, not a component. Descend through
+                // it (at most three levels) and split its real children instead.
+                var wrapper = parentSize && level < 3 && childCountOf(child) > 0 &&
+                    rect.w >= parentSize.w * 0.92 && rect.h >= parentSize.h * 0.92;
+                // A full-width row is a layout band, not a component: the ability slots and the
+                // item slots both live inside bands. Descend through those bands so the frame
+                // lands on the slot, not around the empty space between them.
+                var band = parentSize && level < 3 && childCountOf(child) > 1 &&
+                    rect.w >= parentSize.w * 0.92 && rect.h <= parentSize.h * 0.65;
+                var screenRoot = rect.w >= screenW * 0.9 && rect.h >= screenH * 0.9;
+                if (wrapper || band || screenRoot) { walk(child, level + 1); continue; }
+                out.push({ panel: child, rect: rect });
+            }
+        }
+        walk(panel, 0);
+        out.sort(function (a, b) {
+            if (Math.abs(a.rect.y - b.rect.y) > 8) return a.rect.y - b.rect.y;
+            return a.rect.x - b.rect.x;
+        });
+        return out.slice(0, 14);
+    }
+
+    function partKey(panel, at, used) {
+        var raw = "";
+        try { raw = String(panel.id || ""); } catch (e) { raw = ""; }
+        if (!raw) raw = String(classesOf(panel).split(" ")[0] || "");
+        raw = raw.replace(/[^A-Za-z0-9_]/g, "_").substring(0, 42);
+        if (!raw) raw = "part" + at;
+        var key = raw;
+        var n = 2;
+        while (used[key]) { key = raw + "_" + n; n++; }
+        used[key] = 1;
+        return key;
+    }
+
+    function splitWindow(win) {
+        if (!win || !isPanelWindow(win)) return false;
+        if (win.cellWindow) return false;
+        if (splitCells[win.id] && splitCells[win.id].length) return true;
+        // Colon ids (discovered `live:` / `popup:` windows) encode their measured size and are
+        // not stable across a HUD rebuild. A declared package window has a stable slug and is
+        // the only thing a saved profile can name again.
+        if (String(win.id).indexOf(":") >= 0) {
+            globalThis.OpenlockToast("Split refused",
+                "Only a declared window can be split; this one is discovered and its id changes with the HUD.", "", true);
+            return false;
+        }
+        var b = bound[win.id] || ensureBound(win);
+        if (!b || !b.panel) {
+            globalThis.OpenlockToast("Split refused", "The live panel is not on screen yet.", "", true);
+            return false;
+        }
+        var parts = componentParts(b.panel);
+        if (parts.length < 2) {
+            globalThis.OpenlockToast("Split refused",
+                (win.title || win.id) + " is already one component; there is nothing to separate.", "", true);
+            return false;
+        }
+
+        var used = {};
+        var cells = [];
+        for (var i = 0; i < parts.length; i++) {
+            var part = parts[i];
+            var key = partKey(part.panel, i, used);
+            var cellId = cellIdFor(win.id, key);
+            var label = key;
+            var cell = index[cellId];
+            if (!cell) {
+                cell = {
+                    id: cellId,
+                    title: (win.title || win.id) + " · " + label,
+                    content: "cell",
+                    lane: "game",
+                    "theme-role": "hud",
+                    cellWindow: true,
+                    cellParent: win.id,
+                    cellKey: key,
+                    panelCandidates: [{ kind: "ref", panel: part.panel }],
+                    x: part.rect.x,
+                    y: part.rect.y,
+                    width: part.rect.w,
+                    height: part.rect.h,
+                    minWidth: 24,
+                    minHeight: 16,
+                    opacity: 930,
+                    pinnable: true,
+                    layers: []
+                };
+                index[cellId] = cell;
+                data.windows.push(cell);
+            } else {
+                cell.panelCandidates = [{ kind: "ref", panel: part.panel }];
+                cell.title = (win.title || win.id) + " · " + label;
+            }
+            cells.push({ id: cellId, key: key, panel: part.panel, label: label });
+        }
+
+        splitCells[win.id] = cells;
+        win.split = true;
+        if (frames[win.id]) setFrameVisible(frames[win.id], false);
+        for (var c = 0; c < cells.length; c++) openWindow(cells[c].id, true);
+        renderBar();
+        render();
+        logPerf("info", "split " + win.id + " into " + cells.length + " cell(s)");
+        globalThis.OpenlockToast("Cells separated",
+            (win.title || win.id) + " → " + cells.length + " component(s). Each cell can be moved, themed and saved.",
+            "", false);
+        return true;
+    }
+
+    function openSplitCells(id) {
+        var cells = splitCells[id];
+        if (!cells || !cells.length) return false;
+        for (var i = 0; i < cells.length; i++) openWindow(cells[i].id, true);
+        return true;
     }
 
     // --- discovery -----------------------------------------------------------
@@ -3147,6 +3447,16 @@
         if (isPanelWindow(win)) contextAction(contextMenu,
             (liveSkin[win.id] && liveSkin[win.id].on ? "Remove live skin" : "Theme live panel (experimental)"),
             function () { toggleLiveSkin(win); });
+        if (isPanelWindow(win) && !win.cellWindow && !splitCells[win.id]) {
+            contextAction(contextMenu, "Split into cells", function () { splitWindow(win); });
+        }
+        if (win.cellWindow) {
+            var cellPanel = (bound[win.id] && bound[win.id].panel) ||
+                (win.panelCandidates && win.panelCandidates[0] && win.panelCandidates[0].panel) || null;
+            contextAction(contextMenu,
+                (cellPanel && isThemedPanel(cellPanel) ? "Stop theming this cell" : "Theme this cell"),
+                function () { togglePanelTheme(cellPanel, win.title || win.id); });
+        }
         contextAction(contextMenu, "Inspect in UI tree", function () {
             uiSelected = win.id;
             uiCss.selector = "";
@@ -3249,7 +3559,12 @@
     function titleButton(parent, icon, onClick, winId) {
         // Move is a drag handle; the rest act on press. A press is also what the pointer probe
         // records, so a refused control is visible in the log instead of silently doing nothing.
-        var b = addControl(parent, "WindowButton", "", onClick, icon !== "Move");
+        // Every control prints its own line, which is how the installed-build proof distinguishes
+        // a dead glyph from a window that refused the action.
+        var b = addControl(parent, "WindowButton", "", function () {
+            $.Msg("[Openlock] window control ", icon, ": ", winId);
+            onClick();
+        }, icon !== "Move");
         if (icon === "Popit") {
             b.AddClass("WindowPopit");
             var dots = $.CreatePanel("Panel", b, "");
@@ -3352,10 +3667,9 @@
             if (f.maxButton.glyph) f.maxButton.glyph.text = maximized[id] ? "▣" : "□";
         }
         applyWindow(win);
-        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
+        // Geometry is client state until the player presses Save layout. The old per-move send
+        // used a format the host no longer accepts and was logged as a refused save.
     }
-
 
     function createFrame(win) {
         if (frames[win.id]) return frames[win.id];
@@ -3515,6 +3829,24 @@
             return;
         }
 
+        // A split window has no frame of its own; opening it opens its component cells. The
+        // parent tab remains the way back to the whole set.
+        if (splitCells[id] && splitCells[id].length) {
+            expanded = true;
+            hudScanSig = "";
+            open[id] = true;
+            delete dismissed[id];
+            delete minimized[id];
+            freeCursor(true);
+            openSplitCells(id);
+            activeId = splitCells[id][0].id;
+            renderBar();
+            render();
+            focusWindow(activeId);
+            if (!quiet) cue("select");
+            return;
+        }
+
         var hidden = hiddenPanels[id];
         if (hidden) {
             try { hidden.style.visibility = "visible"; } catch (e) {}
@@ -3666,10 +3998,32 @@
         $.Msg("[Openlock] close press: ", id);
         var f = frames[id];
         var b = bound[id];
+        var closing = windowById(id);
+        var closingCell = !!(closing && closing.cellWindow);
+
+        // Closing a split container closes its cells and stops drawing the container; it must
+        // not collapse the game panel, because the cells are children of it. Each cell's own
+        // close path is the normal one below.
+        if (splitCells[id] && splitCells[id].length) {
+            var cells = splitCells[id];
+            delete splitCells[id];
+            if (closing) closing.split = false;
+            for (var sc = 0; sc < cells.length; sc++) closeWindow(cells[sc].id);
+            delete open[id];
+            dismissed[id] = true;
+            if (frames[id]) { try { frames[id].frame.DeleteAsync(0); } catch (e) {} delete frames[id]; }
+            if (focused === id) focused = "";
+            renderBar();
+            render();
+            return;
+        }
+
         // Closing a frame around a live game panel collapses that panel, not only its chrome.
-        // The panel is remembered so reopening the window restores it.
+        // The panel is remembered so reopening the window restores it. A split cell is a
+        // component of a panel that is still in use: removing its chrome must not erase the
+        // game's own ability icon from the HUD.
         releasePanel(id);
-        if (b && b.panel) {
+        if (!closingCell && b && b.panel) {
             try { b.panel.style.visibility = "collapse"; hiddenPanels[id] = b.panel; } catch (e) {}
         }
         delete open[id];
@@ -3690,7 +4044,16 @@
         render();
     }
 
-    function togglePin(id) {
+    function togglePin(id, quiet) {
+        // Pinning a split container is a promise for every component it stands for.
+        if (splitCells[id] && splitCells[id].length) {
+            var cells = splitCells[id];
+            var turnOn = !pinned[id];
+            for (var c = 0; c < cells.length; c++) {
+                if (turnOn && !pinned[cells[c].id]) togglePin(cells[c].id, true);
+                if (!turnOn && pinned[cells[c].id]) togglePin(cells[c].id, true);
+            }
+        }
         if (pinned[id]) {
             delete pinned[id];
             var b = bound[id];
@@ -3712,13 +4075,15 @@
         var f = frames[id];
         if (f && f.pinButton) f.pinButton.SetHasClass("PinOn", !!pinned[id]);
 
-        cue("place");
-        globalThis.OpenlockToast(
-            pinned[id] ? "Pinned" : "Unpinned",
-            (windowById(id) && windowById(id).title ? windowById(id).title : id) +
-                (pinned[id] ? " stays while the shell is closed" : " leaves with the shell"),
-            "",
-            false);
+        if (!quiet) {
+            cue("place");
+            globalThis.OpenlockToast(
+                pinned[id] ? "Pinned" : "Unpinned",
+                (windowById(id) && windowById(id).title ? windowById(id).title : id) +
+                    (pinned[id] ? " stays while the shell is closed" : " leaves with the shell"),
+                "",
+                false);
+        }
 
         render();
     }
@@ -3864,6 +4229,15 @@
 
     function minimizeWindow(id) {
         $.Msg("[Openlock] minimize press: ", id);
+        // A split container's chrome is hidden; minimizing its taskbar entry means minimizing the
+        // component cells it stands for, not a frame the player cannot see.
+        if (splitCells[id] && splitCells[id].length) {
+            var split = splitCells[id];
+            for (var sc = 0; sc < split.length; sc++) minimizeWindow(split[sc].id);
+            minimized[id] = true;
+            renderBar();
+            return;
+        }
         var f = frames[id];
         if (!f) {
             refuseFeature("Minimize refused", "no frame owns window '" + id + "'");
@@ -4078,8 +4452,6 @@
         if (!win || !commit) return;
         var g = ensureGeometry(win);
         applyWindow(win);
-        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
     }
 
     function makeDraggable(panel, id, mode) {
@@ -4172,8 +4544,6 @@
         g.init = true;
         hideGrid();
         applyWindow(win);
-        send("layout", win.id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
-            Math.round(g.w) + " " + Math.round(g.h));
     }
 
     // --- shell views ---------------------------------------------------------
@@ -5029,6 +5399,18 @@
         globalThis.OpenlockToast("Picker", "Move over a HUD element and click. Right-click or Cancel stops.", "", false);
     }
 
+    function windowForPanel(panel) {
+        var p = panel;
+        for (var depth = 0; p && depth < 6; depth++) {
+            for (var id in bound) {
+                if (!bound.hasOwnProperty(id) || !bound[id]) continue;
+                if (bound[id].panel === p) return windowById(id);
+            }
+            try { p = p.GetParent(); } catch (e) { break; }
+        }
+        return null;
+    }
+
     function renderPicker(body, win) {
         headingXd(body, "scrub the live panorama");
         rowXd(body, "The picker reads the panels the HUD actually built, not the package's catalog. " +
@@ -5054,6 +5436,28 @@
                 uiField(body, "border-color", pickerValue("border-color"), function (v) { pickerApply("border-color", v); });
                 uiField(body, "color", pickerValue("color"), function (v) { pickerApply("color", v); });
                 uiField(body, "border-radius", pickerValue("border-radius"), function (v) { pickerApply("border-radius", v); });
+                var isThemed = isThemedPanel(p);
+                actionXd(body, isThemed
+                    ? "Stop theming this element"
+                    : "Theme this element with " + currentScheme + " / " + currentForm,
+                    function () {
+                        togglePanelTheme(p, pickerName(pickerTarget));
+                        renderOwn(win, body);
+                    });
+                if (isThemed) {
+                    rowXd(body, "themed inline; the active palette and form still own its colour and radius",
+                        "PaletteNote");
+                }
+                var owner = windowForPanel(p);
+                if (owner && !owner.cellWindow && !splitCells[owner.id] && isPanelWindow(owner)) {
+                    actionXd(body, "Split " + (owner.title || owner.id) + " into cells", function () {
+                        splitWindow(owner);
+                        renderOwn(win, body);
+                    });
+                } else if (owner && splitCells[owner.id]) {
+                    rowXd(body, (owner.title || owner.id) + " is split into " +
+                        splitCells[owner.id].length + " cell(s)", "ViewMuted");
+                }
                 actionXd(body, "Hide selected panel", function () { pickerApply("visibility", "hidden"); });
                 actionXd(body, "Show selected panel", function () { pickerApply("visibility", "visible"); });
                 actionXd(body, "Restore selected panel", function () { pickerRestore(); });
@@ -5224,6 +5628,45 @@
             resetPalette(scheme);
             renderOwn(win, body);
         });
+
+        headingXd(body, "layout  ·  " + scheme.id);
+        rowXd(body, "A layout is the whole arrangement: the taskbar tab, every open window, the " +
+            "split cells, and which windows are pinned, minimized or focused. It loads automatically " +
+            "when this palette is active.", "PaletteNote");
+        var profile = layoutProfiles[scheme.id];
+        var profileRows = profile && profile.windows ? profile.windows : profile;
+        var rows = 0;
+        if (profileRows) for (var pid in profileRows) if (profileRows.hasOwnProperty(pid)) rows++;
+        rowXd(body, profile ? "saved: " + rows + " window(s) · " +
+            ((profile.pinned && profile.pinned.length) || 0) + " pinned · " +
+            ((profile.minimized && profile.minimized.length) || 0) + " minimized"
+            : "no saved layout for this scheme", "ViewMuted");
+        rowXd(body, profile ? "auto-load: on · applied at shell start" : "auto-load: waiting for the first save",
+            "ViewMuted");
+        actionXd(body, "Save current layout to file", function () { saveLayoutNow(false); });
+        actionXd(body, "Load saved layout", function () {
+            send("layout-load", scheme.id);
+            applyLayoutProfile(scheme.id, true);
+            renderOwn(win, body);
+        });
+        actionXd(body, "Export saved layout as a file", function () {
+            send("layout-export", scheme.id);
+            globalThis.OpenlockToast("Layout export",
+                "Writing " + scheme.id + " under layouts/exports; the path follows in the next host update.",
+                "", false);
+        });
+        actionXd(body, "Reset saved layout", function () {
+            send("layout-reset", scheme.id);
+            delete layoutProfiles[scheme.id];
+            layoutLoadedFor = "";
+            layoutExportPath = "";
+            globalThis.OpenlockToast("Layout reset", scheme.id + " profile removed; package defaults remain.", "", false);
+            renderOwn(win, body);
+        });
+        if (layoutExportPath) rowXd(body, "exported: " + layoutExportPath, "PaletteValue");
+        if (layoutNotices.length) {
+            for (var ln = 0; ln < layoutNotices.length && ln < 4; ln++) rowXd(body, layoutNotices[ln], "ViewMuted");
+        }
 
         headingXd(body, "live-panel skin  ·  experimental");
         rowXd(body, "Deadlock owns these elements' styles. A skin writes this scheme's roles inline " +
@@ -5419,10 +5862,29 @@
             rowXd(body, "branch " + (build.branch || "no git metadata"), "ViewMuted");
             rowXd(body, "game " + (build.gameVersion || "unknown"), "ViewMuted");
 
-            headingXd(body, "the layout is a schema");
-            rowXd(body, "Windows, tabs and pins come from shell/alpha-shell/package.shspec. Changing a geometry row changes the default; M and the corner grip change this session.", "ViewMuted");
+            headingXd(body, "the layout");
+            rowXd(body, "A layout is how this screen is arranged: the active taskbar tab, every open " +
+                "window and split cell, and which windows are pinned, minimized or focused. The package " +
+                "provides the defaults; your save is restored on the next start.", "ViewMuted");
             rowXd(body, data.windows.length + " declared windows · " + data.tabs.length + " tabs · " + data.pins.length + " pins", "ViewMuted");
-            actionXd(body, "Restore UI layout  ·  " + (currentScheme || themes.default), restoreUiLayout);
+            actionXd(body, "Save current layout to file", function () { saveLayoutNow(false); });
+            actionXd(body, "Load saved layout", function () {
+                send("layout-load", currentScheme || themes.default);
+                applyLayoutProfile(currentScheme || themes.default, true);
+            });
+            actionXd(body, "Export saved layout as a file", function () {
+                send("layout-export", currentScheme || themes.default);
+                globalThis.OpenlockToast("Layout export", "Writing the profile under layouts/exports.", "", false);
+            });
+            actionXd(body, "Reset saved layout", function () {
+                send("layout-reset", currentScheme || themes.default);
+                delete layoutProfiles[currentScheme || themes.default];
+                layoutLoadedFor = "";
+                layoutExportPath = "";
+                globalThis.OpenlockToast("Layout reset",
+                    (currentScheme || themes.default) + " profile removed; package defaults remain.", "", false);
+            });
+            actionXd(body, "Restore package defaults  ·  " + (currentScheme || themes.default), restoreUiLayout);
 
             headingXd(body, "input");
             var pointerAt = cursorPoint();
@@ -5600,6 +6062,245 @@
         tick();
     }
 
+    // --- layout profiles -----------------------------------------------------
+    // The host owns the file; the client owns which windows exist. A snapshot is the same
+    // scheme@id,x,y,w,h@... line the C# LayoutProfiles parser reads, so the player's Save button
+    // and an operator's request use one path. Cell rows are ordinary ids; a split is recreated
+    // from the `cell:<parent>:<key>` rows when the profile is loaded again.
+    function layoutSnapshot() {
+        var rows = [];
+        var windows = 0;
+        // State rows come first. They are what makes a saved layout the player's desktop:
+        // the focused window, the active taskbar tab, what they pinned and what they minimized.
+        if (activeId && open[activeId] && windowById(activeId)) rows.push("active=" + activeId);
+        if (activeTab) rows.push("tab=" + activeTab);
+        for (var pinId in pinned) {
+            if (!pinned.hasOwnProperty(pinId) || !pinned[pinId] || !open[pinId] || !windowById(pinId)) continue;
+            rows.push("pin=" + pinId);
+        }
+        for (var minId in minimized) {
+            if (!minimized.hasOwnProperty(minId) || !minimized[minId] || !open[minId] || !windowById(minId)) continue;
+            rows.push("min=" + minId);
+        }
+        for (var id in open) {
+            if (!open.hasOwnProperty(id) || !open[id] || !windowById(id)) continue;
+            var g = geometry[id];
+            if (!g || !g.init) continue;
+            if (String(id).indexOf("@") >= 0 || String(id).indexOf(",") >= 0) continue;
+            var cell = !!windowById(id).cellWindow;
+            var rowId = id;
+            if (cell) {
+                var b = bound[id];
+                // A themed cell carries its theme in the row so a loaded split keeps the same
+                // elements painted with the scheme instead of silently becoming unthemed.
+                if (windowById(id).themed || (b && b.panel && isThemedPanel(b.panel))) rowId += ":t";
+            }
+            var w = Math.round(g.w);
+            var h = Math.round(g.h);
+            if (cell) { w = Math.max(16, w); h = Math.max(16, h); }
+            else { w = Math.max(120, w); h = Math.max(64, h); }
+            rows.push(rowId + "," + Math.round(g.x) + "," + Math.round(g.y) + "," + w + "," + h);
+            windows++;
+        }
+        if (!windows) return "";
+        return (currentScheme || "default") + "@" + rows.join("@");
+    }
+
+    function saveLayoutNow(quiet) {
+        var snapshot = layoutSnapshot();
+        if (!snapshot) {
+            if (!quiet) globalThis.OpenlockToast("Layout not saved", "No window is open to snapshot.", "", true);
+            return false;
+        }
+        send("layout", snapshot);
+        if (!quiet) {
+            var rows = 0;
+            for (var i = 0; i < snapshot.length; i++) if (snapshot.charAt(i) === ",") rows++;
+            globalThis.OpenlockToast("Layout saved",
+                currentScheme + " · " + rows + " window(s) · active, tab, pins and cells are in the file", "", false);
+        }
+        logPerf("info", "layout save requested: " + currentScheme);
+        return true;
+    }
+
+    function applyRect(id, rect) {
+        var win = windowById(id);
+        if (!win) return false;
+        if (!open[id]) openWindow(id, true);
+        geometry[id] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h, init: true };
+        if (frames[id]) applyWindow(win);
+        return true;
+    }
+
+    function ensureSplitCell(parentId, key, themed, rect) {
+        var parent = windowById(parentId);
+        if (!parent || !isPanelWindow(parent)) return false;
+        if (!splitCells[parentId] || !splitCells[parentId].length) {
+            if (!bound[parentId]) openWindow(parentId, true);
+            if (!splitWindow(windowById(parentId))) return false;
+        }
+        var cellId = cellIdFor(parentId, key);
+        var cell = windowById(cellId);
+        if (!cell) return false;
+        if (!applyRect(cellId, rect)) return false;
+        if (themed) {
+            cell.themed = true;
+            var b = bound[cellId];
+            if (b && b.panel) themePanel(b.panel, key);
+        }
+        return true;
+    }
+
+    function applyLayoutProfile(scheme, announce) {
+        var profile = layoutProfiles[scheme];
+        if (!profile) {
+            if (announce) {
+                globalThis.OpenlockToast("No saved layout",
+                    "There is no " + scheme + " profile yet. Move a window and press Save layout.", "", true);
+            }
+            return 0;
+        }
+        var rows = profile.windows || {};
+        var applied = 0;
+        var cells = 0;
+        var expectedCells = 0;
+        for (var id in rows) {
+            if (!rows.hasOwnProperty(id)) continue;
+            var rect = rows[id];
+            if (String(id).indexOf("cell:") === 0) expectedCells++;
+            if (String(id).indexOf("cell:") === 0) {
+                var rest = String(id).substring(5);
+                var at = rest.indexOf(":");
+                if (at <= 0) continue;
+                var parentId = rest.substring(0, at);
+                var tail = rest.substring(at + 1);
+                var themed = false;
+                if (tail.substring(tail.length - 2) === ":t") {
+                    themed = true;
+                    tail = tail.substring(0, tail.length - 2);
+                }
+                if (ensureSplitCell(parentId, tail, themed, rect)) cells++;
+                continue;
+            }
+            if (applyRect(id, rect)) applied++;
+        }
+
+        // Replace the arrangement, don't merge it into the package defaults: a saved layout is
+        // what the player last left on screen. Pins are restored after rows so a pinned window
+        // has a frame to attach the state to.
+        var hasState = profile.pinned || profile.minimized || profile.active || profile.tab;
+        if (hasState) {
+            for (var oldPin in pinned) {
+                if (pinned.hasOwnProperty(oldPin)) delete pinned[oldPin];
+            }
+            for (var oldMin in minimized) {
+                if (minimized.hasOwnProperty(oldMin)) delete minimized[oldMin];
+            }
+        }
+        var pins = profile.pinned || [];
+        for (var p = 0; p < pins.length; p++) {
+            if (!windowById(pins[p])) continue;
+            if (!open[pins[p]]) openWindow(pins[p], true);
+            pinned[pins[p]] = true;
+            enforcePinnedVisibility(pins[p]);
+        }
+        var mins = profile.minimized || [];
+        for (var m = 0; m < mins.length; m++) {
+            if (!windowById(mins[m]) || !open[mins[m]]) continue;
+            minimized[mins[m]] = true;
+        }
+        if (profile.tab && windowById(profile.tab)) activeTab = profile.tab;
+        if (profile.active && splitCells[profile.active] && splitCells[profile.active].length) {
+            activeId = splitCells[profile.active][0].id;
+            focusWindow(activeId);
+        } else if (profile.active && open[profile.active] && windowById(profile.active)) {
+            activeId = profile.active;
+            focusWindow(activeId);
+        }
+
+        renderBar();
+        render();
+
+        // A saved split can be restored before the game has built its HUD panel. Keep retrying
+        // for a short window instead of marking the profile applied with cells missing; the
+        // attempt is bounded, because a renamed component is a real mismatch, not a slow HUD.
+        if (expectedCells > cells) {
+            var attempt = (layoutRetries[scheme] || 0) + 1;
+            layoutRetries[scheme] = attempt;
+            logPerf("info", "layout waiting: " + scheme + " cells=" + cells + "/" + expectedCells +
+                " attempt=" + attempt);
+            if (attempt <= 15) {
+                $.Schedule(1.0, function () {
+                    if (currentScheme === scheme && layoutProfiles[scheme]) {
+                        applyLayoutProfile(scheme, false);
+                    }
+                });
+                return applied + cells;
+            }
+            layoutNotices.push("layout " + scheme + ": " + (expectedCells - cells) +
+                " saved cell(s) no longer match the live HUD");
+        }
+        delete layoutRetries[scheme];
+        layoutLoadedFor = scheme;
+        if (announce) {
+            globalThis.OpenlockToast("Layout loaded",
+                scheme + " · " + applied + " window(s)" + (cells ? " · " + cells + " cell(s)" : "") +
+                " · " + pins.length + " pinned · " + mins.length + " minimized",
+                "", false);
+        }
+        logPerf("info", "layout applied: " + scheme + " windows=" + applied + " cells=" + cells +
+            " pinned=" + pins.length + " minimized=" + mins.length);
+        $.Msg("[Openlock] layout applied: ", scheme, " windows=", applied, " cells=", cells,
+            " pinned=", pins.length, " minimized=", mins.length, " active=", activeId);
+        return applied + cells;
+    }
+
+    function parseLayoutPayload(raw) {
+        if (!raw || raw === lastLayoutRaw) return;
+        lastLayoutRaw = raw;
+        var parsed = null;
+        try { parsed = JSON.parse(raw); } catch (e) {
+            logPerf("warn", "layout payload is not JSON");
+            return;
+        }
+        if (!parsed || typeof parsed !== "object") return;
+        layoutProfiles = {};
+        layoutRetries = {};
+        var profiles = parsed.profiles || {};
+        for (var scheme in profiles) {
+            if (!profiles.hasOwnProperty(scheme)) continue;
+            var entry = profiles[scheme] || {};
+            // Current payloads wrap geometry and arrangement state; an older payload is the
+            // geometry map itself. Reading both keeps a profile written by an older install
+            // loadable instead of silently discarding its windows.
+            var rows = entry.windows || entry || {};
+            var out = {};
+            for (var id in rows) {
+                if (!rows.hasOwnProperty(id)) continue;
+                var rect = rows[id] || {};
+                if (!rect || typeof rect !== "object") continue;
+                out[id] = { x: Number(rect.x) || 0, y: Number(rect.y) || 0,
+                    w: Number(rect.w) || 0, h: Number(rect.h) || 0 };
+            }
+            layoutProfiles[scheme] = {
+                windows: out,
+                active: typeof entry.active === "string" ? entry.active : "",
+                tab: typeof entry.tab === "string" ? entry.tab : "",
+                pinned: entry.pinned instanceof Array ? entry.pinned : [],
+                minimized: entry.minimized instanceof Array ? entry.minimized : []
+            };
+        }
+        layoutNotices = parsed.notices || [];
+        var count = 0;
+        for (var p in layoutProfiles) if (layoutProfiles.hasOwnProperty(p)) count++;
+        $.Msg("[Openlock] layout profiles: ", count, " scheme=", (currentScheme || "none"),
+            " saved=", !!(currentScheme && layoutProfiles[currentScheme]));
+        if (currentScheme && layoutProfiles[currentScheme] && layoutLoadedFor !== currentScheme) {
+            $.Msg("[Openlock] layout auto-load: ", currentScheme);
+            applyLayoutProfile(currentScheme, false);
+        }
+    }
+
     // --- server poll ---------------------------------------------------------
 
     var lastSig = "";
@@ -5611,6 +6312,21 @@
         // Comparing the payload string first means an unchanged payload costs one attribute read.
         pollAddons();
         pollObserver();
+        // Profiles arrive as one host attribute. Parsing an unchanged payload is skipped by the
+        // signature; a changed one is the only time the client re-reads geometry.
+        try { parseLayoutPayload(attr("layout", "")); } catch (e) { noteFailure("layout parse", e); }
+        var layoutRequest = attr("layoutrequest", "");
+        if (layoutRequest && layoutRequest !== lastLayoutRequest) {
+            lastLayoutRequest = layoutRequest;
+            saveLayoutNow(true);
+        }
+        var layoutExport = attr("layoutexport", "");
+        if (layoutExport && layoutExport !== lastLayoutExport) {
+            lastLayoutExport = layoutExport;
+            layoutExportPath = layoutExport;
+            globalThis.OpenlockToast("Layout exported", layoutExport, "", false);
+            logPerf("info", "layout exported: " + layoutExport);
+        }
         var want = attr("active", "");
         var sig = want + "|" + attr("view", "") + "|" + attr("refusal", "") + "|" + attr("body", "").length;
 
