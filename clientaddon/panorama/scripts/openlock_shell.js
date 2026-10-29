@@ -49,6 +49,8 @@
     var preloadStartedAt = 0;
     var preloadCompleted = 0;
 
+    var REPO_URL = "https://github.com/alacripose/dl-openshell";
+    var LANDING_URL = "https://alacripose.github.io/dl-openshell/";
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
         id: WINDOWS_ID,
@@ -3706,6 +3708,45 @@
                 var rx = runtimeRefusals[rr];
                 rowXd(body, rx.file + "  " + rx.subject + " — " + rx.why, "ViewMuted");
             }
+            return;
+        }
+
+        // Updates, repository and landing are the motd addon's window shape: a small package
+        // window with a heading, a text body and one action, not a second modal over the game.
+        if (kind === "updates") {
+            var update = data.update || {};
+            var build = data.build || {};
+            headingXd(body, "updates");
+            rowXd(body, "build  " + (build.label || data.version || "openlock"), "ViewMuted");
+            rowXd(body, "repository  " + REPO_URL, "ViewMuted");
+            if (update.available) {
+                rowXd(body, "available  " + (update.version || "new build"), "ViewMuted");
+                rowXd(body, String(update.notes || "Restart the client to apply the new build."), "ViewMuted");
+                actionXd(body, "Restart now", function () { globalThis.OpenlockUpdateRestart(); });
+                actionXd(body, "Later", function () { globalThis.OpenlockUpdateLater(); });
+            } else {
+                rowXd(body, "This client is on the current build.", "ViewMuted");
+                rowXd(body, "The update record is published with the shell package.", "ViewMuted");
+            }
+            return;
+        }
+
+        if (kind === "repo") {
+            var gitBuild = data.build || {};
+            headingXd(body, "git repository");
+            rowXd(body, REPO_URL, "ViewMuted");
+            rowXd(body, "branch  " + (gitBuild.branch || "main"), "ViewMuted");
+            rowXd(body, "commit  " + (gitBuild.commit || "unknown") +
+                (gitBuild.dirty ? " (dirty)" : ""), "ViewMuted");
+            rowXd(body, "The landing page is published from this repository.", "ViewMuted");
+            return;
+        }
+
+        if (kind === "landing") {
+            headingXd(body, "landing page");
+            rowXd(body, LANDING_URL, "ViewMuted");
+            rowXd(body, "Published from main through GitHub Pages.", "ViewMuted");
+            rowXd(body, "The same package builds the in-game shell and the download page.", "ViewMuted");
             return;
         }
 
