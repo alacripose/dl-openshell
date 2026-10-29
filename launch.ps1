@@ -258,6 +258,11 @@ function Invoke-ParityGate($Chosen) {
     foreach ($row in @($payload.cells)) {
         Write-Boot ('  {0,-7} {1}  {2,-8} {3}' -f $row.state, $row.grade, $row.cell, $row.detail)
     }
+    # The CSDK10 server slot checks every other client and tools shell, not only the live Steam
+    # tree. A shell update that reached one install is a partial update, and the dashboard says so.
+    foreach ($row in @($payload.audits)) {
+        Write-Boot ('  {0,-7} B  {1,-16} {2}' -f $row.state, $row.cell, $row.detail)
+    }
     foreach ($refusal in @($payload.refusals)) {
         Write-Boot ('  REFUSED {0,-10} {1}  {2}' -f $refusal.kind, $refusal.cell, $refusal.detail)
     }

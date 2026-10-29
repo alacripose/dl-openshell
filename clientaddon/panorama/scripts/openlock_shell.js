@@ -2186,7 +2186,7 @@
         if (isPanelWindow(win)) contextAction(contextMenu, "Launch layout", function () {
             var path = layoutForWindow(win);
             if (path) openLayout(path);
-            else globalThis.OpenlockToast("Layout refused", win.title + " has no mounted layout", "", true);
+            else globalThis.OpenlockToast("Layout refused", win.title + " has no declared layout", "", true);
         });
         contextAction(contextMenu, "Inspect in UI tree", function () {
             uiSelected = win.id;
@@ -2570,7 +2570,12 @@
         }
         if (path.indexOf("..") >= 0) return "";
         if (path.charAt(0) === "/") path = path.substring(1);
-        if (path.indexOf("/") < 0) path = "panorama/layout/" + path;
+        // {resources} already resolves to the panorama/ tree. A generator path such as
+        // panorama/layout/citadel_hero_grid.xml must drop its first segment: BLoadLayout with
+        // file://{resources}/panorama/layout/... asserts "Couldn't get layout file" (2), which is
+        // exactly what hero select hit. Bare names are resources-relative layout names.
+        if (path.indexOf("panorama/") === 0) path = path.substring("panorama/".length);
+        if (path.indexOf("/") < 0) path = "layout/" + path;
         path = path.replace(/\.vxml_c$/i, ".xml");
         if (!/\.xml$/i.test(path)) path += ".xml";
         return "file://{resources}/" + path;
@@ -3260,21 +3265,17 @@
 
         if (bound[id] && (!alive(bound[id].panel) || !panelVisible(bound[id].panel))) bound[id] = null;
         if (!ensureBound(win)) {
-            var layout = layoutForWindow(win);
-            if (layout) {
-                var opened = openLayout(layout);
-                if (opened) {
-                    globalThis.OpenlockToast("Layout launched", win.title + " is not live; opened " +
-                        layoutFont(layout) + " instead", opened, false);
-                    return true;
-                }
-            }
+            // Do not BLoadLayout a guessed stock layout here. A live panel can be absent from this
+            // reduced build (hero select in CSDK10 has no citadel_hero_grid resource), and an
+            // unreadable layout asserts the whole client. "Launch layout" in the UI tree stays an
+            // explicit choice; hooking a panel that is not on screen frames its declared window
+            // and refuses the hook instead of guessing a file.
             var f = createFrame(win);
             f.auto = false;
             open[id] = true;
             delete dismissed[id];
             applyWindow(win);
-            globalThis.OpenlockToast("Hook refused", win.title + " is not on screen and has no mounted layout", "", true);
+            globalThis.OpenlockToast("Hook refused", win.title + " is not on screen in this build", "", true);
             return false;
         }
 

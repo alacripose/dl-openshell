@@ -77,6 +77,38 @@ def build_from_text(text: str) -> dict:
     return found
 
 
+def shell_build(root: Path) -> dict:
+    """What shell a tree actually runs, whether it is loose compiled resources or a packed VPK.
+
+    A live install can carry both: the VPK from the last packaged install and loose `_c`
+    resources from a later map-reload install. The loose copy wins because the client resolves it
+    first; reporting the stale archive would call a working client out of date.
+    """
+    loose = root / LOOSE_DATA
+    if loose.is_file():
+        baked = build_from_text(loose.read_text(encoding="utf-8", errors="replace"))
+        return {
+            "kind": "loose",
+            "witness": loose,
+            "sha256": sha256_file(loose),
+            "commit": str(baked.get("commit") or ""),
+            "dirty": bool(baked.get("dirty")),
+            "grade": str(baked.get("grade") or ""),
+        }
+    archive = root / INSTALLED_VPK
+    if archive.is_file():
+        baked = vpk_build(archive)
+        return {
+            "kind": "vpk",
+            "witness": archive,
+            "sha256": sha256_file(archive),
+            "commit": str(baked.get("commit") or ""),
+            "dirty": bool(baked.get("dirty")),
+            "grade": str(baked.get("grade") or ""),
+        }
+    return {"kind": "none", "witness": root / INSTALLED_VPK, "sha256": "", "commit": "", "dirty": False, "grade": ""}
+
+
 def remote_main(root: Path) -> tuple[str, str]:
     """(commit, detail) for refs/heads/main on origin. An unreachable remote is not a commit."""
     try:
@@ -232,20 +264,122 @@ def find_live(explicit: str) -> Path | None:
     return Path(str(choose["path"]))
 
 
-def live_cell(root: Path | None, installed_hash: str) -> dict:
+def live_cell(root: Path | None, installed_hash: str, head: str) -> dict:
     if root is None:
         return cell("live", "absent", "D", "steam", "no Steam Deadlock install was found")
-    witness = root / INSTALLED_VPK
-    if not witness.is_file():
-        return cell("live", "absent", "B", witness, "the live client carries no Openlock VPK")
-    live_hash = sha256_file(witness)
-    baked = vpk_build(witness)
-    committed = str(baked.get("commit") or "unknown")
-    grade = str(baked.get("grade") or "?")
-    detail = f"build {committed}{'+' if baked.get('dirty') else ''} grade {grade} sha {live_hash[:12]}"
+    shell = shell_build(root)
+    if shell["kind"] == "none":
+        return cell("live", "absent", "B", shell["witness"], "the live client carries no Openlock shell")
+    live_hash = shell["sha256"]
+    committed = shell["commit"] or "unknown"
+    grade = shell["grade"] or "?"
+    detail = f"{shell['kind']} build {committed}{'+' if shell['dirty'] else ''} grade {grade} sha {live_hash[:12]}"
+    # Different tools compilers produce different bytes for the same source. The build commit is
+    # the identity; a hash match is only the stronger form of the same answer.
+    if head and shell["commit"] == head:
+        return cell("live", "held", "B", shell["witness"], detail + f"; commit matches HEAD {head}", live_hash)
     if live_hash == installed_hash:
-        return cell("live", "held", "B", witness, detail + "; matches the installed build", live_hash)
-    return cell("live", "absent", "B", witness, detail + "; differs from the installed build", live_hash)
+        return cell("live", "held", "B", shell["witness"], detail + "; bytes match the installed shell", live_hash)
+    return cell("live", "absent", "B", shell["witness"], detail + f"; differs from HEAD {head or '(none)'}", live_hash)
+
+
+def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str) -> dict | None:
+    """One other client or tools shell, measured rather than assumed.
+
+    These are deliberately not gate refusals: a second tools tree or the shipping client may sit
+    on an older build and that is a fact to report. The CSDK10 server slot still needs the
+    comparison, because a shell update that only reached one tree is not a verified update.
+    """
+    root = Path(str(row.get("path") or ""))
+    if not row or not str(root):
+        return None
+    try:
+        same_install = root.resolve() == install_root.resolve()
+        same_live = live_root is not None and root.resolve() == live_root.resolve()
+    except OSError:
+        same_install = str(root).lower() == str(install_root).lower()
+        same_live = live_root is not None and str(root).lower() == str(live_root).lower()
+    if same_install or same_live:
+        return None
+
+    shell = shell_build(root)
+    kind = str(row.get("kind") or "game")
+    name = kind + ":" + (root.name or str(root))
+    if shell["kind"] == "none":
+        return {
+            "cell": name,
+            "kind": kind,
+            "state": "absent",
+            "shell": str(row.get("shell") or "unknown"),
+            "witness": str(root),
+            "commit": "",
+            "grade": "",
+            "sha256": "",
+            "detail": "no Openlock shell is installed in this tree",
+        }
+
+    committed = shell["commit"] or "unknown"
+    grade = shell["grade"] or "?"
+    detail = (
+        f"{shell['kind']} build {committed}{'+' if shell['dirty'] else ''} grade {grade} "
+        f"sha {shell['sha256'][:12]} mount {str(row.get('shell') or 'unknown')}"
+    )
+    state = "held" if head and shell["commit"] == head else "drift"
+    if not shell["commit"]:
+        detail += "; no build commit is baked into this shell"
+    elif state == "drift":
+        detail += f"; differs from HEAD {head}"
+    else:
+        detail += "; matches HEAD"
+    return {
+        "cell": name,
+        "kind": kind,
+        "state": state,
+        "shell": str(row.get("shell") or "unknown"),
+        "witness": str(shell["witness"]),
+        "commit": shell["commit"],
+        "grade": shell["grade"],
+        "sha256": shell["sha256"],
+        "detail": detail,
+    }
+
+
+def audit_installs(install_root: Path, live_root: Path | None, head: str) -> list[dict]:
+    """Every other client and tools shell the machine's own discovery already knows about.
+
+    `read_installs` covers game trees with a gameinfo. A reduced CSDK tools host can carry the
+    shell without one, so `read_hosts` is read too; that is the surface that compiles the shell,
+    and a stale loose bundle there would otherwise never be compared.
+    """
+    try:
+        rows = read_installs(install_root / GAMEINFO, [install_root])
+    except (OSError, ValueError):
+        rows = []
+    try:
+        from list_installs import read_hosts  # local import: a host scan is not needed by every call
+
+        for host in read_hosts():
+            path = str(host.get("path") or "")
+            if path:
+                rows.append({"path": path, "kind": "toolhost", "shell": "unknown"})
+    except (OSError, ValueError, ImportError):
+        pass
+
+    audits = []
+    seen: set[str] = set()
+    for row in rows:
+        path = str(row.get("path") or "")
+        try:
+            key = str(Path(path).resolve()).lower()
+        except OSError:
+            key = path.lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        reading = audit_cell(row, install_root, live_root, head)
+        if reading:
+            audits.append(reading)
+    return audits
 
 
 def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
@@ -259,7 +393,8 @@ def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
     ]
     installed_hash = cells[2]["sha256"]
     live_root = find_live(live_override)
-    cells.append(live_cell(live_root, installed_hash))
+    cells.append(live_cell(live_root, installed_hash, head))
+    audits = audit_installs(install_root, live_root, head)
 
     by_name = {row["cell"]: row for row in cells}
     refusals = []
@@ -291,6 +426,18 @@ def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
     detail = ""
     if by_name["live"]["state"] != "held":
         detail = "the live Steam client is not this build: " + by_name["live"]["detail"]
+    drift = [row for row in audits if row["state"] == "drift"]
+    uninstalled = [row for row in audits if row["state"] == "absent"]
+    if drift:
+        detail = (detail + "; " if detail else "") + (
+            f"{len(drift)} other shell tree(s) differ from HEAD: "
+            + ", ".join(row["cell"] for row in drift)
+        )
+    if uninstalled:
+        detail = (detail + "; " if detail else "") + (
+            f"{len(uninstalled)} client/tools tree(s) carry no shell: "
+            + ", ".join(row["cell"] for row in uninstalled)
+        )
     payload = {
         "state": state,
         "at": utc_now(),
@@ -300,6 +447,7 @@ def derive(install_root: Path, live_override: str) -> tuple[dict, int]:
         "install": str(install_root),
         "live": str(live_root) if live_root else "",
         "cells": cells,
+        "audits": audits,
         "refusals": refusals,
         "detail": detail,
     }
@@ -323,6 +471,7 @@ def store_run(payload: dict, uri: str | None) -> dict:
             "state": payload["state"],
             "detail": payload["detail"],
             "cells": payload["cells"],
+            "audits": payload["audits"],
             "refusals": payload["refusals"],
         }
         store.db.parity.insert_one(dict(document))
@@ -356,6 +505,9 @@ def print_human(payload: dict) -> None:
     print(f"parity {payload.get('state', 'UNKNOWN')}  run {payload.get('run', '-')}  {payload.get('commit', '-')}")
     for row in payload.get("cells", []):
         print(f"  {row['state']:<7} {row['grade']}  {row['cell']:<8} {row['detail']}")
+        print(f"          {row['witness']}")
+    for row in payload.get("audits", []):
+        print(f"  {row['state']:<7} B  {row['cell']:<16} {row['detail']}")
         print(f"          {row['witness']}")
     for refusal in payload.get("refusals", []):
         print(f"  REFUSED {refusal['kind']:<10} {refusal['cell']}  {refusal['detail']}")
