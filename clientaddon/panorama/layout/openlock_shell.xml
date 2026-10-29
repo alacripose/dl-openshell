@@ -35,11 +35,15 @@
             </Panel>
             <Panel id="TabStrip" class="TabStrip" />
             <Panel class="TaskbarSpacer" />
-            <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
-                <Label class="WindowsButtonLabel" text="Windows" />
+            <!-- One flow row, not three absolute margins: a wide build label must take the space
+                 beside the Windows button, never the button's pixels. -->
+            <Panel id="TaskbarRight" class="TaskbarRight">
+                <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
+                    <Label class="WindowsButtonLabel" text="Windows" />
+                </Panel>
+                <Label id="VersionLabel" class="VersionLabel" />
+                <Label id="Clock" class="Clock" text="--:--" />
             </Panel>
-            <Label id="VersionLabel" class="VersionLabel" />
-            <Label id="Clock" class="Clock" text="--:--" />
         </Panel>
 
         <!-- The launcher is the one mark that is always on screen: it reopens the shell and it is
