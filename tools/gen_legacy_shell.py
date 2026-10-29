@@ -14,11 +14,15 @@ import pathlib
 import re
 import sys
 
-INVALID = (
-    re.compile(r"^\s*position:\s*(?:absolute|relative);\s*$"),
-    re.compile(r"^\s*transform:\s*rotate\([^)]*\);\s*$"),
-    re.compile(r"^\s*border-radius:\s*[^;]+;\s*$"),
-    re.compile(r"^\s*width:\s*fill-remaining-space;\s*$"),
+# Declarations this older Panorama parser reports as errors, rewritten to the nearest supported
+# equivalent instead of deleted. Deleting `position: absolute` alone put the full-screen window
+# layers into normal flow, which pushed the taskbar and launcher off the bottom of the screen.
+REWRITES = (
+    (re.compile(r"^(\s*)position:\s*absolute;\s*$"), r"\1ignore-parent-flow: true;"),
+    (re.compile(r"^(\s*)position:\s*relative;\s*$"), r""),
+    (re.compile(r"^(\s*)transform:\s*rotate\([^)]*\);\s*$"), r""),
+    (re.compile(r"^(\s*)border-radius:\s*[^;]+;\s*$"), r""),
+    (re.compile(r"^(\s*)width:\s*fill-remaining-space;\s*$"), r"\1width: 100%;"),
 )
 
 
@@ -26,10 +30,16 @@ def sanitized_sheet(text: str) -> tuple[str, int]:
     kept: list[str] = []
     removed = 0
     for line in text.splitlines():
-        if any(pattern.match(line) for pattern in INVALID):
+        for pattern, replacement in REWRITES:
+            match = pattern.match(line)
+            if not match:
+                continue
             removed += 1
-            continue
-        kept.append(line)
+            if replacement:
+                kept.append(match.expand(replacement))
+            break
+        else:
+            kept.append(line)
     return "\n".join(kept).rstrip() + "\n", removed
 
 

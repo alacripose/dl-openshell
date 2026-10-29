@@ -26,33 +26,15 @@
     var windowLayer = root.FindChildTraverse("WindowLayer");
     var panelLayer = root.FindChildTraverse("PanelLayer");
     var dropGrid = root.FindChildTraverse("DropGrid");
+    var pointerProbe = root.FindChildTraverse("PointerProbe");
     var toastStack = root.FindChildTraverse("ToastStack");
     var updateModal = root.FindChildTraverse("UpdateModal");
-    var buildStrip = root.FindChildTraverse("BuildStrip");
-    var buildStageLabel = root.FindChildTraverse("BuildStage");
-    var buildDetailLabel = root.FindChildTraverse("BuildDetail");
     var clockLabel = root.FindChildTraverse("Clock");
     var versionLabel = root.FindChildTraverse("VersionLabel");
     var schemeLabel = root.FindChildTraverse("SchemeLabel");
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
     var themes = data.themes || { default: "", order: [], schemes: [], extensions: [] };
     var currentScheme = "";
-    var currentGrade = "dev";
-    // The launcher shows the Steam persona on this machine. dl-openshell is only the fallback for
-    // a client that cannot expose a persona, never a build-time player name.
-    var shellDisplayName = "dl-openshell";
-    var observerXmlPanels = {};
-    var observerXmlAt = 0;
-    var savedProfiles = {};
-    var layoutPayload = "";
-    var layoutRequest = "";
-    var layoutNoticesSeen = {};
-    var liveBuild = null;
-    var liveBuildRaw = "";
-    var liveUpdate = null;
-    var liveUpdateRaw = "";
-    var liveStatusWarned = {};
-    var addonPayload = "";
 
     var WINDOWS_ID = "__windows";
     var WINDOWS_VIEW = {
@@ -110,7 +92,9 @@
     // to move. writes are style assignments; skipped are the same value met again and not written.
     var perf = { polls: 0, applies: 0, writes: 0, skips: 0, scans: 0, fullScans: 0, cost: {} };
     var frameMs = 0;
-    var frameTickAt = -1;
+    var frameClockAt = 0;
+    var frameTickAt = 0;
+    var frameTicks = 0;
     var reportedRefusals = {};
 
     var frames = {};      // id -> { frame, title, meta, body, refusal, win }
@@ -281,28 +265,6 @@
     // A scheme is a generated stylesheet block (openlock_schemes.css) plus one class on the shell
     // root. Switching is a class change, not a recolour of every panel, so the game keeps its frame
     // pacing while the palette moves.
-    // The installer chooses the grade once. Dev keeps every declared window and addon reachable;
-    // observer removes the shell's own chrome so a recording shows only the game and any XML
-    // surfaces an addon sends; player keeps the saved layout scheme available at startup.
-    function setGrade(grade) {
-        var value = String(grade || "").toLowerCase();
-        if (value !== "observer" && value !== "player") value = "dev";
-        currentGrade = value;
-        try {
-            root.RemoveClass("GradeDev");
-            root.RemoveClass("GradeObserver");
-            root.RemoveClass("GradePlayer");
-            root.AddClass(value === "observer" ? "GradeObserver" : value === "player" ? "GradePlayer" : "GradeDev");
-        } catch (e) {}
-        $.Msg("[dl-openshell] grade: ", currentGrade);
-    }
-
-    function gradeFromRecords() {
-        if (liveBuild && liveBuild.grade) return liveBuild.grade;
-        if (data.build && data.build.grade) return data.build.grade;
-        return "dev";
-    }
-
     function schemeById(id) {
         for (var i = 0; i < themes.schemes.length; i++) {
             if (themes.schemes[i].id === id) return themes.schemes[i];
@@ -340,7 +302,7 @@
         }
         for (var k = 0; k < hosts.length; k++) {
             try { hosts[k].AddClass(schemeClass(scheme.id)); } catch (e) {
-                $.Msg("[dl-openshell] scheme class REFUSED for '", scheme.id, "': ", String(e));
+                $.Msg("[Openlock] scheme class REFUSED for '", scheme.id, "': ", String(e));
             }
         }
 
@@ -354,9 +316,7 @@
     }
 
     globalThis.OpenlockScheme = function (id) {
-        var applied = applyScheme(String(id || "").toLowerCase(), true);
-        if (applied) applySavedLayoutFor(applied, true);
-        return applied;
+        return applyScheme(String(id || "").toLowerCase(), true);
     };
 
     globalThis.OpenlockCycleScheme = function () {
@@ -369,9 +329,7 @@
             if (themes.schemes[i].id === currentScheme) { at = i; break; }
         }
         var next = themes.schemes[(at + 1) % themes.schemes.length];
-        var applied = applyScheme(next.id, true);
-        if (applied) applySavedLayoutFor(applied, true);
-        return applied;
+        return applyScheme(next.id, true);
     };
 
     // --- toast / update ------------------------------------------------------
@@ -382,20 +340,15 @@
         var t = $.CreatePanel("Panel", toastStack, "");
         t.AddClass("Toast");
         if (attention) t.AddClass("Attention");
-        // A notice is not a control surface. Only a toast that names a window needs a hit target;
-        // every other toast must pass the pointer through to the game's own top-right menu.
-        try { t.hittest = !!windowId; } catch (e) {}
 
         var h = $.CreatePanel("Label", t, "");
         h.AddClass("ToastTitle");
         h.text = title;
-        try { h.hittest = false; } catch (e) {}
 
         if (body) {
             var b = $.CreatePanel("Label", t, "");
             b.AddClass("ToastBody");
             b.text = body;
-            try { b.hittest = false; } catch (e) {}
         }
 
         if (windowId) {
@@ -412,9 +365,9 @@
     function quitForUpdate() {
         try {
             $.DispatchEvent("CitadelConCommand", "quit");
-            $.Msg("[dl-openshell] update restart: quit dispatched");
+            $.Msg("[Openlock] update restart: quit dispatched");
         } catch (e) {
-            $.Msg("[dl-openshell] update restart REFUSED: no quit command on this build: ", String(e));
+            $.Msg("[Openlock] update restart REFUSED: no quit command on this build: ", String(e));
         }
     }
 
@@ -471,8 +424,13 @@
     function addControl(parent, cls, label, onClick) {
         var p = $.CreatePanel("Panel", parent, "");
         p.AddClass(cls);
+        p.hittest = true;
+        p.hittestchildren = true;
         var l = $.CreatePanel("Label", p, "");
         l.text = label;
+        // A label is decoration. Left hit-testable it sits over the panel that owns the handler
+        // and swallows the click, which is exactly how the title-bar glyphs stopped working.
+        l.hittest = false;
         if (cls === "ShellTab") l.AddClass("ShellTabLabel");
         p.SetPanelEvent("onmouseactivate", onClick);
         return p;
@@ -629,21 +587,12 @@
         // of letting the bar slice through the top-row HUD frames.
         g.y = clamp(g.y, SHELL_TOP_DP + CHROME_DP, Math.max(SHELL_TOP_DP + CHROME_DP, screenH - 80));
 
-        g.w = clamp(g.w, num(win.minWidth) || 160, screenW);
-        g.h = clamp(g.h, num(win.minHeight) || 120, screenH);
-
-        // A live game panel is scaled into the frame, not the frame around the panel. Two
-        // independent factors are what let a corner change height: the old single `scale` was
-        // derived from width alone, and the frame height was then recomputed from the panel's
-        // natural aspect, so any height delta was thrown away and a north drag left a fixed top
-        // edge. g.h is now the authority on both axes.
-        var sx = clamp(g.w / nat.w, 0.08, 4);
-        var sy = clamp(g.h / nat.h, 0.08, 4);
-        var tx = g.x - nat.x - (nat.w - nat.w * sx) / 2;
-        var ty = g.y - nat.y - (nat.h - nat.h * sy) / 2;
+        var scale = clamp(g.w / nat.w, 0.08, 4);
+        var tx = g.x - nat.x - (nat.w - nat.w * scale) / 2;
+        var ty = g.y - nat.y - (nat.h - nat.h * scale) / 2;
 
         var transform = "translate3d(" + tx + "px," + ty + "px,0px) scale3d(" +
-            sx + "," + sy + ",1)";
+            scale + "," + scale + ",1)";
         if (b.lastTransform === transform) {
             perf.skips++;
         } else {
@@ -652,95 +601,160 @@
                 b.panel.style.transform = transform;
                 perf.writes++;
             } catch (e) {
-                $.Msg("[dl-openshell] shell transform REFUSED for '", win.id, "': ", String(e));
+                $.Msg("[Openlock] shell transform REFUSED for '", win.id, "': ", String(e));
             }
         }
 
-        setRect(record, g.x, g.y - CHROME_DP, g.w, g.h + CHROME_DP);
+        setRect(record, g.x, g.y - CHROME_DP, g.w, nat.h * scale + CHROME_DP);
         return true;
     }
 
-    // Deadlock exposes no performance.now and no GameUI. $.FrameTime() is the engine's frame
-    // timestamp (seconds since Panorama started); its deltas are the only sub-millisecond frame
-    // clock here. Per-window work is measured with Date.now, which is a 1 ms clock, so the label
-    // shows "<1 ms" rather than inventing precision.
-    function engineNowMs() {
+    // A real clock, never a guessed one. Panorama exposes performance.now on current V8 builds;
+    // Date.now is a 1 ms fallback and the readout says so instead of pretending to be precise.
+    var clockIsPrecise = typeof performance !== "undefined" && performance && typeof performance.now === "function";
+    function nowMs() {
         try {
-            if (typeof $ !== "undefined" && typeof $.FrameTime === "function") {
-                var t = Number($.FrameTime());
-                if (isFinite(t)) return t * 1000;
-            }
+            if (clockIsPrecise) return performance.now();
         } catch (e) {}
-        return -1;
+        return Date.now();
     }
 
     function noteWindowCost(id, started) {
-        // Force this frame's layout once so the measurement covers the style writes and the
-        // layout they cause, not just the JS property assignments.
-        var f = frames[id];
-        if (f && f.frame) {
-            try { var flush = f.frame.actuallayoutwidth; if (flush < 0) $.Msg("[dl-openshell] layout read negative"); } catch (e) {}
-        }
-        var b = bound[id];
-        if (b && b.panel) {
-            // Read the live panel too: the frame read flushes the chrome, but the transform on the
-            // game panel is what a panel window's resize costs, so its layout must be forced here.
-            try { var panelFlush = b.panel.actuallayoutwidth; if (panelFlush < 0) $.Msg("[dl-openshell] panel layout read negative"); } catch (e) {}
-        }
-        var elapsed = Math.max(0, Date.now() - started);
-        if (!perf.cost[id]) perf.cost[id] = { total: 0, max: 0, avg: 0, samples: 0 };
-        var cost = perf.cost[id];
-        cost.total += elapsed;
-        if (elapsed > cost.max) cost.max = elapsed;
-        // Date.now is the only sub-frame clock this client exposes, so the average is honest at
-        // 1 ms resolution; values below one tick are shown as "<1" rather than invented.
-        cost.avg = cost.samples ? (cost.avg * 0.8 + elapsed * 0.2) : elapsed;
-        cost.samples++;
+        var elapsed = Math.max(0, nowMs() - started);
+        if (!perf.cost[id]) perf.cost[id] = { total: 0, samples: 0 };
+        perf.cost[id].total += elapsed;
+        perf.cost[id].samples++;
     }
 
     function updateCost(f, id) {
         if (!f || !f.cost) return;
-        var cost = perf.cost[id] || { total: 0, max: 0, avg: 0, samples: 0 };
-        var own = cost.samples ? cost.avg : 0;
-        // win = this window's sampled apply + forced layout; frame = measured UI frame interval.
-        var label = own >= 0.95 ? own.toFixed(1) : "<1";
-        var ui = frameMs > 0 ? frameMs.toFixed(1) : "--";
-        var text = "win " + label + " ms · frame " + ui + " ms";
+        var cost = perf.cost[id] || { total: 0, samples: 0 };
+        var own = cost.samples ? (cost.total / cost.samples) : 0;
+        // ui = the measured interval between two engine UI frames (frameTick); own = the mean
+        // apply cost this window paid. Both are measurements, not a spinner.
+        var ui = frameMs ? frameMs.toFixed(1) : "--";
+        var text = ui + " · " + (clockIsPrecise ? own.toFixed(2) : own.toFixed(0)) + " ms";
         if (f.lastCost === text) return;
         f.lastCost = text;
         f.cost.text = text;
     }
 
-    // The frame interval changes even when a window is idle, so the readout is refreshed twice a
-    // second from the same measurements instead of freezing at its last apply.
-    function refreshCosts() {
-        if (expanded) {
-            for (var id in frames) {
-                if (frames[id] && frames[id].cost) updateCost(frames[id], id);
-            }
+    // A real frame interval: Game.GetFrameTime/GetFPS when the client exposes it, otherwise the
+    // scheduler cadence. This never fabricates a number from a spinner.
+    function sampleFrameMs() {
+        var owners = [];
+        try { if (typeof Game !== "undefined") owners.push(Game); } catch (e) {}
+        try { if (typeof GameUI !== "undefined") owners.push(GameUI); } catch (e) {}
+        try { if (typeof $ !== "undefined") owners.push($); } catch (e) {}
+        for (var i = 0; i < owners.length; i++) {
+            var owner = owners[i];
+            try {
+                if (owner.GetFrameTime) {
+                    var t = Number(owner.GetFrameTime());
+                    if (isFinite(t) && t > 0) return t > 1 ? t : t * 1000;
+                }
+            } catch (e) {}
+            try {
+                if (owner.GetFPS) {
+                    var fps = Number(owner.GetFPS());
+                    if (isFinite(fps) && fps > 0) return 1000 / fps;
+                }
+            } catch (e) {}
         }
-        $.Schedule(0.5, refreshCosts);
+        try {
+            if (typeof Game !== "undefined" && Game.GetConVar) {
+                var frame = Number(Game.GetConVar("host_frametime"));
+                if (isFinite(frame) && frame > 0) return frame > 1 ? frame : frame * 1000;
+            }
+        } catch (e) {}
+        return 0;
     }
 
-    // The engine's frame interval, measured from $.FrameTime deltas. Without that API the
-    // Date.now fallback is still a real (1 ms) scheduler interval, never a guessed FPS.
+    // A safe capability probe. Enumerating the native GameUI/Game objects with Object.keys is
+    // what took the previous build down at boot; typeof never touches the host object's own
+    // property table.
+    function apiProbe() {
+        var bits = [];
+        try {
+            if (typeof GameUI === "undefined") {
+                bits.push("GameUI:none");
+            } else {
+                bits.push("cursor:" + (typeof GameUI.GetCursorPosition === "function" ? "yes" : "no"));
+                bits.push("down:" + (typeof GameUI.IsMouseDown === "function" ? "yes" : "no"));
+            }
+        } catch (e) {
+            bits.push("GameUI:error");
+        }
+        try {
+            bits.push("frame:" + (typeof Game !== "undefined" && typeof Game.GetFrameTime === "function" ? "api" : "none"));
+        } catch (e) {
+            bits.push("frame:error");
+        }
+        try {
+            bits.push("$cursor:" + (typeof $ !== "undefined" && typeof $.GetCursorPosition === "function" ? "yes" : "no"));
+        } catch (e) {
+            bits.push("$cursor:error");
+        }
+        bits.push("clock:" + (clockIsPrecise ? "perf" : "date"));
+        return bits.join(" ");
+    }
+
+    // Diagnostic shape of an event's arguments. Panels deliver events but the docs do not say
+    // whether mousemove/mousedown carry the pointer; this prints exactly what arrives.
+    function probeArgs(args) {
+        if (args === undefined || args === null) return "null";
+        var out = "n" + args.length;
+        for (var i = 0; i < args.length && i < 2; i++) {
+            var a = args[i];
+            out += " " + (typeof a);
+            if (a && typeof a === "object") {
+                var keys = ["x", "y", "cursorX", "cursorY", "mouseX", "mouseY"];
+                for (var k = 0; k < keys.length; k++) {
+                    if (a[keys[k]] !== undefined) out += " " + keys[k] + "=" + Math.round(Number(a[keys[k]]));
+                }
+            } else if (typeof a === "number") {
+                out += "=" + Math.round(a);
+            }
+        }
+        return out;
+    }
+
+    // The engine's UI frame interval, measured between two scheduled callbacks. This is the
+    // only real frame cadence a Panorama addon can observe; it is shown as "ui" beside each
+    // window's own measured apply cost.
     function frameTick() {
+        // The interval only matters while chrome is on screen. Collapsed: one wake a second,
+        // no per-frame callback added to the game's own loop.
         if (!expanded) {
-            frameTickAt = -1;
+            frameTickAt = 0;
             frameMs = 0;
             $.Schedule(1, frameTick);
             return;
         }
-        var at = engineNowMs();
-        if (at < 0) at = Date.now();
-        if (frameTickAt >= 0) {
+        var at = nowMs();
+        if (frameTickAt) {
             var delta = at - frameTickAt;
             if (delta > 0 && delta < 250) {
                 frameMs = frameMs ? (frameMs * 0.85 + delta * 0.15) : delta;
             }
         }
         frameTickAt = at;
+        frameTicks++;
         $.Schedule(0.001, frameTick);
+    }
+
+    function frameClock() {
+        frameClockAt = Date.now();
+        if (!frameTicks) {
+            var sampled = sampleFrameMs();
+            if (sampled > 0) frameMs = sampled;
+        }
+        if (pointerProbe) {
+            var p = cursorPoint();
+            pointerProbe.text = "ptr " + (p ? (Math.round(p.x) + "," + Math.round(p.y)) : "NONE") +
+                " | ev " + lastPointerEvent + " | " + apiProbe();
+        }
+        $.Schedule(1, frameClock);
     }
 
     function applyWindow(win) {
@@ -799,10 +813,8 @@
             }
             var ok = applyPanelRect(win, f, g);
             noteWindowCost(win.id, started);
-            var nat = bound[win.id] && bound[win.id].natural;
             f.meta.text = (win.panelCandidates[0].name || win.panelCandidates[0].kind) +
-                (ok && nat ? "  ·  scale " + Math.round((g.w / nat.w) * 100) + "%×" +
-                    Math.round((g.h / nat.h) * 100) + "%" : "  ·  not on screen");
+                (ok ? "  ·  scale " + Math.round((g.w / bound[win.id].natural.w) * 100) + "%" : "  ·  not on screen");
             setChildVisibility(f, "refusal", f.refusal, !ok);
             setChildVisibility(f, "body", f.body, false);
             f.frame.style.backgroundColor = "transparent";
@@ -943,7 +955,7 @@
             var natural = naturalOf(panel);
             if (!natural) continue;
             bound[win.id] = { panel: panel, natural: natural };
-            $.Msg("[dl-openshell] shell framed '", win.id, "' → ",
+            $.Msg("[Openlock] shell framed '", win.id, "' → ",
                 candidates[i].name || candidates[i].kind, " ", Math.round(natural.w), "×",
                 Math.round(natural.h));
             return bound[win.id];
@@ -1000,7 +1012,7 @@
             }
             b.panel.style.opacity = "1";
         } catch (e) {
-            $.Msg("[dl-openshell] pin visibility REFUSED for '", id, "': ", String(e));
+            $.Msg("[Openlock] pin visibility REFUSED for '", id, "': ", String(e));
         }
     }
 
@@ -1562,10 +1574,8 @@
         title.text = win.title || win.id;
 
         contextAction(contextMenu, "Open", function () { openWindow(win.id); });
-        if (hasControl(win, "minimize"))
-            contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
-        if (hasControl(win, "pin"))
-            contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
+        contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
+        contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
         if (isPanelWindow(win)) contextAction(contextMenu, "Launch layout", function () {
             var path = layoutForWindow(win);
             if (path) openLayout(path);
@@ -1576,8 +1586,7 @@
             uiCss.selector = "";
             openWindow("uitree");
         });
-        if (hasControl(win, "close"))
-            contextAction(contextMenu, "Close", function () { closeWindow(win.id); });
+        contextAction(contextMenu, "Close", function () { closeWindow(win.id); });
 
         // The layout is not measured until the next frame; use a conservative record now and let
         // the watch retire the menu as soon as the pointer leaves that box.
@@ -1649,7 +1658,7 @@
     }
 
     function refuseFeature(title, why) {
-        $.Msg("[dl-openshell] REFUSED " + title + ": " + why);
+        $.Msg("[Openlock] REFUSED " + title + ": " + why);
         var key = title + "|" + why;
         if (reportedRefusals[key]) return;
         reportedRefusals[key] = true;
@@ -1661,6 +1670,9 @@
         var i = $.CreatePanel("Panel", b, "");
         i.AddClass("WindowIcon");
         i.AddClass("Icon" + icon);
+        // The icon is a child of the button, not a second target. It must never take the press.
+        i.hittest = false;
+        i.hittestchildren = false;
 
         // Real Unicode controls from Arial Unicode MS, which the client already ships as
         // vgui/fonts/arialuni.ttf. These are not drawn codepoints guessed from a system font.
@@ -1673,6 +1685,7 @@
             var label = $.CreatePanel("Label", i, "");
             label.AddClass("WindowGlyph");
             label.text = glyph;
+            label.hittest = false;
             b.glyph = label;
         } else if (icon === "Pin") {
             var head = $.CreatePanel("Panel", i, "");
@@ -1690,6 +1703,10 @@
                 tip.AddClass("IconMoveTip");
                 tip.AddClass("MoveTip" + tips[t]);
             }
+        }
+
+        if (!b || b.hittest === false) {
+            refuseFeature("Window control refused", icon + " has no hit-testable button; the title bar would swallow the click");
         }
 
         var help = {
@@ -1733,21 +1750,10 @@
             if (f.maxButton.glyph) f.maxButton.glyph.text = maximized[id] ? "▣" : "□";
         }
         applyWindow(win);
-        sendLayout();
+        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
+            Math.round(g.w) + " " + Math.round(g.h));
     }
 
-
-    // The package declares a window's title-bar controls (pin/minimize/maximize/close) in the
-    // same record as its geometry. A package compiled before controls were projected has no
-    // list at all, and keeps the old full chrome; an explicit empty list means the layout
-    // declared no title bar, so no control is invented for it.
-    function hasControl(win, kind) {
-        if (!win || win.controls === undefined) return true;
-        for (var i = 0; i < win.controls.length; i++) {
-            if (win.controls[i] && win.controls[i].kind === kind) return true;
-        }
-        return false;
-    }
 
     function createFrame(win) {
         if (frames[win.id]) return frames[win.id];
@@ -1788,18 +1794,11 @@
         // a small shape instead of a typed codepoint.
         var moveButton = titleButton(title, "Move", function () { focusWindow(win.id); });
         makeDraggable(moveButton, win.id, "move");
-        var minButton = hasControl(win, "minimize")
-            ? titleButton(title, "Minimize", function () { minimizeWindow(win.id); }) : null;
-        var maxButton = hasControl(win, "maximize")
-            ? titleButton(title, "Maximize", function () { toggleMaximize(win.id); }) : null;
-        var pinButton = hasControl(win, "pin")
-            ? titleButton(title, "Pin", function () { togglePin(win.id); }) : null;
-        if (pinButton && pinned[win.id]) pinButton.AddClass("PinOn");
-        // The close button's right margin is wider than the others so the northeast grip has a
-        // clear corner: the grip is 22 dp and the close button would otherwise sit on top of it.
-        var closeButton = hasControl(win, "close")
-            ? titleButton(title, "Close", function () { closeWindow(win.id); }) : null;
-        if (closeButton) closeButton.AddClass("WindowClose");
+        var minButton = titleButton(title, "Minimize", function () { minimizeWindow(win.id); });
+        var maxButton = titleButton(title, "Maximize", function () { toggleMaximize(win.id); });
+        var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); });
+        if (pinned[win.id]) pinButton.AddClass("PinOn");
+        titleButton(title, "Close", function () { closeWindow(win.id); });
 
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions");
@@ -1830,9 +1829,8 @@
             var grip = $.CreatePanel("Panel", frame, "");
             grip.AddClass("ResizeGrip");
             grip.AddClass("Grip" + gripSpecs[gi][0]);
-            grip.hittest = true;
             bindDwell(grip, "Resize " + gripSpecs[gi][0],
-                "Drag this corner. Shell windows resize freely; a live game panel scales into the new rect.");
+                "Drag this corner. Shell windows resize freely; game panels scale from their own width.");
             makeDraggable(grip, win.id, gripSpecs[gi][1]);
             grips.push(grip);
         }
@@ -1873,15 +1871,7 @@
     function openWindow(id) {
         var win = windowById(id);
         if (!win) {
-            $.Msg("[dl-openshell] shell open REFUSED: no window '", id, "'");
-            return;
-        }
-
-        // In observer grade the shell's windows are not drawn. A package XML surface is the
-        // exception: it is what an addon or a remote operator sends to show live stats, and it
-        // belongs in the toast stack rather than in window chrome.
-        if (currentGrade === "observer") {
-            if (win.layoutPath) showObserverXml(win);
+            $.Msg("[Openlock] shell open REFUSED: no window '", id, "'");
             return;
         }
 
@@ -1907,102 +1897,6 @@
         focusWindow(id);
         send("view", id);
     }
-
-    // Observer XML is a toast-shaped host for a package's delivered layout. It keeps the layout's
-    // own controls and scripts, so a remote sender can put live stats or external links there;
-    // the close affordance belongs to the shell so the XML cannot trap the observer.
-    function showObserverXml(win) {
-        if (!toastStack || !win || !win.layoutPath) return;
-        if (observerXmlPanels[win.id]) return;
-
-        var panel = $.CreatePanel("Panel", toastStack, "OpenlockObserverXml_" + safeId(win.id));
-        panel.AddClass("Toast");
-        panel.AddClass("ObserverXmlToast");
-        try {
-            panel.SetAttributeString("dw_observer_id", win.id);
-            panel.SetAttributeString("dw_observer_title", win.title || win.addonName || "Observer");
-            panel.SetAttributeString("dw_observer_data", observerXmlData(win));
-        } catch (e) {}
-
-        var title = $.CreatePanel("Label", panel, "");
-        title.AddClass("ToastTitle");
-        title.text = win.title || win.addonName || "Observer";
-
-        var close = $.CreatePanel("Panel", panel, "");
-        close.AddClass("ObserverXmlClose");
-        close.SetPanelEvent("onmouseactivate", function () {
-            try { panel.DeleteAsync(0); } catch (e) {}
-            delete observerXmlPanels[win.id];
-        });
-        var closeLabel = $.CreatePanel("Label", close, "");
-        closeLabel.text = "×";
-
-        var host = $.CreatePanel("Panel", panel, "");
-        host.AddClass("ObserverXmlHost");
-        try {
-            host.SetAttributeString("dw_observer_id", win.id);
-            host.SetAttributeString("dw_observer_data", observerXmlData(win));
-        } catch (e) {}
-        try {
-            host.BLoadLayout(win.layoutPath, false, false);
-        } catch (e) {
-            var refusal = $.CreatePanel("Label", panel, "");
-            refusal.AddClass("ToastBody");
-            refusal.text = "Observer XML refused: " + String(e);
-            $.Msg("[dl-openshell] observer XML REFUSED ", win.layoutPath, ": ", String(e));
-        }
-
-        observerXmlPanels[win.id] = { panel: panel, host: host };
-        updateObserverXml(true);
-    }
-
-    // An observer XML is deliberately not a second data API: the toast carries the same live
-    // records the Tools view reads, on an attribute the layout can read from its parent. A layout
-    // that wants extra external information keeps its own controls and links; this only makes the
-    // shell's live state reachable from the delivered XML.
-    function observerXmlData(win) {
-        var build = liveBuild || data.build || {};
-        var payload = {
-            format: "openlock.observer/1",
-            id: win && win.id ? win.id : "",
-            title: win && (win.title || win.addonName) ? (win.title || win.addonName) : "Observer",
-            build: build,
-            update: liveUpdate || data.update || { available: false },
-            packages: (data.addonPackages || []).length,
-            windows: (data.windows || []).length,
-            connected: connected(),
-            observedAt: new Date().toISOString ? new Date().toISOString() : ""
-        };
-        try { return JSON.stringify(payload); } catch (e) { return ""; }
-    }
-
-    function updateObserverXml(force) {
-        var now = Date.now();
-        if (!force && now - observerXmlAt < 2000) return;
-        observerXmlAt = now;
-
-        for (var id in observerXmlPanels) {
-            if (!observerXmlPanels.hasOwnProperty(id)) continue;
-            var record = observerXmlPanels[id];
-            var win = windowById(id);
-            var dataText = observerXmlData(win);
-            try { record.panel.SetAttributeString("dw_observer_data", dataText); } catch (e) {}
-            try { record.host.SetAttributeString("dw_observer_data", dataText); } catch (e) {}
-        }
-    }
-
-    // The server bridge, a console, or an addon can read the live record for one observer
-    // surface without duplicating the Tools view's parsing.
-    globalThis.OpenlockObserverData = function (id) {
-        var win = windowById(String(id || ""));
-        return win ? observerXmlData(win) : "";
-    };
-
-    // The server bridge or a console can address an observer surface by window id.
-    globalThis.OpenlockObserverXml = function (id) {
-        var win = windowById(String(id || ""));
-        if (win && win.layoutPath) showObserverXml(win);
-    };
 
     // --- arbitrary Panorama layouts -----------------------------------------
     // The package declares the windows the shell ships, but the client mounts hundreds more
@@ -2101,7 +1995,6 @@
     // bar when the HUD builds them. Only declared panel windows take part; a closed screen is not
     // a frame, and a window the player closed is left closed.
     function autoFrameOpen() {
-        if (currentGrade === "observer") return;
         var now = Date.now();
         for (var i = 0; i < data.windows.length; i++) {
             var win = data.windows[i];
@@ -2218,186 +2111,29 @@
         renderBar();
     }
 
-    function layoutScheme() {
-        return String(currentScheme || themes.default || "default").toLowerCase();
-    }
-
-    // The server receives one complete snapshot so a save replaces the previous profile rather
-    // than leaving a stale row for a window that was closed. Only known windows are sent; the
-    // profile loader ignores ids that no longer exist in the build and says so.
-    //
-    // Rows are joined with '@', not ';': the payload travels through CitadelConCommand, and a
-    // semicolon there starts a second console command, truncating the snapshot at the scheme.
-    function layoutEntries() {
-        var parts = [];
-        for (var id in geometry) {
-            if (!geometry.hasOwnProperty(id) || !index[id]) continue;
-            var g = geometry[id];
-            if (!g) continue;
-            var x = Math.round(num(g.x));
-            var y = Math.round(num(g.y));
-            var w = Math.round(num(g.w));
-            var h = Math.round(num(g.h));
-            if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)) continue;
-            if (String(id).indexOf(",") >= 0 || String(id).indexOf("@") >= 0) continue;
-            parts.push(id + "," + x + "," + y + "," + w + "," + h);
-        }
-        return parts.join("@");
-    }
-
-    function sendLayout() {
-        var entries = layoutEntries();
-        if (!entries) return false;
-        sendArgs("layout", layoutScheme() + "@" + entries);
-        return true;
-    }
-
-    function saveUiLayout() {
-        if (sendLayout()) {
-            globalThis.OpenlockToast("Layout save", "sent · " + layoutScheme(), "", false);
-            return true;
-        }
-
-        globalThis.OpenlockToast("Layout not saved", "no open window geometry to write", "", true);
-        return false;
-    }
-
-    function loadUiLayout() {
-        sendArgs("layout-load", layoutScheme());
-        $.Schedule(0.5, function () { syncLayoutProfiles(true); });
-    }
-
-    function resetKnownGeometry() {
-        pointerDrag = null;
-        for (var gid in index) if (index.hasOwnProperty(gid)) delete geometry[gid];
-        for (var mid in maximized) if (maximized.hasOwnProperty(mid)) delete maximized[mid];
-        for (var nid in minimized) if (minimized.hasOwnProperty(nid)) delete minimized[nid];
-    }
-
-    function drawGeometry() {
-        for (var id in frames) {
-            if (!frames.hasOwnProperty(id)) continue;
-            var f = frames[id];
-            if (!f || !f.win) continue;
-            applyWindow(f.win);
-            if (pinned[id]) enforcePinnedVisibility(id);
-        }
-        renderBar();
-    }
-
-    function showPackageDefaults() {
-        resetKnownGeometry();
-        drawGeometry();
-    }
-
     // Restore is local and deterministic: every window returns to the geometry the active package
     // declares (or to the live panel's own rect), maximized and minimized state clears, and the
     // current scheme is re-applied. It does not silently reopen windows the player closed.
     function restoreUiLayout() {
-        resetKnownGeometry();
+        pointerDrag = null;
+        for (var gid in geometry) if (geometry.hasOwnProperty(gid)) delete geometry[gid];
+        for (var mid in maximized) if (maximized.hasOwnProperty(mid)) delete maximized[mid];
+        for (var nid in minimized) if (minimized.hasOwnProperty(nid)) delete minimized[nid];
+
         for (var id in frames) {
             if (!frames.hasOwnProperty(id)) continue;
             var f = frames[id];
-            if (f) setFrameVisible(f, true);
-        }
-        applyScheme(currentScheme || themes.default, false);
-        drawGeometry();
+            if (!f || !f.win) continue;
+            setFrameVisible(f, true);
+            applyWindow(f.win);
+            if (pinned[id]) enforcePinnedVisibility(id);
+        }            applyScheme(currentScheme || themes.default, false);
+        renderBar();
         globalThis.OpenlockToast("Layout restored",
-            "geometry reset to the active scheme · " + layoutScheme(), "", false);
+            "geometry reset to the active scheme · " + currentScheme, "", false);
     }
 
-    // Reset-to-defaults is a local reset plus a request to remove the saved profile. Otherwise
-    // the next boot would load the profile the player just asked to discard.
-    function resetUiLayout() {
-        restoreUiLayout();
-        sendArgs("layout-reset", layoutScheme());
-    }
-
-    function applySavedLayoutFor(scheme, announce) {
-        var key = String(scheme || "").toLowerCase();
-        var profile = savedProfiles[key];
-        if (!profile) return false;
-
-        resetKnownGeometry();
-        var known = 0;
-        var ignored = 0;
-        for (var wid in profile) {
-            if (!profile.hasOwnProperty(wid)) continue;
-            if (!index[wid]) {
-                ignored++;
-                continue;
-            }
-
-            var r = profile[wid] || {};
-            var x = num(r.x);
-            var y = num(r.y);
-            var w = num(r.w);
-            var h = num(r.h);
-            if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)
-                || Math.abs(x) > 20000 || Math.abs(y) > 20000
-                || w < 120 || h < 64) {
-                ignored++;
-                continue;
-            }
-
-            geometry[wid] = { x: x, y: y, w: w, h: h, init: true };
-            known++;
-        }
-
-        drawGeometry();
-        if (ignored) {
-            var note = "layout profile ignored " + ignored + " window(s) that no longer exist or are invalid";
-            $.Msg("[dl-openshell] " + note + " scheme=" + key);
-            if (announce) globalThis.OpenlockToast("Layout profile", note, "", true);
-        }
-        $.Msg("[dl-openshell] layout profile applied scheme=", key, " windows=", known, " ignored=", ignored);
-        sendArgs("layout-applied", key + "|" + known + "|" + ignored);
-        if (announce && known) {
-            globalThis.OpenlockToast("Layout loaded", key + " · " + known + " window(s)", "", false);
-        }
-        return true;
-    }
-
-    // The server publishes a JSON payload through the host attribute. Reading it here, instead of
-    // on a fixed timer around the UI buttons, is what makes the saved profile available at boot
-    // even when the addon was mounted before this script started.
-    function syncLayoutProfiles(force) {
-        var raw = "";
-        try { raw = attr("layout", ""); } catch (e) { raw = ""; }
-        if (!raw || (!force && raw === layoutPayload)) return;
-        layoutPayload = raw;
-
-        var payload = null;
-        try { payload = JSON.parse(raw); } catch (e) {
-            $.Msg("[dl-openshell] layout payload unreadable: ", String(e));
-            if (!layoutNoticesSeen.payload) {
-                layoutNoticesSeen.payload = true;
-                globalThis.OpenlockToast("Layout profile", "payload unreadable; package defaults remain", "", true);
-            }
-            return;
-        }
-
-        if (!payload || payload.format !== "openlock.layouts/1") {
-            $.Msg("[dl-openshell] layout payload ignored: unknown format");
-            return;
-        }
-
-        savedProfiles = payload.profiles || {};
-        var notices = payload.notices || [];
-        for (var i = 0; i < notices.length; i++) {
-            var text = String(notices[i]);
-            if (!text || layoutNoticesSeen[text]) continue;
-            layoutNoticesSeen[text] = true;
-            $.Msg("[dl-openshell] layout notice: ", text);
-            globalThis.OpenlockToast("Layout profile", text, "", true);
-        }
-
-        applySavedLayoutFor(layoutScheme(), true);
-    }
-
-    globalThis.OpenlockRestoreLayout = resetUiLayout;
-    globalThis.OpenlockSaveLayout = saveUiLayout;
-    globalThis.OpenlockLoadLayout = loadUiLayout;
+    globalThis.OpenlockRestoreLayout = restoreUiLayout;
 
     globalThis.OpenlockToggle = function () {
         expanded = !expanded;
@@ -2427,7 +2163,7 @@
         try {
             $.DispatchEvent("CitadelConCommand", "hud_free_cursor " + (want ? "1" : "-1"));
         } catch (e) {
-            $.Msg("[dl-openshell] shell cursor dispatch failed: ", String(e));
+            $.Msg("[Openlock] shell cursor dispatch failed: ", String(e));
         }
     }
 
@@ -2436,18 +2172,7 @@
             $.DispatchEvent("CitadelConCommand",
                 "dw_ui openlock-shell|" + eventName + (arg === undefined ? "" : ":" + arg));
         } catch (e) {
-            $.Msg("[dl-openshell] shell send failed: ", String(e));
-        }
-    }
-
-    // Events with a payload use the documented pipe-separated form, so the server receives the
-    // payload as one argument instead of folding it into the event name.
-    function sendArgs(eventName, arg) {
-        try {
-            $.DispatchEvent("CitadelConCommand",
-                "dw_ui openlock-shell|" + eventName + "|" + String(arg === undefined ? "" : arg));
-        } catch (e) {
-            $.Msg("[dl-openshell] shell send failed: ", String(e));
+            $.Msg("[Openlock] shell send failed: ", String(e));
         }
     }
 
@@ -2464,402 +2189,163 @@
         renderBar();
     }
 
-    // The drag path does not need this (it is event-driven). Dwell placement and the context
-    // menu's follow test use it when a client exposes one; Deadlock does not.
-    // Deadlock does not expose GameUI, but the Panorama root does expose MousePosition(): "the
-    // position of the mouse in the parent window" (Panorama Javascript API). That is the engine's
-    // own pointer, not an event argument, so it works while a button is held. The other three are
-    // kept as feature-checked fallbacks for builds that rename or drop the root function.
-    var cursorApi = "none";
-    var cursorFailure = "";
-    var cursorDetail = "";
-    var cursorScaleDetail = "";
-
-    // The engine cursor's coordinate space is undocumented in the addon API. Measure the shell
-    // first and classify the reading against it: a fractional 0..1 pair is normalized, a pair
-    // inside the root is already root-local, and a pair inside Game.GetScreenWidth/Height is a
-    // render-pixel position that must be scaled into the root. A pair outside both is not guessed
-    // at: it is a scale mismatch and the drag refuses rather than moving the window by the wrong
-    // amount.
-    function renderSize() {
-        try {
-            if (typeof Game !== "undefined" && Game) {
-                var pairs = [["GetScreenWidth", "GetScreenHeight"], ["GetRenderWidth", "GetRenderHeight"]];
-                for (var i = 0; i < pairs.length; i++) {
-                    var getW = Game[pairs[i][0]];
-                    var getH = Game[pairs[i][1]];
-                    if (typeof getW !== "function" || typeof getH !== "function") continue;
-                    var w = Number(getW.call(Game));
-                    var h = Number(getH.call(Game));
-                    if (isFinite(w) && isFinite(h) && w > 200 && h > 200) {
-                        return { w: w, h: h, source: "Game." + pairs[i][0] };
-                    }
-                }
-            }
-        } catch (e) {}
-        return { w: screenW, h: screenH, source: "root layout" };
-    }
-
-    function normalizeCursor(x, y) {
-        measureScreen();
-        var ref = renderSize();
-        var sx = ref.w > 200 ? screenW / ref.w : 1;
-        var sy = ref.h > 200 ? screenH / ref.h : 1;
-
-        // A fractional pair in 0..1 can only be normalized. Integer 0/1 stay root pixels: the
-        // two interpretations differ by at most the top-left corner at that scale.
-        var fractional = (x % 1 !== 0) || (y % 1 !== 0);
-        if (fractional && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
-            return { x: clamp(x * screenW, 0, screenW), y: clamp(y * screenH, 0, screenH),
-                mode: "normalized", ref: ref };
-        }
-
-        // Root-local is the common case. The measured shell size, not a hard-coded 1600x900,
-        // decides whether the pair fits.
-        if (x >= -2 && y >= -2 && x <= screenW + 2 && y <= screenH + 2) {
-            return { x: clamp(x, 0, screenW), y: clamp(y, 0, screenH), mode: "root", ref: ref };
-        }
-
-        // Without a render-size reference there is nothing to normalize against. Refuse instead of
-        // silently clamping an out-of-frame reading to the edge, which would look like a cursor
-        // that stopped following the pointer.
-        if (ref.source === "root layout") {
-            cursorScaleDetail = "the cursor read " + x + "," + y + ", outside the shell " + screenW + "×" + screenH +
-                ", and this client exposes no render-size API (Game.GetScreenWidth/GetRenderWidth) to normalize it";
-            return null;
-        }
-
-        // Render pixels: only usable if both axes need the same scale. Different X and Y factors
-        // mean the reference frame and the shell are not the same aspect; a 1:1 drag is impossible
-        // without guessing, so say so.
-        var halfW = ref.w * 0.5;
-        var halfH = ref.h * 0.5;
-        if (ref.w > 200 && ref.h > 200 &&
-            x >= -halfW && y >= -halfH && x <= ref.w + halfW && y <= ref.h + halfH) {
-            if (Math.abs(sx - sy) > 0.02 * Math.max(1, Math.abs(sx), Math.abs(sy))) {
-                cursorScaleDetail = "the engine frame is " + ref.w + "×" + ref.h + " (" + ref.source +
-                    ") and the shell measures " + screenW + "×" + screenH +
-                    ", which need different X and Y scales (" + sx.toFixed(3) + " vs " + sy.toFixed(3) + ")";
-                return null;
-            }
-            return { x: clamp(x * sx, 0, screenW), y: clamp(y * sy, 0, screenH),
-                mode: "scaled", ref: ref };
-        }
-
-        cursorScaleDetail = "the cursor read " + x + "," + y + ", outside the shell " + screenW + "×" + screenH +
-            " and the engine frame " + ref.w + "×" + ref.h + " (" + ref.source + ")";
-        return null;
-    }
+    // The pointer is polled on drag. Both the Panorama root and GameUI are probed because the
+    // reduced CSDK 10 client (the host installer shell) exposes only $.MousePosition.
+    var pointerDrag = null;
 
     function cursorPoint() {
-        cursorFailure = "";
-        cursorDetail = "";
-        cursorScaleDetail = "";
         var p = null;
-        var api = "";
-        var tried = [];
         try {
-            if (typeof $ !== "undefined" && typeof $.MousePosition === "function") {
-                tried.push("$.MousePosition");
-                p = $.MousePosition();
-                if (p !== null && p !== undefined) api = "$.MousePosition";
-            }
+            if (typeof $ !== "undefined" && typeof $.MousePosition === "function") p = $.MousePosition();
         } catch (e) {}
         if (!p) {
             try {
-                if (typeof GameUI !== "undefined" && GameUI.GetCursorPosition) {
-                    tried.push("GameUI.GetCursorPosition");
-                    p = GameUI.GetCursorPosition();
-                    if (p !== null && p !== undefined) api = "GameUI.GetCursorPosition";
-                }
+                if (typeof GameUI !== "undefined" && GameUI.GetCursorPosition) p = GameUI.GetCursorPosition();
             } catch (e) {}
         }
         if (!p) {
             try {
-                if (typeof $ !== "undefined" && $.GetCursorPosition) {
-                    tried.push("$.GetCursorPosition");
-                    p = $.GetCursorPosition();
-                    if (p !== null && p !== undefined) api = "$.GetCursorPosition";
-                }
+                if (typeof $ !== "undefined" && $.GetCursorPosition) p = $.GetCursorPosition();
             } catch (e) {}
         }
         if (!p) {
             try {
-                if (typeof Game !== "undefined" && Game.GetCursorPosition) {
-                    tried.push("Game.GetCursorPosition");
-                    p = Game.GetCursorPosition();
-                    if (p !== null && p !== undefined) api = "Game.GetCursorPosition";
-                }
+                if (typeof Game !== "undefined" && Game.GetCursorPosition) p = Game.GetCursorPosition();
             } catch (e) {}
         }
-        if (!p || !api) {
-            cursorApi = "none";
-            cursorFailure = "api";
-            cursorDetail = tried.length
-                ? tried.join(", ") + " returned no position"
-                : "this client exposes no mouse-position function ($.MousePosition, GameUI.GetCursorPosition, $.GetCursorPosition, Game.GetCursorPosition)";
-            return null;
-        }
-        cursorApi = api;
-
-        var x;
-        var y;
-        if (typeof p === "string") {
-            // Some builds serialize the pair ("x y" / "x,y"); numbers are the only useful part.
-            var parts = p.match(/-?\d+(?:\.\d+)?/g);
-            if (!parts || parts.length < 2) {
-                cursorFailure = "api";
-                cursorDetail = api + " returned an unreadable string";
-                return null;
-            }
-            x = Number(parts[0]);
-            y = Number(parts[1]);
-        } else {
-            x = p.x !== undefined ? p.x : (p[0] !== undefined ? p[0] : (p.position && p.position.x));
-            y = p.y !== undefined ? p.y : (p[1] !== undefined ? p[1] : (p.position && p.position.y));
-        }
-        if (x === undefined || y === undefined) {
-            cursorFailure = "api";
-            cursorDetail = api + " returned no coordinate pair";
-            return null;
-        }
+        if (!p) return null;
+        var x = p.x !== undefined ? p.x : (p[0] !== undefined ? p[0] : (p.position && p.position.x));
+        var y = p.y !== undefined ? p.y : (p[1] !== undefined ? p[1] : (p.position && p.position.y));
+        if (x === undefined || y === undefined) return null;
         x = num(x);
         y = num(y);
-        if (!isFinite(x) || !isFinite(y)) {
-            cursorFailure = "api";
-            cursorDetail = api + " returned a non-numeric position";
-            return null;
+        // Some Panorama builds return a normalized cursor; the tooltip and drag math need pixels.
+        if (Math.abs(x) <= 1 && Math.abs(y) <= 1) {
+            x *= screenW;
+            y *= screenH;
         }
-
-        var at = normalizeCursor(x, y);
-        if (!at) {
-            cursorFailure = "scale";
-            cursorDetail = cursorScaleDetail;
-            return null;
-        }
-        at.source = "engine";
-        at.raw = { x: x, y: y };
-        return at;
+        return { x: x, y: y };
     }
 
-    // The drag is driven by the engine's own cursor (cursorPoint), polled every frame while the
-    // button is held. Panel mouse events are only the start/release signals and a coordinate
-    // fallback: a build that does not deliver MousePosition still gets a refusal, never a window
-    // that silently snaps back to its starting cell.
-    var pointerDrag = null;
-    var dragCapture = null;
-    var dragGeneration = 0;
-
-    function eventPoint(args) {
-        if (!args) return null;
-        for (var i = 0; i < args.length; i++) {
-            var arg = args[i];
-            if (arg && typeof arg === "object") {
-                var candidates = [arg, arg.position, arg.cursor, arg.mouse, arg.data];
-                for (var c = 0; c < candidates.length; c++) {
-                    var p = candidates[c];
-                    if (!p || typeof p !== "object") continue;
-                    var x = p.x !== undefined ? p.x : (p.cursorX !== undefined ? p.cursorX : (p.mouseX !== undefined ? p.mouseX : p[0]));
-                    var y = p.y !== undefined ? p.y : (p.cursorY !== undefined ? p.cursorY : (p.mouseY !== undefined ? p.mouseY : p[1]));
-                    if (x !== undefined && y !== undefined && isFinite(Number(x)) && isFinite(Number(y))) {
-                        return { x: num(x), y: num(y) };
-                    }
-                }
+    function pointerHeld() {
+        try {
+            if (typeof GameUI !== "undefined" && GameUI.IsMouseDown) {
+                var down = GameUI.IsMouseDown(0);
+                if (down === undefined) down = GameUI.IsMouseDown();
+                return !!down;
             }
-            if (typeof arg === "number" && i + 1 < args.length && typeof args[i + 1] === "number") {
-                return { x: num(arg), y: num(args[i + 1]) };
-            }
-        }
+        } catch (e) {}
+        try {
+            if (typeof Game !== "undefined" && Game.IsMouseDown) return !!Game.IsMouseDown();
+        } catch (e) {}
         return null;
     }
 
-    // A full-screen capture for the duration of a drag. It is what makes the release reliable:
-    // the pointer can leave the 30 dp title bar or the corner grip, and the mouseup still lands
-    // here instead of on the game under the shell.
-    function createDragCapture() {
-        if (dragCapture) return;
-        try {
-            dragCapture = $.CreatePanel("Panel", root, "OpenlockDragCapture");
-            dragCapture.AddClass("DragCapture");
-            dragCapture.hittest = true;
-            dragCapture.hittestchildren = false;
-            dragCapture.SetPanelEvent("onmousemove", function () { movePointerDrag(arguments); });
-            dragCapture.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
-        } catch (e) {
-            dragCapture = null;
-            $.Msg("[dl-openshell] drag capture unavailable: ", String(e));
-        }
-    }
+    var lastPointerEvent = "none";
 
-    function dropDragCapture() {
-        if (!dragCapture) return;
-        var panel = dragCapture;
-        dragCapture = null;
-        try { panel.hittest = false; } catch (e) {}
-        try { panel.DeleteAsync(0); } catch (e) {}
-    }
-
-    function beginPointerDrag(id, mode, args) {
-        var win = windowById(id);
-        if (!win) { endPointerDrag(false); return; }
-        if (pointerDrag) endPointerDrag(false);
-        measureScreen();
-        dragGeneration++;
-        var at = cursorPoint();
-        var press = eventPoint(args);
-        if (!at && cursorFailure === "scale") {
-            refuseFeature("Drag refused — scale mismatch", cursorDetail);
-            return;
-        }
-        var g = ensureGeometry(win);
-        pointerDrag = {
-            generation: dragGeneration,
-            id: id,
-            mode: mode,
-            startX: at ? at.x : null,
-            startY: at ? at.y : null,
-            anchorSource: at ? "engine" : "",
-            press: press,
-            x: g.x,
-            y: g.y,
-            w: g.w,
-            h: g.h,
-            moved: false,
-            downAt: Date.now(),
-            at: Date.now()
-        };
-        hideGrid();
-        var f = frames[id];
-        if (f && f.cost) f.cost.text = "drag";
-        createDragCapture();
-        $.Schedule(0.016, pollPointerDrag);
-    }
-
-    // The engine cursor, read once per UI frame. This is the same pointer the game uses for aim,
-    // so it is live while the button is held; no per-move event or drop grid is needed.
+    // The engine does not deliver a mousemove stream to Panorama panels, but it does expose the
+    // cursor and the button state. One scheduled poll reads both; the delta since mousedown is
+    // written straight into the window's geometry. No capture panel, no grid, no cell snapping.
     function pollPointerDrag() {
         if (!pointerDrag) return;
-        var generation = pointerDrag.generation;
-        var at = cursorPoint();
-        if (at) applyPointer(at, "engine");
-        else if (cursorFailure === "scale") {
-            var scaleWhy = cursorDetail;
-            endPointerDrag(false);
-            refuseFeature("Drag refused — scale mismatch", scaleWhy);
+        if (Date.now() - pointerDrag.at > 20000) {
+            endPointerDrag(true);
             return;
         }
-        if (!pointerDrag || pointerDrag.generation !== generation) return;
-        if (Date.now() - pointerDrag.at > 30000) { endPointerDrag(true); return; }
-        $.Schedule(0.016, pollPointerDrag);
-    }
 
-    function applyPointer(at, source) {
-        if (!pointerDrag) return;
-        if (pointerDrag.startX === null) {
-            // Anchor on the first reading that arrives after the capture exists. In particular the
-            // mousedown's title-panel coordinates are not used: they are in a different space from
-            // a capture move, and using them is the anchor-space jump this build had.
-            pointerDrag.startX = at.x;
-            pointerDrag.startY = at.y;
-            pointerDrag.anchorSource = source;
-            pointerDrag.at = Date.now();
-            return;
-        }
-        if (source !== pointerDrag.anchorSource) {
-            var mismatch = pointerDrag;
-            endPointerDrag(false);
-            refuseFeature("Drag refused — anchor-space mismatch",
-                "the anchor was read in " + mismatch.anchorSource + "-space at " +
-                Math.round(mismatch.startX) + "," + Math.round(mismatch.startY) +
-                " but the next move arrived in " + source + "-space at " +
-                Math.round(at.x) + "," + Math.round(at.y) +
-                "; mixing the two would move the window by the panel offset");
+        // IsMouseDown is authoritative only after it has reported a press. On a build where the
+        // method exists but always reports false, the onmouseup binding is the release path and
+        // the first poll must not cancel the drag.
+        var held = pointerHeld();
+        if (held === true) pointerDrag.heldSeen = true;
+        if (pointerDrag.heldSeen && held === false) {
+            endPointerDrag(true);
             return;
         }
 
         var win = windowById(pointerDrag.id);
-        if (!win) { endPointerDrag(false); return; }
-        var dx = at.x - pointerDrag.startX;
-        var dy = at.y - pointerDrag.startY;
-        if (dx === 0 && dy === 0) {
-            pointerDrag.at = Date.now();
+        var at = cursorPoint();
+        if (!win || !at) {
+            endPointerDrag(false);
             return;
         }
 
         var g = ensureGeometry(win);
+        var dx = at.x - pointerDrag.startX;
+        var dy = at.y - pointerDrag.startY;
+        lastPointerEvent = "poll " + Math.round(dx) + "," + Math.round(dy);
         if (pointerDrag.mode.indexOf("resize") === 0) {
             var west = pointerDrag.mode.indexOf("w") >= 0;
             var north = pointerDrag.mode.indexOf("n") >= 0;
+            var panelWindow = isPanelWindow(win);
             var width = clamp(pointerDrag.w + (west ? -dx : dx), num(win.minWidth) || 160, screenW);
             var height = clamp(pointerDrag.h + (north ? -dy : dy), num(win.minHeight) || 120, screenH);
             if (west) g.x = clamp(pointerDrag.x + (pointerDrag.w - width), 0, Math.max(0, screenW - 160));
-            // A panel frame's title is CHROME_DP above its content, so its content top can be a
-            // little lower than a shell frame's; both edges move so a north drag keeps the bottom
-            // fixed. This applies to live game panels too; the panel is scaled to the new height.
-            var minY = isPanelWindow(win) ? SHELL_TOP_DP + CHROME_DP : SHELL_TOP_DP;
-            if (north) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), minY, Math.max(minY, screenH - 80));
+            if (north && !panelWindow) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
             g.w = width;
-            g.h = height;
+            if (!panelWindow) g.h = height;
         } else {
             g.x = clamp(pointerDrag.x + dx, 4, Math.max(4, screenW - 160));
             g.y = clamp(pointerDrag.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
         }
-        pointerDrag.moved = true;
-        pointerDrag.at = Date.now();
         g.init = true;
         applyWindow(win);
+        $.Schedule(0.016, pollPointerDrag);
     }
 
-    // Event coordinates are a fallback for a build where MousePosition is absent. They are only
-    // used for a capture-space move, never for the press anchor, so the first delta cannot jump by
-    // the title bar's screen offset.
-    function movePointerDrag(args) {
-        if (!pointerDrag) return;
+    // A Panorama panel does not deliver a stream of mousemove events. GameUI does expose the
+    // cursor position and button state, so a drag is a bounded poll: mousedown captures the
+    // start point, a scheduled tick reads the pointer and writes the new rectangle, and release
+    // ends it. No grid, no engine drop target, no cell snapping.
+    function beginPointerDrag(id, mode) {
+        var win = windowById(id);
+        lastPointerEvent = "down " + mode;
+        if (!win) { endPointerDrag(false); return; }
         var at = cursorPoint();
-        if (at) { applyPointer(at, "engine"); return; }
-        if (cursorFailure === "scale") {
-            var scaleWhy = cursorDetail;
-            endPointerDrag(false);
-            refuseFeature("Drag refused — scale mismatch", scaleWhy);
+        if (!at) {
+            refuseFeature("Drag refused",
+                "this client does not expose GameUI.GetCursorPosition; the pointer probe above the window says which API is missing");
             return;
         }
-        var ev = eventPoint(args);
-        if (ev) applyPointer(ev, "event");
+        var g = ensureGeometry(win);
+        pointerDrag = {
+            id: id,
+            mode: mode,
+            startX: at.x,
+            startY: at.y,
+            x: g.x,
+            y: g.y,
+            w: g.w,
+            h: g.h,
+            at: Date.now(),
+            heldSeen: false
+        };
+        hideGrid();
+        var startedFrame = frames[id];
+        if (startedFrame && startedFrame.cost) startedFrame.cost.text = "drag";
+        $.Schedule(0.016, pollPointerDrag);
     }
 
     function endPointerDrag(commit) {
         if (!pointerDrag) return;
-        var drag = pointerDrag;
+        lastPointerEvent = "up ";
+        var id = pointerDrag.id;
         pointerDrag = null;
-        dragGeneration++;
-        dropDragCapture();
-        var win = windowById(drag.id);
-        if (!win) return;
-        if (!commit) { applyWindow(win); return; }
+        var win = windowById(id);
+        if (!win || !commit) return;
         var g = ensureGeometry(win);
         applyWindow(win);
-        sendLayout();
-
-        // A press that produced neither a cursor nor a single move is a drag this client cannot
-        // serve. Name which of the three spaces failed, so the player's one-line report is enough:
-        // no usable cursor API; a cursor we cannot map onto the measured shell; or a press anchor
-        // in title-panel space with moves in capture space.
-        if (!drag.moved && drag.startX === null && Date.now() - drag.downAt > 250) {
-            if (drag.press) {
-                refuseFeature("Drag refused — anchor-space mismatch",
-                    "the press arrived at " + Math.round(drag.press.x) + "," + Math.round(drag.press.y) +
-                    " in the title panel's space, no engine cursor was available to convert it, and no capture-space move arrived; using it directly would jump the window by the panel offset");
-            } else {
-                refuseFeature("Drag refused — API absent",
-                    "no window can follow the cursor: " + cursorDetail);
-            }
-        }
+        send("layout", id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
+            Math.round(g.w) + " " + Math.round(g.h));
     }
 
     function makeDraggable(panel, id, mode) {
         if (!panel) return;
         try {
-            panel.SetPanelEvent("onmousedown", function () { beginPointerDrag(id, mode, arguments); });
+            // onmousedown starts the poll. SetDraggable is deliberately NOT called: it hands the
+            // panel to the engine's drag-and-drop layer, which is where the 100 dp cell snap came
+            // from, and it does not deliver a JS drag event this build can use.
+            panel.SetPanelEvent("onmousedown", function () { beginPointerDrag(id, mode); });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
         } catch (e) {
             refuseFeature("Drag refused", "the engine rejected the drag binding: " + String(e));
@@ -2934,7 +2420,8 @@
         g.init = true;
         hideGrid();
         applyWindow(win);
-        sendLayout();
+        send("layout", win.id + " " + Math.round(g.x) + " " + Math.round(g.y) + " " +
+            Math.round(g.w) + " " + Math.round(g.h));
     }
 
     // --- shell views ---------------------------------------------------------
@@ -2974,15 +2461,6 @@
             var id = "";
             try { id = p.id || ""; } catch (e) {}
             if (id.indexOf("DWHost_") === 0) return p;
-            // A launcher client can keep the shell under its standalone anchor while a
-            // server-mounted wrapper bridges dwv_* attributes onto that anchor. The wrapper
-            // marks the anchor with dw_live so it is distinguishable from any other generic
-            // HUD panel by the same name.
-            if (id === "OpenlockStandaloneHost") {
-                try {
-                    if (p.GetAttributeString && p.GetAttributeString("dw_live", "") !== "") return p;
-                } catch (e) {}
-            }
             try { p = p.GetParent(); } catch (e) { break; }
             depth++;
         }
@@ -3066,176 +2544,33 @@
         return true;
     }
 
-    function formatBytes(value) {
-        var bytes = Number(value) || 0;
-        if (bytes <= 0) return "0 B";
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KiB";
-        return (bytes / (1024 * 1024)).toFixed(2) + " MiB";
-    }
-
-    function renderBuildStrip() {
-        if (!buildStrip) return;
-
-        var state = liveBuild;
-        var phase = state ? String(state.state || (state.stage === "installed" ? "ok" : "running")) : "";
-        var running = phase === "running";
-        var failed = phase === "failed";
-
-        buildStrip.SetHasClass("Running", running);
-        buildStrip.SetHasClass("Failed", failed);
-        if (!running && !failed) return;
-
-        if (buildStageLabel) {
-            buildStageLabel.text = (failed ? "build failed · " : "building · ") +
-                String(state.stage || "unknown");
-        }
-        if (buildDetailLabel) {
-            var bits = [];
-            if (state.resources) bits.push(state.resources + " resource(s)");
-            if (state.vpkBytes) bits.push(formatBytes(state.vpkBytes));
-            if (state.message) bits.push(String(state.message));
-            if (state.updatedAt) bits.push(String(state.updatedAt));
-            buildDetailLabel.text = bits.join("  ·  ");
-        }
-    }
-
-    function refreshOpenWindow(id) {
-        var f = frames[id];
-        if (f && open[id] && f.win) renderOwn(f.win, f.body);
-    }
-
-    function refreshOpenTools() {
-        refreshOpenWindow("tools");
-    }
-
-    // A Deadworks addon ships its windows as real shploingus packages (SHPKG002/SHPKG003), either
-    // as .shpkg files or inside a VPK. The server discovers those frames, verifies their digest,
-    // and sends the validated window records here. The shell does not read archives or invent a
-    // layout path: it mounts the content kind and controls the package declared.
-    function syncAddons(force) {
-        var raw = attr("addons", "");
-        if (!force && raw === addonPayload) return;
-        addonPayload = raw;
-        if (!raw) return;
-
-        var payload = null;
-        try { payload = JSON.parse(raw); } catch (e) {
-            if (!liveStatusWarned.addons) {
-                liveStatusWarned.addons = true;
-                $.Msg("[dl-openshell] addon payload unreadable: ", String(e));
-            }
-            return;
-        }
-
-        if (!payload || payload.format !== "openlock.addons/2") {
-            $.Msg("[dl-openshell] addon payload ignored: unknown format");
-            return;
-        }
-
-        data.addonPackages = payload.packages || [];
-        var windows = payload.windows || [];
-        var added = 0;
-        for (var i = 0; i < windows.length; i++) {
-            var win = windows[i];
-            if (!win || !win.id || index[win.id]) continue;
-            data.windows.push(win);
-            index[win.id] = win;
-            added++;
-        }
-
-        if (added) {
-            $.Msg("[dl-openshell] addon windows merged: ", added, " from ", data.addonPackages.length, " package(s)");
-            refreshOpenWindow("mods");
-            refreshOpenWindow("__windows");
-            updateObserverXml(true);
-        }
-    }
-
-    // The server bridge copies the installer's records onto the shell host as dwv_build and
-    // dwv_update. An empty attribute is not an error: it means no live producer, and the window
-    // then says plainly that it is showing the record baked at pack time.
-    function syncLiveStatus(force) {
-        var raw = attr("build", "");
-        if (force || raw !== liveBuildRaw) {
-            liveBuildRaw = raw;
-            liveBuild = null;
-            if (raw) {
-                try { liveBuild = JSON.parse(raw); } catch (e) {
-                    if (!liveStatusWarned.build) {
-                        liveStatusWarned.build = true;
-                        $.Msg("[dl-openshell] build record unreadable: ", String(e));
-                    }
-                }
-            }
-            renderBuildStrip();
-            refreshOpenTools();
-            setGrade(gradeFromRecords());
-        }
-
-        var updateRaw = attr("update", "");
-        if (force || updateRaw !== liveUpdateRaw) {
-            liveUpdateRaw = updateRaw;
-            liveUpdate = null;
-            if (updateRaw) {
-                try { liveUpdate = JSON.parse(updateRaw); } catch (e) {
-                    if (!liveStatusWarned.update) {
-                        liveStatusWarned.update = true;
-                        $.Msg("[dl-openshell] update record unreadable: ", String(e));
-                    }
-                }
-            }
-            refreshOpenTools();
-        }
-
-        updateObserverXml();
-    }
-
-    function currentUpdate() {
-        return liveUpdate || data.update || {};
-    }
-
     function renderTools(body) {
-        var state = liveBuild || data.buildState || {};
+        var state = data.buildState || {};
         var stages = state.stages || [];
-        var phase = state.state || (state.stage === "installed" ? "ok" : "unknown");
 
         headingXd(body, "last VPK build");
-        rowXd(body, (liveBuild ? "live" : "baked") + "  ·  stage " + (state.stage || "unknown") +
-            "  ·  " + (state.state || "unknown") + "  ·  " +
-            (state.updatedAt || state.finishedAt || "no timestamp"), liveBuild ? "ViewLine" : "ViewMuted");
-        if (!liveBuild) {
-            rowXd(body, "no live producer on this shell; the rows below are the last record baked at pack time", "ViewMuted");
-        }
-        if (state.message) rowXd(body, state.message, "ViewMuted");
-        if (state.error) rowXd(body, state.error, "ViewMuted");
-
         if (stages.length) {
+            rowXd(body, "stage " + (state.stage || "unknown") + "  ·  " + (state.finishedAt || "no timestamp"), "ViewMuted");
             for (var s = 0; s < stages.length; s++) {
                 var stage = stages[s];
-                var ok = stage.ok === true || stage.state === "ok";
                 var detail = "";
                 if (stage.resources) detail = "  ·  " + stage.resources + " resource(s)";
-                if (stage.bytes) detail += "  ·  " + formatBytes(stage.bytes);
-                if (stage.state) detail += "  ·  " + stage.state;
-                if (stage.startedAt) detail += "  ·  " + stage.startedAt +
-                    (stage.finishedAt ? " → " + stage.finishedAt : "");
-                rowXd(body, (ok ? "[x] " : stage.state === "failed" ? "[!] " : "[ ] ") +
-                    stage.name + detail, ok ? "ViewLine" : "ViewMuted");
+                if (stage.bytes) detail += "  ·  " + Math.round(stage.bytes / 1024) + " KiB";
+                rowXd(body, (stage.ok ? "[x] " : "[ ] ") + stage.name + detail, stage.ok ? "ViewLine" : "ViewMuted");
             }
-        } else if (!state.message) {
-            rowXd(body, "no build record yet — the next install writes build.json beside the game", "ViewMuted");
+        } else {
+            rowXd(body, "no build record yet — the next install writes shell/alpha-shell/build.json", "ViewMuted");
         }
 
         if (state.vpk) {
             headingXd(body, "vpk");
-            rowXd(body, state.vpk + "  ·  " + formatBytes(state.vpkBytes));
+            rowXd(body, state.vpk + (state.vpkBytes ? "  ·  " + Math.round(state.vpkBytes / 1024) + " KiB" : ""));
             if (state.resources) rowXd(body, state.resources + " compiled resource(s)", "ViewMuted");
             if (state.path) rowXd(body, state.path, "ViewMuted");
         }
 
         headingXd(body, "update");
-        var update = currentUpdate();
+        var update = data.update || {};
         if (update.available) {
             rowXd(body, (update.version || "staged") + "  ·  " + (update.title || "Update ready"));
             if (update.notes) rowXd(body, update.notes, "ViewMuted");
@@ -3573,89 +2908,6 @@
         return runConsole(String(text || ""));
     };
 
-    // A package layout is drawn from its node tree, not BLoadLayout. This is the port of the
-    // original client-side DOM path: every panel is created with $.CreatePanel, so hittest and
-    // hittestchildren are ours to set and a control cannot be swallowed by a pointer-transparent
-    // host. A package mounted as a VPK still uses BLoadLayout only when it shipped no source XML.
-    var liveTags = {
-        Panel: true, Label: true, Button: true, Image: true, TextEntry: true,
-        ProgressBar: true, Slider: true, DropDown: true
-    };
-
-    function liveStyleKey(name) {
-        var parts = String(name || "").split("-");
-        var key = parts[0] || "";
-        for (var i = 1; i < parts.length; i++) {
-            key += parts[i].charAt(0).toUpperCase() + parts[i].substring(1);
-        }
-        return key;
-    }
-
-    function buildLiveNode(parent, node, depth, addon) {
-        if (!parent || !node || depth > 24) return null;
-        var tag = liveTags[node.tag] ? node.tag : "Panel";
-        var panel = null;
-        try {
-            panel = $.CreatePanel(tag, parent, node.id || "");
-        } catch (e) {
-            try { panel = $.CreatePanel("Panel", parent, ""); } catch (e2) { return null; }
-        }
-        if (!panel) return null;
-
-        var classes = String(node.class || "").split(/\s+/);
-        for (var c = 0; c < classes.length; c++) {
-            if (classes[c]) {
-                try { panel.AddClass(classes[c]); } catch (e) {}
-            }
-        }
-
-        if (node.text !== undefined && node.text !== null && node.text !== "") {
-            try {
-                if (tag === "Label" || tag === "Button") panel.text = String(node.text);
-                else panel.SetAttributeString("text", String(node.text));
-            } catch (e) {}
-        }
-
-        var attrs = node.attrs || {};
-        for (var key in attrs) {
-            if (!attrs.hasOwnProperty(key)) continue;
-            var value = String(attrs[key]);
-            try {
-                if (key === "src" && typeof panel.SetImage === "function") panel.SetImage(value);
-                else if (key === "enabled") panel.enabled = value !== "false";
-                else if (key === "visible") panel.style.visibility = value === "false" ? "collapse" : "visible";
-                else panel.SetAttributeString(key, value);
-            } catch (e) {}
-        }
-
-        var styles = node.styles || {};
-        for (var prop in styles) {
-            if (!styles.hasOwnProperty(prop)) continue;
-            try { panel.style[liveStyleKey(prop)] = String(styles[prop]); } catch (e) {}
-        }
-
-        // The old DOM path set these itself. A Label or Image that takes the pointer hides the
-        // button or row behind it; a Panel that ignores the pointer makes every child dead.
-        var pointer = tag !== "Label" && tag !== "Image" && tag !== "ProgressBar";
-        panel.hittest = pointer;
-        panel.hittestchildren = true;
-
-        var children = node.children || [];
-        for (var i = 0; i < children.length; i++) {
-            buildLiveNode(panel, children[i], depth + 1, addon);
-        }
-        return panel;
-    }
-
-    function renderLiveTree(host, win) {
-        var tree = win.liveTree || [];
-        if (!tree.length) return false;
-        for (var i = 0; i < tree.length; i++) {
-            buildLiveNode(host, tree[i], 0, win.addon || "");
-        }
-        return true;
-    }
-
     function renderOwn(win, body) {
         body.RemoveAndDeleteChildren();
 
@@ -3707,11 +2959,6 @@
                             (ext ? "  ·  " + ext + " extension(s)" : "") + "  ·  " + scheme.source,
                         function () {
                             applyScheme(scheme.id, true);
-                            if (!applySavedLayoutFor(scheme.id, true)) {
-                                showPackageDefaults();
-                                globalThis.OpenlockToast("Layout",
-                                    "no saved layout for " + scheme.id + "; package defaults", "", false);
-                            }
                             renderOwn(win, body);
                         });
                 })(themes.schemes[sc]);
@@ -3736,17 +2983,16 @@
             rowXd(body, "game " + (build.gameVersion || "unknown"), "ViewMuted");
 
             headingXd(body, "the layout is a schema");
-            rowXd(body, "Windows, tabs and pins come from shell/alpha-shell/package.shspec. Changing a geometry row changes the default; M and the corner grip change this window, and Save writes the active scheme's profile.", "ViewMuted");
+            rowXd(body, "Windows, tabs and pins come from shell/alpha-shell/package.shspec. Changing a geometry row changes the default; M and the corner grip change this session.", "ViewMuted");
             rowXd(body, data.windows.length + " declared windows · " + data.tabs.length + " tabs · " + data.pins.length + " pins", "ViewMuted");
-            actionXd(body, "Save UI layout  ·  " + layoutScheme(), saveUiLayout);
-            actionXd(body, "Load saved layout  ·  " + layoutScheme(), loadUiLayout);
-            actionXd(body, "Reset to package defaults  ·  " + layoutScheme(), resetUiLayout);
+            actionXd(body, "Restore UI layout  ·  " + (currentScheme || themes.default), restoreUiLayout);
 
             headingXd(body, "input");
-            // This build exposes no cursor-position API (GameUI is absent). Drag is carried by
-            // the panel mouse events; this line states what is available instead of faking a
-            // pointer coordinate.
-            rowXd(body, "drag the title bar to move · drag a corner grip to resize · cursor coordinates unavailable in this client", "ViewMuted");
+            var pointerAt = cursorPoint();
+            var held = pointerHeld();
+            rowXd(body, "pointer " + (pointerAt ? (Math.round(pointerAt.x) + ", " + Math.round(pointerAt.y)) : "unavailable") +
+                "  ·  mouse " + (held === null ? "unavailable" : (held ? "down" : "up")) +
+                "  ·  GameUI " + (typeof GameUI !== "undefined" ? "present" : "absent"), "ViewMuted");
 
             headingXd(body, "server");
             rowXd(body, connected() ? "connected" : "not connected — showing the declared package only", "ViewMuted");
@@ -3764,28 +3010,6 @@
             for (var s = 0; s < mounts.length; s++) {
                 rowXd(body, mounts[s].kind + "  " + mounts[s].path + "  [" + mounts[s].mounts + "]",
                     mounts[s].mounts === "empty" || mounts[s].mounts === "missing" ? "ViewMuted" : "ViewLine");
-            }
-
-            headingXd(body, "deadworks addon windows");
-            var addonPackages = data.addonPackages || [];
-            if (!addonPackages.length) {
-                rowXd(body, "no shploingus package (.shpkg) is mounted", "ViewMuted");
-            }
-            for (var ap = 0; ap < addonPackages.length; ap++) {
-                (function (pkg) {
-                    rowXd(body, (pkg.id || "?") + "  " + (pkg.version || "") + "  ·  " + (pkg.archive || ""), "ViewLine");
-                    var ids = pkg.windowIds || [];
-                    for (var iw = 0; iw < ids.length; iw++) {
-                        var addonWin = windowById(ids[iw]);
-                        if (!addonWin) continue;
-                        actionXd(body, "Open  " + (addonWin.title || addonWin.id), function () { openWindow(addonWin.id); });
-                    }
-                    var refusals = pkg.refusals || [];
-                    for (var ir = 0; ir < refusals.length; ir++) {
-                        rowXd(body, "REFUSED " + refusals[ir].file + ":" + refusals[ir].line + "  " +
-                            refusals[ir].subject + " — " + refusals[ir].why, "ViewMuted");
-                    }
-                })(addonPackages[ap]);
             }
 
             headingXd(body, "mounted scheme extensions");
@@ -3809,29 +3033,6 @@
 
         if (kind === "tools") {
             renderTools(body);
-            return;
-        }
-
-        if (kind === "addon-layout") {
-            var addonHost = $.CreatePanel("Panel", body, "");
-            addonHost.AddClass("LayoutHost");
-            addonHost.hittest = true;
-            addonHost.hittestchildren = true;
-
-            if (renderLiveTree(addonHost, win)) return;
-
-            if (!win.layoutPath) {
-                rowXd(body, "the package declares no delivered layout for this window", "ViewMuted");
-                return;
-            }
-
-            // Compiled-only packages keep the mounted-resource path. Source XML packages take the
-            // DOM path above, where every control owns its pointer surface.
-            try {
-                addonHost.BLoadLayout(win.layoutPath, false, false);
-            } catch (e) {
-                globalThis.OpenlockToast("Addon layout refused", String(e), "", true);
-            }
             return;
         }
 
@@ -3863,6 +3064,15 @@
                 })(layouts[l]);
             }
             if (layouts.length > 24) rowXd(body, "type to open any of the other " + (layouts.length - 24), "ViewMuted");
+            return;
+        }
+
+        if (kind === "api-viewer") {
+            headingXd(body, "openlock shell");
+            rowXd(body, "layout: openlock_shell.xml");
+            rowXd(body, "data: openlock_shell_data.js (generated from package.shspec)");
+            rowXd(body, "live panels: framed, never reparented");
+            if (!connected()) rowXd(body, "server: not connected", "ViewMuted");
             return;
         }
 
@@ -3919,7 +3129,7 @@
                 var isBound = !!b && alive(b.panel) && panelVisible(b.panel);
                 var candidate = (win.panelCandidates[0].name || win.panelCandidates[0].kind);
                 var label = (isBound ? "● " : "○ ") + win.title + "  →  " + candidate +
-                    (isBound ? "  ·  live" : "  ·  not on screen");
+                    (isBound ? "  ·  scale " + Math.round((bound[win.id].natural.w ? 1 : 1) * 100) + "%" : "  ·  not on screen");
                 actionXd(body, label, function () {
                     if (hookWindow(win.id)) renderWindowBrowser(body);
                 });
@@ -3959,12 +3169,6 @@
     var pollCount = 0;
     function poll() {
         pollCount++;
-        syncLiveStatus(false);
-        var request = attr("layoutrequest", "");
-        if (request && request !== layoutRequest) {
-            layoutRequest = request;
-            if (request.indexOf("save:") === 0) saveUiLayout();
-        }
         var want = attr("active", "");
         var sig = want + "|" + attr("view", "") + "|" + attr("refusal", "") + "|" + attr("body", "").length;
 
@@ -3976,8 +3180,6 @@
             var f = frames[activeId];
             if (f && !isPanelWindow(f.win)) renderOwn(f.win, f.body);
         }
-
-        if ((pollCount % 4) === 0) syncAddons(false);
 
         // A framed panel can be destroyed and rebuilt by the game (the shop does this on every
         // open). Re-binding is the only reaction; a missing panel is a refusal in the window.
@@ -3996,7 +3198,6 @@
         // layout while the shell is open. The check is every other second, not every poll.
         // Only the small autoFrame set is retried here. HUD discovery is a one-shot sweep on
         // open (or the explicit Scan action), never part of the 2s poll.
-        if ((pollCount % 4) === 0) syncLayoutProfiles(false);
         if (expanded && (pollCount % 4) === 0) autoFrameOpen();
         if (expanded && (pollCount % 4) === 2) scanPopups();
 
@@ -4010,17 +3211,15 @@
         try {
             if (typeof Steam !== "undefined" && Steam.GetPersonaName) name = String(Steam.GetPersonaName() || "");
         } catch (e) {
-            $.Msg("[dl-openshell] Steam persona unavailable: ", String(e));
+            $.Msg("[Openlock] Steam persona unavailable: ", String(e));
         }
         if (!name) {
             try {
                 if (typeof Game !== "undefined" && Game.GetSteamPersonaName) name = String(Game.GetSteamPersonaName() || "");
             } catch (e) {}
         }
-        // Never fall back to a value baked at build time: that value belongs to the builder, not
-        // to whoever is running this install. If Steam is unavailable, show the shell name.
-        shellDisplayName = name || "dl-openshell";
-        if (launcherLabel) launcherLabel.text = shellDisplayName;
+        if (!name) name = String(data.steamName || "");
+        if (launcherLabel) launcherLabel.text = name || "Openlock";
     }
 
     // A click or leaving the shell retires the pointer tooltip. The context menu has its own
@@ -4029,40 +3228,27 @@
         root.SetPanelEvent("onmouseactivate", hideDwell);
         root.SetPanelEvent("onmouseout", hideDwell);
     } catch (e) {
-        $.Msg("[dl-openshell] tooltip lifetime REFUSED: ", String(e));
+        $.Msg("[Openlock] tooltip lifetime REFUSED: ", String(e));
     }
 
-    // Panel events route up the parent chain. The root therefore keeps a drag alive while the
-    // pointer is over any shell chrome and catches the release even outside the title bar.
+    // The launcher is hit-testable and always on screen, so it is the safest panel to learn what
+    // this build's event system actually delivers before wiring a drag to it again.
     try {
-        root.SetPanelEvent("onmousemove", function () { if (pointerDrag) movePointerDrag(arguments); });
-        root.SetPanelEvent("onmouseup", function () { if (pointerDrag) endPointerDrag(true); });
+        if (launcherBar) {
+            launcherBar.SetPanelEvent("onmouseover", function () { lastPointerEvent = "over"; });
+            launcherBar.SetPanelEvent("onmousemove", function () { lastPointerEvent = "mov " + probeArgs(arguments); });
+            launcherBar.SetPanelEvent("onmousedown", function () { lastPointerEvent = "down " + probeArgs(arguments); });
+        }
     } catch (e) {
-        $.Msg("[dl-openshell] drag capture REFUSED: ", String(e));
+        lastPointerEvent = "bind-error";
     }
 
     measureScreen();
     frameTick();
-    refreshCosts();
-
-    // One line in console.log records which pointer source this client actually exposes. It is a
-    // report, not synthesized input: nothing here moves the cursor or opens anything.
-    (function () {
-        var at = cursorPoint();
-        $.Msg("[dl-openshell] pointer api: ", cursorApi, " at ",
-            at ? (Math.round(at.x) + "," + Math.round(at.y)) : "unavailable",
-            " screen ", Math.round(screenW), "x", Math.round(screenH),
-            " frameTime ", (engineNowMs() >= 0 ? "yes" : "no"));
-    })();
-
+    frameClock();
     setLauncherName();
     $.Schedule(2.0, setLauncherName);
-    setGrade(gradeFromRecords());
     applyScheme(themes.default, false);
-    syncLayoutProfiles(true);
-    syncLiveStatus(true);
-    syncAddons(true);
-    $.Schedule(0.6, function () { syncLayoutProfiles(true); syncLiveStatus(true); syncAddons(true); });
     renderBar();
     startClock();
 
@@ -4077,11 +3263,11 @@
         if (!build.commit) line.push("no git metadata");
         if (build.generatedAt) line.push(build.generatedAt);
         globalThis.OpenlockToast(
-            shellDisplayName + " " + (build.version ? "v" + build.version : (data.version || "")),
+            "Openlock " + (build.version ? "v" + build.version : (data.version || "")),
             line.join("  ·  ") || "layout package loaded",
             "",
             false);
-        $.Msg("[dl-openshell] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
+        $.Msg("[Openlock] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
             " commit=", (build.commit || "unknown"), " game=", (build.gameVersion || "unknown"),
             " windows=", data.windows.length, " refusals=", data.refusals.length);
     });
