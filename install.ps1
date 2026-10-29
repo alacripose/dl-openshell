@@ -927,10 +927,11 @@ if (Test-Path $compiler) {
 #     them up on its next map reload. This is the tools host path; a shipping install still packs.
 if ($Live) {
     $liveRoot = Join-Path $addonRoot 'panorama'
+    $compiledRoot = Join-Path $build 'panorama'
     if (Test-Path -LiteralPath $liveRoot) { Remove-Item -LiteralPath $liveRoot -Recurse -Force }
     $liveCount = 0
-    foreach ($file in @(Get-ChildItem $build -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c)) {
-        $relative = $file.FullName.Substring($build.Length + 1)
+    foreach ($file in @(Get-ChildItem $compiledRoot -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c)) {
+        $relative = $file.FullName.Substring($compiledRoot.Length + 1)
         $target = Join-Path $liveRoot $relative
         New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
         Copy-Item -LiteralPath $file.FullName -Destination $target -Force
