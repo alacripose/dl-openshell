@@ -30,6 +30,10 @@ param(
     # so this process must not draw a window of its own. A boot-shell host is not a headless run -
     # the build record it publishes is what that shell renders.
     [switch]$BootShellHost,
+    # Rebuild and replace the mounted archive while the tools client is running. The search path
+    # is already in gameinfo.gi, so this mode never rewrites it; the client's map reload picks up
+    # the new archive. It is for the CSDK10 tools host, not the shipping game.
+    [switch]$Live,
     [ValidateSet('dev', 'observer', 'player')]
     [string]$Grade = '',
     [switch]$VpkOnly,
@@ -120,8 +124,18 @@ $runningTarget = @(Get-Process deadlock,project8 -ErrorAction SilentlyContinue |
     try { $path = [string]$_.Path } catch { }
     $path -and $path.StartsWith($DeadlockRoot, [System.StringComparison]::OrdinalIgnoreCase)
 })
+$skipMount = $false
 if ($runningTarget.Count -gt 0) {
-    throw 'Deadlock is running from the install tree. Close it and run this again; gameinfo.gi and a mounted VPK are read at launch.'
+    if (-not $Live) {
+        throw 'Deadlock is running from the install tree. Close it and run this again, or pass -Live to replace the mounted archive for a map reload.'
+    }
+    $mountedText = ''
+    try { $mountedText = [System.IO.File]::ReadAllText($gameinfo).Replace('\', '/').ToLowerInvariant() } catch { }
+    if ($mountedText -notmatch 'citadel/addons/mods') {
+        throw 'Live install needs citadel/addons/mods mounted already; run a normal install once before using -Live.'
+    }
+    $skipMount = $true
+    Write-Host 'Live install: the tools client is running; the archive will be replaced and gameinfo.gi left untouched.'
 }
 
 # The source can be beside the script, in the parent checkout, in OPENLOCK_SOURCE, or cloned from
@@ -907,6 +921,29 @@ if (Test-Path $compiler) {
     Write-BuildRecord -Stage 'compile' -State 'ok' -Resources $compiledCount -Message "compiled $compiledCount Panorama resources"
 }
 
+# 3b. Live tools update. The CSDK10 tools client reads loose compiled `_c` resources from the
+#     mounted addon directory when it reloads a map, while the packed VPK stays open and cannot be
+#     replaced. Copy only the compiled resources, never the VPK, and let the running client pick
+#     them up on its next map reload. This is the tools host path; a shipping install still packs.
+if ($Live) {
+    $liveRoot = Join-Path $addonRoot 'panorama'
+    if (Test-Path -LiteralPath $liveRoot) { Remove-Item -LiteralPath $liveRoot -Recurse -Force }
+    $liveCount = 0
+    foreach ($file in @(Get-ChildItem $build -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c)) {
+        $relative = $file.FullName.Substring($build.Length + 1)
+        $target = Join-Path $liveRoot $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
+        Copy-Item -LiteralPath $file.FullName -Destination $target -Force
+        $liveCount++
+    }
+    if ($liveCount -lt 1) { throw 'Live install compiled no resources to copy.' }
+    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
+        -Message "live compiled $liveCount resources for the next map reload"
+    Write-Host "Live install: $liveCount compiled resource(s) in $liveRoot; reload the map to read them."
+    Write-Host 'The packed VPK and gameinfo.gi were not touched.'
+    return
+}
+
 # 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
 #    packer writes the archive and then never exits, so run it as a child, wait for a stable file,
 #    terminate it when it overruns, and validate the VPK tree before installing. A timeout only
@@ -1000,7 +1037,36 @@ Write-BuildRecord -Stage 'install' -State 'running' -VpkBytes $archiveBytes -Mes
 $builtHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
 New-Item -ItemType Directory -Force -Path $addonRoot | Out-Null
 $installedArchive = Join-Path $addonRoot 'pak01_dir.vpk'
-Copy-Item $archive $installedArchive -Force
+try {
+    Copy-Item $archive $installedArchive -Force
+} catch {
+    if (-not $Live) { throw }
+    # A running client can hold the archive open. Replace through a sibling path; if the mount
+    # still refuses the move, say so instead of pretending the live update landed.
+    $staged = "$installedArchive.new"
+    Copy-Item $archive $staged -Force
+    try {
+        Move-Item -LiteralPath $staged -Destination $installedArchive -Force
+    } catch {
+        Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
+        # A running client may hold a read handle that forbids rename but still permits an
+        # in-place write. Open for write once to test the share mode before truncating anything.
+        try {
+            $probe = [System.IO.File]::Open($installedArchive, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+            $probe.Dispose()
+            $bytes = [System.IO.File]::ReadAllBytes($archive)
+            $stream = [System.IO.File]::Open($installedArchive, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite)
+            try {
+                $stream.SetLength(0)
+                $stream.Write($bytes, 0, $bytes.Length)
+                $stream.Flush()
+            } finally { $stream.Dispose() }
+            Write-Host 'Live install: rewrote the mounted archive in place; reload the map to read it.'
+        } catch {
+            throw "Live install could not replace $installedArchive; the client still holds it. Use a map reload after it releases the file."
+        }
+    }
+}
 $installedHash = (Get-FileHash -LiteralPath $installedArchive -Algorithm SHA256).Hash
 if ($builtHash -ne $installedHash) {
     throw "Installed VPK hash $installedHash does not match the built archive's $builtHash."
@@ -1185,6 +1251,9 @@ if ($PackageRepo.Count -gt 0) {
 }
 
 # 6. Mount it from the game's search paths.
+if ($skipMount) {
+    Write-Host 'Live install: citadel/addons/mods is already mounted; gameinfo.gi is not rewritten.'
+} else {
 $backup = "$gameinfo.openlock-bak"
 if (-not (Test-Path $backup)) { Copy-Item $gameinfo $backup -Force }
 
@@ -1244,6 +1313,7 @@ if ($check.Length -ge 3 -and $check[0] -eq 0xEF -and $check[1] -eq 0xBB -and $ch
 
 Write-Host "Mounted citadel/addons/mods from $gameinfo"
 if ($hadBom) { Write-Host 'Removed the UTF-8 BOM the previous install left on gameinfo.gi.' }
+}
 
 # 7. Leave the build record the Tools window reads. The next data generation embeds it; this
 #    record is also useful on its own when an install is inspected without launching the client.
