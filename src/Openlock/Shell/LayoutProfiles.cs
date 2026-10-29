@@ -23,11 +23,14 @@ public sealed class LayoutProfiles
     private const int MaxWindows = 400;
     private const int MaxProfileBytes = 256 * 1024;
     private const int MaxProfiles = 64;
+    private const int MaxStateIds = 64;
     private const int MaxCoordinate = 20000;
     private const int MinWindowWidth = 120;
     private const int MaxWindowWidth = 16000;
     private const int MinWindowHeight = 64;
     private const int MaxWindowHeight = 9000;
+    // A cell is a component inside a window; a HUD ability icon can be 24-64 px.
+    private const int MinCellSide = 16;
 
     private static readonly Regex SchemePattern = new(
         "^[a-z0-9][a-z0-9_-]{0,31}$",
@@ -59,12 +62,34 @@ public sealed class LayoutProfiles
         public int H { get; set; }
     }
 
+    public sealed class LayoutState
+    {
+        public string Active { get; set; } = "";
+        public string Tab { get; set; } = "";
+        public List<string> Pinned { get; set; } = [];
+        public List<string> Minimized { get; set; } = [];
+    }
+
     public sealed class Profile
     {
         public string Format { get; set; } = "";
         public string Scheme { get; set; } = "";
         public string Updated { get; set; } = "";
+        public string Active { get; set; } = "";
+        public string Tab { get; set; } = "";
+        public List<string> Pinned { get; set; } = [];
+        public List<string> Minimized { get; set; } = [];
         public Dictionary<string, Rect> Windows { get; set; } = [];
+    }
+
+    /// <summary>What the payload publishes for one scheme: geometry plus the arrangement state.</summary>
+    public sealed class Snapshot
+    {
+        public Dictionary<string, Rect> Windows { get; set; } = [];
+        public string Active { get; set; } = "";
+        public string Tab { get; set; } = "";
+        public List<string> Pinned { get; set; } = [];
+        public List<string> Minimized { get; set; } = [];
     }
 
     public static bool IsValidScheme(string? scheme) =>
@@ -92,19 +117,22 @@ public sealed class LayoutProfiles
     }
 
     /// <summary>
-    /// Parses <c>scheme@id,x,y,w,h@id,x,y,w,h</c>. Rows use '@' because the snapshot travels
-    /// through CitadelConCommand, where ';' starts a second console command and truncates it.
-    /// Unknown window ids are shape-valid here: the client owns which windows exist, and it
-    /// ignores profile rows it no longer knows.
+    /// Parses <c>scheme@id,x,y,w,h@...</c> plus optional <c>active=</c>, <c>tab=</c>,
+    /// <c>pin=</c> and <c>min=</c> rows. Rows use '@' because the snapshot travels through
+    /// CitadelConCommand, where ';' starts a second console command and truncates it. Unknown
+    /// window ids are shape-valid here: the client owns which windows exist, and it ignores
+    /// profile rows it no longer knows.
     /// </summary>
     public bool TryParse(
         string? argument,
         out string scheme,
         out Dictionary<string, Rect> windows,
+        out LayoutState state,
         out string why)
     {
         scheme = "";
         windows = [];
+        state = new LayoutState();
         why = "";
 
         var text = (argument ?? "").Trim();
@@ -150,6 +178,52 @@ public sealed class LayoutProfiles
 
         foreach (var row in rows)
         {
+            // State rows have no comma. They name the taskbar tab, the focused window and the
+            // windows the player kept pinned or minimized, so a restored layout is the whole
+            // arrangement rather than only a set of rectangles.
+            var equals = row.IndexOf('=');
+            if (equals > 0 && row.IndexOf(',') < 0)
+            {
+                var key = row[..equals].Trim().ToLowerInvariant();
+                var value = row[(equals + 1)..].Trim();
+                if (key is "active" or "tab")
+                {
+                    if (value.Length > 0 && !WindowPattern.IsMatch(value))
+                    {
+                        why = $"layout {key} '{value}' is not a safe window id";
+                        return false;
+                    }
+
+                    if (key == "active") state.Active = value;
+                    else state.Tab = value;
+                    continue;
+                }
+
+                if (key is "pin" or "min")
+                {
+                    if (!WindowPattern.IsMatch(value))
+                    {
+                        why = $"layout {key} '{value}' is not a safe window id";
+                        return false;
+                    }
+
+                    var list = key == "pin" ? state.Pinned : state.Minimized;
+                    if (!list.Contains(value, StringComparer.OrdinalIgnoreCase))
+                    {
+                        list.Add(value);
+                        if (list.Count > MaxStateIds)
+                        {
+                            why = $"layout has more than {MaxStateIds} {key} rows";
+                            return false;
+                        }
+                    }
+                    continue;
+                }
+
+                why = $"layout row '{row}' is not id,x,y,w,h or a known state row";
+                return false;
+            }
+
             var fields = row.Split(',');
             if (fields.Length != 5)
             {
@@ -171,7 +245,7 @@ public sealed class LayoutProfiles
                 return false;
             }
 
-            if (!ValidRect(x, y, w, h))
+            if (!ValidRect(id, x, y, w, h))
             {
                 why = $"layout row for '{id}' is outside the allowed geometry";
                 return false;
@@ -184,7 +258,11 @@ public sealed class LayoutProfiles
     }
 
     /// <summary>Writes one scheme profile, replacing any previous snapshot with an atomic move.</summary>
-    public bool Save(string scheme, IReadOnlyDictionary<string, Rect> windows, out string why)
+    public bool Save(
+        string scheme,
+        IReadOnlyDictionary<string, Rect> windows,
+        LayoutState state,
+        out string why)
     {
         why = "";
         var path = PathFor(scheme);
@@ -206,11 +284,22 @@ public sealed class LayoutProfiles
         foreach (var pair in windows)
         {
             if (!WindowPattern.IsMatch(pair.Key) || !ValidRect(
-                    pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
+                    pair.Key, pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
             {
                 why = $"window '{pair.Key}' has invalid geometry";
                 return false;
             }
+        }
+
+        if ((state.Active.Length > 0 && !WindowPattern.IsMatch(state.Active))
+            || (state.Tab.Length > 0 && !WindowPattern.IsMatch(state.Tab))
+            || state.Pinned.Count > MaxStateIds
+            || state.Minimized.Count > MaxStateIds
+            || state.Pinned.Any(id => !WindowPattern.IsMatch(id))
+            || state.Minimized.Any(id => !WindowPattern.IsMatch(id)))
+        {
+            why = "arrangement state names an unsafe window id";
+            return false;
         }
 
         try
@@ -220,6 +309,10 @@ public sealed class LayoutProfiles
                 Format = ProfileFormat,
                 Scheme = scheme.Trim().ToLowerInvariant(),
                 Updated = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                Active = state.Active,
+                Tab = state.Tab,
+                Pinned = [.. state.Pinned],
+                Minimized = [.. state.Minimized],
                 Windows = windows.ToDictionary(pair => pair.Key, pair => new Rect
                 {
                     X = pair.Value.X,
@@ -262,6 +355,72 @@ public sealed class LayoutProfiles
         }
     }
 
+    /// <summary>
+    /// Writes one scheme profile without arrangement state. Kept for callers that only need
+    /// geometry (the install-time tests and console snapshots).
+    /// </summary>
+    public bool Save(string scheme, IReadOnlyDictionary<string, Rect> windows, out string why) =>
+        Save(scheme, windows, new LayoutState(), out why);
+
+    /// <summary>
+    /// Copies a saved profile into <c>layouts/exports</c> as a portable file. The copy has the
+    /// same validated contents; the timestamp is in the file name so two exports cannot
+    /// overwrite each other.
+    /// </summary>
+    public bool Export(string scheme, out string path, out string why)
+    {
+        path = "";
+        why = "";
+        var source = PathFor(scheme);
+        if (source.Length == 0)
+        {
+            why = "profile path is outside the layout directory";
+            return false;
+        }
+
+        try
+        {
+            if (!File.Exists(source))
+            {
+                why = $"no saved layout for '{scheme}' to export";
+                return false;
+            }
+
+            if (IsLink(source))
+            {
+                why = "profile is a link";
+                return false;
+            }
+
+            var info = new FileInfo(source);
+            if (info.Length > MaxProfileBytes)
+            {
+                why = $"profile is {info.Length} bytes; the limit is {MaxProfileBytes}";
+                return false;
+            }
+
+            var exportDirectory = Path.Combine(_directory, "exports");
+            if (Directory.Exists(exportDirectory) && IsLink(exportDirectory))
+            {
+                why = "export directory is a link";
+                return false;
+            }
+
+            Directory.CreateDirectory(exportDirectory);
+            var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
+            var destination = Path.Combine(exportDirectory,
+                scheme.Trim().ToLowerInvariant() + "-" + stamp + ".layout.json");
+            File.Copy(source, destination, overwrite: false);
+            path = destination;
+            return true;
+        }
+        catch (Exception error)
+        {
+            why = error.Message;
+            return false;
+        }
+    }
+
     public bool Reset(string scheme, out string why)
     {
         why = "";
@@ -292,7 +451,7 @@ public sealed class LayoutProfiles
     /// <summary>The payload the shell reads from the host attribute: profiles plus plain notices.</summary>
     public string PayloadJson(string? notice = null)
     {
-        var profiles = new Dictionary<string, Dictionary<string, Rect>>(StringComparer.OrdinalIgnoreCase);
+        var profiles = new Dictionary<string, Snapshot>(StringComparer.OrdinalIgnoreCase);
         var notices = new List<string>();
 
         try
@@ -329,7 +488,14 @@ public sealed class LayoutProfiles
                             continue;
                         }
 
-                        profiles[scheme] = profile.Windows;
+                        profiles[scheme] = new Snapshot
+                        {
+                            Windows = profile.Windows,
+                            Active = profile.Active ?? "",
+                            Tab = profile.Tab ?? "",
+                            Pinned = profile.Pinned ?? [],
+                            Minimized = profile.Minimized ?? [],
+                        };
                     }
                 }
             }
@@ -390,10 +556,25 @@ public sealed class LayoutProfiles
                 return null;
             }
 
+            profile.Active ??= "";
+            profile.Tab ??= "";
+            profile.Pinned ??= [];
+            profile.Minimized ??= [];
+            if ((profile.Active.Length > 0 && !WindowPattern.IsMatch(profile.Active))
+                || (profile.Tab.Length > 0 && !WindowPattern.IsMatch(profile.Tab))
+                || profile.Pinned.Count > MaxStateIds
+                || profile.Minimized.Count > MaxStateIds
+                || profile.Pinned.Any(id => !WindowPattern.IsMatch(id))
+                || profile.Minimized.Any(id => !WindowPattern.IsMatch(id)))
+            {
+                why = "arrangement state names an unsafe window id";
+                return null;
+            }
+
             foreach (var pair in profile.Windows)
             {
                 if (!WindowPattern.IsMatch(pair.Key) || !ValidRect(
-                        pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
+                        pair.Key, pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
                 {
                     why = $"window '{pair.Key}' has invalid geometry";
                     return null;
@@ -436,13 +617,21 @@ public sealed class LayoutProfiles
         }
     }
 
-    private static bool ValidRect(int x, int y, int w, int h) =>
-        Math.Abs(x) <= MaxCoordinate
-        && Math.Abs(y) <= MaxCoordinate
-        && w >= MinWindowWidth
-        && w <= MaxWindowWidth
-        && h >= MinWindowHeight
-        && h <= MaxWindowHeight;
+    // A split cell is a component of a window, not a whole window: an ability icon or a stat
+    // label may be far smaller than the 120x64 minimum a normal window keeps. The relaxed
+    // floor is keyed by the id prefix so a normal window cannot shrink below the old bar.
+    private static bool ValidRect(string id, int x, int y, int w, int h)
+    {
+        var cell = id.StartsWith("cell:", StringComparison.Ordinal);
+        var minWidth = cell ? MinCellSide : MinWindowWidth;
+        var minHeight = cell ? MinCellSide : MinWindowHeight;
+        return Math.Abs(x) <= MaxCoordinate
+            && Math.Abs(y) <= MaxCoordinate
+            && w >= minWidth
+            && w <= MaxWindowWidth
+            && h >= minHeight
+            && h <= MaxWindowHeight;
+    }
 
     private static bool TryInt(string value, out int result) =>
         int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out result);

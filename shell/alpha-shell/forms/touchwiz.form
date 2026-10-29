@@ -2,6 +2,9 @@ shploingus.form/1
 form	touchwiz
 	label	TouchWiz Nature UX
 	rule	.WindowFrame	border-radius	8px
+	# Nature UX's 8 dp corner carries to a picked live cell; radius only, never a border
+	# weight that would reflow the game's own component.
+	rule	.ThemedCell	border-radius	8px
 	rule	.WindowFrame	border-width	2px
 	rule	.WindowTitle	height	30px
 	rule	.WindowTitle	padding-left	8px

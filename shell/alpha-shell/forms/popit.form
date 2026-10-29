@@ -3,6 +3,10 @@ form	popit
 	label	Popit (LBP3)
 	renderer	popit
 	rule	.WindowButton Label	font-size	12px
+	# A themed live cell (a game drawable picked in the Picker) follows the same silhouette as
+	# this form's windows. Only the radius is written: a border width would reflow the game's
+	# own layout around a component it did not ask to resize.
+	rule	.ThemedCell	border-radius	10px
 	rule	.Taskbar	height	30px
 	rule	.TabStrip	margin-left	96px
 	rule	.PreloadStrip	margin-left	96px

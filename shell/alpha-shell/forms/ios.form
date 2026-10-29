@@ -2,6 +2,9 @@ shploingus.form/1
 form	ios
 	label	iOS 6 SpringBoard
 	rule	.WindowFrame	border-radius	6px
+	# A picked live cell is part of the window's shape language; radius only, so the game's
+	# own component layout is not reflowed by a border weight it never declared.
+	rule	.ThemedCell	border-radius	6px
 	rule	.WindowFrame	border-width	1px
 	rule	.WindowTitle	height	30px
 	rule	.WindowTitle	padding-left	8px
