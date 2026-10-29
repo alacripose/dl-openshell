@@ -212,6 +212,36 @@
     background-color: #c9a86a;
 }
 
+/* The taskbar's right cluster flows as one row. Absolute right margins let the Windows button
+   and the build label paint over each other when the label is wide; flow makes the label take
+   the space beside the button instead of the button's pixels. */
+.TaskbarRight {
+    position: absolute;
+    horizontal-align: right;
+    vertical-align: top;
+    width: fit-children;
+    height: 30px;
+    flow-children: right;
+    margin-right: 10px;
+    z-index: 501;
+}
+
+.TaskbarRight .WindowsButton,
+.TaskbarRight .VersionLabel,
+.TaskbarRight .Clock {
+    position: relative;
+    horizontal-align: left;
+    vertical-align: center;
+    margin: 0px 0px 0px 6px;
+}
+
+/* A pathological build string must not consume the taskbar. The label is a readout; the full
+   value stays in the shell's build record. */
+.TaskbarRight .VersionLabel {
+    max-width: 220px;
+    text-overflow: ellipsis;
+}
+
 /* Fixed index into every frame. The strip itself clips when a HUD sweep adds many entries. */
 .WindowsButton {
     position: absolute;
