@@ -64,9 +64,10 @@ $repoRoot = $PSScriptRoot
 $installer = Join-Path $repoRoot 'install.ps1'
 $lister = Join-Path $repoRoot 'tools\list_installs.py'
 $witness = Join-Path $repoRoot 'tools\axis_witness.py'
+$parity = Join-Path $repoRoot 'tools\parity_check.py'
 $buildRecord = Join-Path $repoRoot 'shell\alpha-shell\build.json'
 
-foreach ($required in @($installer, $lister, $witness)) {
+foreach ($required in @($installer, $lister, $witness, $parity)) {
     if (-not (Test-Path -LiteralPath $required)) {
         throw "Boot module missing: '$required'."
     }
@@ -243,6 +244,33 @@ function Invoke-WitnessGate {
     return $payload
 }
 
+function Invoke-ParityGate($Chosen) {
+    # The installer checked the archive it copied against the archive it built. This is the second
+    # reading: the installed VPK is hashed again and the commit baked into it is compared with the
+    # worktree, origin/main and the live Steam client. A stale or copied install refuses here.
+    Write-Boot 'parity'
+    $run = Invoke-Python @($parity, '--install', $Chosen.path, '--json')
+    $payload = $null
+    try { $payload = $run.Text | ConvertFrom-Json } catch { }
+    if (-not $payload) {
+        throw "the parity gate returned no reading (python exit $($run.Code)).`n$($run.Text)"
+    }
+    foreach ($row in @($payload.cells)) {
+        Write-Boot ('  {0,-7} {1}  {2,-8} {3}' -f $row.state, $row.grade, $row.cell, $row.detail)
+    }
+    foreach ($refusal in @($payload.refusals)) {
+        Write-Boot ('  REFUSED {0,-10} {1}  {2}' -f $refusal.kind, $refusal.cell, $refusal.detail)
+    }
+    if ($payload.store) {
+        Write-Boot ("  store {0}/{1}  read back {2} cell(s)" -f $payload.store.uri, $payload.store.database, $payload.verification.cells)
+    }
+    if ($payload.detail) { Write-Boot "  $($payload.detail)" }
+    if ($payload.state -ne 'PASS') {
+        throw "The installed shell did not pass the parity gate ($($payload.state)): $(@($payload.refusals | ForEach-Object { $_.cell + ': ' + $_.detail }) -join '; ') $($payload.detail)"
+    }
+    return $payload
+}
+
 function Invoke-Installer($Chosen, $InstallerHost) {
     $outLog = Join-Path $env:TEMP ('openlock-launch-' + [guid]::NewGuid().ToString('N') + '.out.log')
     $errLog = Join-Path $env:TEMP ('openlock-launch-' + [guid]::NewGuid().ToString('N') + '.err.log')
@@ -323,6 +351,11 @@ function Start-InstallerShell($Chosen) {
         $arguments = '-dev -condebug -allow_no_lobby_connect -insecure -game citadel +map start'
     }
 
+    # console.log is append-only across sessions. Record where this session starts so the wait
+    # below cannot report the previous client's mount as this one's.
+    $console = Join-Path $Chosen.path 'game\citadel\console.log'
+    $script:consoleStart = if (Test-Path -LiteralPath $console) { (Get-Item -LiteralPath $console).Length } else { 0 }
+
     $exe = [string]$Chosen.exe
     $working = Split-Path $exe -Parent
     $started = Start-Process -FilePath $exe -WorkingDirectory $working -ArgumentList $arguments -PassThru
@@ -332,15 +365,31 @@ function Start-InstallerShell($Chosen) {
     return [pscustomobject]@{ Process = $started; Surface = (Get-Surface $Chosen) }
 }
 
+function Read-NewConsole([string]$Console, [long]$Start) {
+    try {
+        $length = (Get-Item -LiteralPath $Console).Length
+        $offset = if ($length -lt $Start) { 0 } else { $Start }
+        $stream = [System.IO.File]::Open($Console, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+        try {
+            $stream.Seek($offset, [System.IO.SeekOrigin]::Begin) | Out-Null
+            $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8)
+            try { return @($reader.ReadToEnd() -split "`r?`n") } finally { $reader.Dispose() }
+        } finally { $stream.Dispose() }
+    } catch {
+        return @()
+    }
+}
+
 function Wait-ForShell($Chosen) {
     if ($ReadyTimeoutSeconds -le 0) { return }
     $console = Join-Path $Chosen.path 'game\citadel\console.log'
+    $start = if ($null -ne $script:consoleStart) { [long]$script:consoleStart } else { 0 }
     $deadline = (Get-Date).AddSeconds($ReadyTimeoutSeconds)
     $reported = @{}
-    Write-Boot "waiting  : $console"
+    Write-Boot "waiting  : $console (from byte $start)"
     while ((Get-Date) -lt $deadline) {
         if (Test-Path -LiteralPath $console) {
-            $tail = @(Get-Content -LiteralPath $console -Tail 120 -ErrorAction SilentlyContinue)
+            $tail = Read-NewConsole $console $start
             foreach ($line in $tail) {
                 if ($line -match '\[Openlock\] shell ready:' -and -not $reported.ready) {
                     Write-Boot "  $line"
@@ -375,7 +424,7 @@ if ($SelfTest) {
     if (-not $installerHost) {
         throw 'No CSDK10 or other tools host is available. The WinForms fallback is refused, so the installer shell cannot be mounted.'
     }
-    Write-Boot ("modules  : discovery ready | witness pending | install idle | launch idle")
+    Write-Boot ("modules  : discovery ready | witness pending | install idle | parity idle | launch idle")
     Write-Boot ("selected : {0}  {1}" -f (Get-Surface $chosen), $chosen.path)
     Write-Boot ("host     : {0}  {1}" -f $installerHost.engine, $installerHost.path)
     Write-Boot ''
@@ -388,7 +437,7 @@ if ($SelfTest) {
 $discovery = Get-Discovery
 Show-Installs $discovery
 Write-Boot ''
-Write-Boot 'modules  : discovery ready | witness pending | install idle | launch idle'
+Write-Boot 'modules  : discovery ready | witness pending | install idle | parity idle | launch idle'
 Write-Boot ''
 
 $chosen = Select-Install $discovery
@@ -424,6 +473,7 @@ if ($needsInstall) {
     Write-Boot 'shell is already mounted; pass -Install to rebuild or update it'
 }
 
+$null = Invoke-ParityGate $chosen
 Write-Boot ''
 $surface = Start-InstallerShell $chosen
 Wait-ForShell $chosen
