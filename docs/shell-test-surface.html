@@ -76,7 +76,7 @@
 <body>
   <header class="top">
     <h1>Openlock shell test surface</h1>
-    <div class="sub">Browser witness for the CML/Panorama suites · generated 2026-10-30 07:36 UTC</div>
+    <div class="sub">Browser witness for the CML/Panorama suites · generated 2026-10-30 07:49 UTC</div>
   </header>
   <div class="banner pass">All headless suites passed; the live-client rows below remain refused.</div>
   <main>
@@ -87,15 +87,9 @@
           <h2>chrome-test</h2>
           <span class="badge">PASS</span>
         </header>
-        <p class="meta">exit 0 · 56 checks</p>
+        <p class="meta">exit 0 · 66 checks</p>
         <code>node tools/tests/chrome-test.js</code>
-        <pre>ok 1 - dashboard exposes LAYOUT
-ok 2 - dashboard exposes Abilities
-ok 3 - the fake tree built the Abilities frame
-ok 4 - a 100 dp frame is Narrow
-ok 5 - focusing Abilities promotes the frame
-ok 6 - the narrow frame still owns all controls (6)
-ok 7 - every narrow control remains hit-testable
+        <pre>t-testable
 ok 8 - window controls draw no text glyphs
 ok 9 - minimize is an explicit bar
 ok 10 - maximize is an explicit square
@@ -137,15 +131,25 @@ ok 45 - a layout payload over 4 MiB is refused before it is parsed
 ok 46 - an observer layout path outside the resources layout directory is not loaded
 ok 47 - the observer refusal names the missing prefix
 ok 48 - an observer layout path inside the resources layout directory still loads
-ok 49 - the frame title exposes a context-menu handler
-ok 50 - right-click opens the context menu
-ok 51 - a hovered menu survives a burst of outside cursor probes
-ok 52 - the measured menu rect keeps a menu the old guess would have dismissed
-ok 53 - a leave does not close the menu before the dwell
-ok 54 - a real leave plus dwell closes the menu
-ok 55 - the menu and its dismiss surface are paired
-ok 56 - clicking the dismiss surface closes the menu
-chrome-test OK 56 checks</pre>
+ok 49 - a legacy geometry map skips its arrangement keys instead of refusing them as window rows
+ok 50 - the legacy profile is retained under its scheme
+ok 51 - the legacy profile still restores the rect of its real window row
+ok 52 - a __proto__ scheme is refused by name
+ok 53 - a refused __proto__ scheme does not take the valid profile beside it down
+ok 54 - a __proto__ scheme leaves the object prototype untouched
+ok 55 - a __proto__ window id is refused by name
+ok 56 - a refused __proto__ window id does not take the valid profile beside it down
+ok 57 - a __proto__ window id leaves the object prototype untouched
+ok 58 - the valid profile beside a refused __proto__ entry still restores its rect
+ok 59 - the frame title exposes a context-menu handler
+ok 60 - right-click opens the context menu
+ok 61 - a hovered menu survives a burst of outside cursor probes
+ok 62 - the measured menu rect keeps a menu the old guess would have dismissed
+ok 63 - a leave does not close the menu before the dwell
+ok 64 - a real leave plus dwell closes the menu
+ok 65 - the menu and its dismiss surface are paired
+ok 66 - clicking the dismiss surface closes the menu
+chrome-test OK 66 checks</pre>
       </article>
       <article class="card pass" data-suite="dashboard-test">
         <header>
@@ -332,7 +336,7 @@ ok: an unreachable asset is a refusal, not a throw
 ok: the refusal names the URL and every attempt
 ok: the retries waited between attempts
 ok: 6 download checks
-flaky server on 127.0.0.1:59373; dead port 59374
+flaky server on 127.0.0.1:60519; dead port 60520
 requests seen: 2 (first was dropped)</pre>
       </article>
       <article class="card pass" data-suite="split-identity">
@@ -357,6 +361,27 @@ ok 12 - a window with no name or class is refused with the reason: its id carrie
 ok 13 - a discovery fallback name is a position, not an identity: its discovery name is a position, not an identity
 ok 14 - a split whose window is gone stays unresolved with its reason
 ok: 14 split identity check(s)</pre>
+      </article>
+      <article class="card pass" data-suite="popit-surface">
+        <header>
+          <h2>popit-surface</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 12 checks</p>
+        <code>node tools/tests/popit-test.js</code>
+        <pre>ok 1 - the surface opens on a declared layer
+ok 2 - the surface is a real panel
+ok 3 - the surface draws one tile per declared action
+ok 4 - exactly one tile starts selected
+ok 5 - the declared form class is applied to the surface
+ok 6 - every tile draws a declared icon, not a text glyph
+ok 7 - selecting play marks the mode active
+ok 8 - selecting play clears create
+ok 9 - switching the frame applies the new form class
+ok 10 - switching the frame removes the old form class
+ok 11 - status reports the frame, the local mode and the tile count
+ok 12 - a surface over another window is refused, not drawn twice
+popit-test OK 12 checks</pre>
       </article>
       <article class="card pass" data-suite="installer-pair">
         <header>

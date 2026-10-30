@@ -35,6 +35,8 @@ SUITES = (
      [sys.executable, "tools/tests/download-retry-server.py"]),
     ("split-identity", "Split identity: durable key, id churn across reload, unpinnable refused by name",
      ["node", "tools/tests/split-identity-test.js"]),
+    ("popit-surface", "Popit surface: tiles, icons, local mode, frame switch, overlap refusal",
+     ["node", "tools/tests/popit-test.js"]),
     ("installer-pair", "Installer pair: current, stale, absent, incompatible, consent seed, Steam library record, another game's tree",
      [sys.executable, "tools/tests/installer-pair-test.py"]),
 )

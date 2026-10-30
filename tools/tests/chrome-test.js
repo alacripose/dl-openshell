@@ -1,7 +1,9 @@
-// Fake-tree proof for the two chrome defects:
+// Fake-tree proof for the chrome defects:
 //   1. the context menu survives cursor-probe noise while hovered, measures its real rect, and
 //      closes only after a real leave plus dwell;
-//   2. a focused narrow frame still owns all of its controls.
+//   2. a focused narrow frame still owns all of its controls;
+//   3. a saved-layout payload cannot name a scheme or a window `__proto__`, and the older
+//      geometry-map format is not read as if its arrangement keys were window rows.
 //
 // Run: node tools/tests/chrome-test.js
 const fs = require('fs');
@@ -445,6 +447,79 @@ observerSurface = observerToasts.length
     : null;
 check(!!observerSurface && observerSurface.loaded === true,
     'an observer layout path inside the resources layout directory still loads');
+
+// --- saved-layout keys (F4): the profile channel is server-authored --------------------------
+// An older profile is the geometry map itself; `active`, `tab`, `pinned`, `minimized` and
+// `popit` are arrangement state beside the rows. Reading one of them as a window row would
+// refuse the whole profile, so the legacy shape must skip exactly those keys and still load its
+// real rows. This payload runs while `popit` is the active scheme, so it also restores geometry.
+const cleanPrototype = Object.getPrototypeOf({});
+let layoutMark = msgs.length;
+hostPanel.attrs.dwv_layout = JSON.stringify({
+    profiles: {
+        popit: {
+            active: 'abilities',
+            tab: 'abilities',
+            pinned: ['abilities'],
+            minimized: [],
+            popit: {},
+            abilities: { x: 320, y: 150, w: 380, h: 230 }
+        }
+    }
+});
+advance(700);
+check(!msgs.slice(layoutMark).some(m => m.indexOf('REFUSED Layout profile refused') >= 0),
+    'a legacy geometry map skips its arrangement keys instead of refusing them as window rows');
+check(msgs.slice(layoutMark).some(m => m.indexOf('layout profiles: 1') >= 0 &&
+    m.indexOf('saved=true') >= 0),
+    'the legacy profile is retained under its scheme');
+// A game-panel frame is scaled to the live panel, so the height is arbitrated; the origin and
+// the requested width are the row's own numbers and must land.
+check(Math.abs((parseFloat(frame.style.marginLeft) || 0) - 320) < 1 &&
+    Math.abs((parseFloat(frame.style.width) || 0) - 380) < 1,
+    'the legacy profile still restores the rect of its real window row');
+
+// A scheme named `__proto__` would be assigned through the prototype setter. It is refused by
+// name before it reaches the profile map, and the valid profile in the same payload still loads.
+// The raw text is what a server sends; JSON.stringify would create an own property instead of
+// the hostile key this path has to survive.
+layoutMark = msgs.length;
+hostPanel.attrs.dwv_layout =
+    '{"profiles":{"__proto__":{"windows":{"live:evil:10x10":' +
+    '{"x":1,"y":2,"w":30,"h":40}}},' +
+    '"alpha":{"windows":{"abilities":{"x":300,"y":140,"w":400,"h":240}}}}}';
+advance(700);
+check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__ — the scheme is not a profile name') >= 0),
+    'a __proto__ scheme is refused by name');
+check(msgs.slice(layoutMark).some(m => m.indexOf('layout profiles: 1') >= 0),
+    'a refused __proto__ scheme does not take the valid profile beside it down');
+check(Object.getPrototypeOf({}) === cleanPrototype && !('windows' in {}) && !('active' in {}),
+    'a __proto__ scheme leaves the object prototype untouched');
+
+// A window id named `__proto__` would be assigned into the row map the same way. The profile
+// that declares it is refused whole, by id, and the valid profile beside it still loads.
+layoutMark = msgs.length;
+hostPanel.attrs.dwv_layout =
+    '{"profiles":{"popit":{"windows":{"__proto__":' +
+    '{"x":1,"y":2,"w":30,"h":40},' +
+    '"abilities":{"x":260,"y":120,"w":360,"h":220}}},' +
+    '"alpha":{"windows":{"abilities":{"x":300,"y":140,"w":400,"h":240}}}}}';
+advance(700);
+check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__ — the id is not a window id') >= 0),
+    'a __proto__ window id is refused by name');
+check(msgs.slice(layoutMark).some(m => m.indexOf('layout profiles: 1') >= 0),
+    'a refused __proto__ window id does not take the valid profile beside it down');
+check(Object.getPrototypeOf({}) === cleanPrototype && !('x' in {}),
+    'a __proto__ window id leaves the object prototype untouched');
+
+// The surviving profile is not merely counted: switching to it applies its row.
+globalThis.OpenlockScheme('alpha');
+advance(50);
+check(Math.abs((parseFloat(frame.style.marginLeft) || 0) - 300) < 1 &&
+    Math.abs((parseFloat(frame.style.width) || 0) - 400) < 1,
+    'the valid profile beside a refused __proto__ entry still restores its rect');
+globalThis.OpenlockScheme('popit');
+advance(50);
 
 // Context menu: use the frame title's real context handler.
 check(!!titleBar && typeof titleBar.events.oncontextmenu === 'function',
