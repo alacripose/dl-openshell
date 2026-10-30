@@ -24,6 +24,11 @@ public sealed class LayoutProfiles
     private const int MaxProfileBytes = 256 * 1024;
     private const int MaxProfiles = 64;
     private const int MaxStateIds = 64;
+    private const int MaxPopitOrder = 32;
+    private const int MinPopitWidth = 240;
+    private const int MaxPopitWidth = 900;
+    private static readonly string[] PopitFrames = ["lbp1", "lbp2", "lbp3", "psp", "vita", "karting"];
+    private static readonly string[] PopitModes = ["create", "play"];
     private const int MaxCoordinate = 20000;
     private const int MinWindowWidth = 120;
     private const int MaxWindowWidth = 16000;
@@ -36,8 +41,10 @@ public sealed class LayoutProfiles
         "^[a-z0-9][a-z0-9_-]{0,31}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    // A nested cell id is `cell:<root>:<key>[:<key>...]`, so it is longer than a whole-window
+    // id. The path is still a fixed set of safe characters and never becomes a file name.
     private static readonly Regex WindowPattern = new(
-        "^[A-Za-z0-9_.:-]{1,96}$",
+        "^[A-Za-z0-9_.:-]{1,192}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -62,12 +69,28 @@ public sealed class LayoutProfiles
         public int H { get; set; }
     }
 
+    /// <summary>
+    /// How the Popit surface arranges itself: the frame it is drawn in, how wide it is, how many
+    /// tiles a row holds and the order of the tiles. The surface is the shell's own menu on a
+    /// build whose game dashboard is empty, so its arrangement belongs to the saved layout beside
+    /// the window rectangles.
+    /// </summary>
+    public sealed class PopitLayout
+    {
+        public int Columns { get; set; } = 4;
+        public int Width { get; set; } = 356;
+        public string Frame { get; set; } = "lbp3";
+        public string Mode { get; set; } = "create";
+        public List<string> Order { get; set; } = [];
+    }
+
     public sealed class LayoutState
     {
         public string Active { get; set; } = "";
         public string Tab { get; set; } = "";
         public List<string> Pinned { get; set; } = [];
         public List<string> Minimized { get; set; } = [];
+        public PopitLayout? Popit { get; set; }
     }
 
     public sealed class Profile
@@ -79,6 +102,7 @@ public sealed class LayoutProfiles
         public string Tab { get; set; } = "";
         public List<string> Pinned { get; set; } = [];
         public List<string> Minimized { get; set; } = [];
+        public PopitLayout? Popit { get; set; }
         public Dictionary<string, Rect> Windows { get; set; } = [];
     }
 
@@ -90,6 +114,7 @@ public sealed class LayoutProfiles
         public string Tab { get; set; } = "";
         public List<string> Pinned { get; set; } = [];
         public List<string> Minimized { get; set; } = [];
+        public PopitLayout? Popit { get; set; }
     }
 
     public static bool IsValidScheme(string? scheme) =>
@@ -220,6 +245,16 @@ public sealed class LayoutProfiles
                     continue;
                 }
 
+                if (key == "popit")
+                {
+                    // The Popit surface is the shell's own menu; its arrangement is saved with
+                    // the desktop it belongs to, not in a second file the shell cannot find.
+                    if (!TryParsePopit(value, out var popit, out why))
+                        return false;
+                    state.Popit = popit;
+                    continue;
+                }
+
                 why = $"layout row '{row}' is not id,x,y,w,h or a known state row";
                 return false;
             }
@@ -255,6 +290,159 @@ public sealed class LayoutProfiles
         }
 
         return windows.Count > 0;
+    }
+
+    /// <summary>
+    /// Reads one <c>popit=</c> row: <c>columns:4;width:356;frame:lbp3;mode:create;order:a+b</c>.
+    /// The order is a <c>+</c> list because a comma already separates a rectangle row.
+    /// </summary>
+    private static bool TryParsePopit(string value, out PopitLayout popit, out string why)
+    {
+        popit = new PopitLayout();
+        why = "";
+
+        if (value.Length == 0)
+        {
+            why = "layout popit row is empty";
+            return false;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in value.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var split = part.IndexOf(':');
+            if (split <= 0)
+            {
+                why = $"popit field '{part}' is not key:value";
+                return false;
+            }
+
+            var key = part[..split].Trim().ToLowerInvariant();
+            var field = part[(split + 1)..].Trim();
+            if (!seen.Add(key))
+            {
+                why = $"popit field '{key}' appears twice";
+                return false;
+            }
+
+            switch (key)
+            {
+                case "columns":
+                    if (!TryInt(field, out var columns) || columns < 1 || columns > 4)
+                    {
+                        why = $"popit columns '{field}' is not 1..4";
+                        return false;
+                    }
+
+                    popit.Columns = columns;
+                    break;
+
+                case "width":
+                    if (!TryInt(field, out var width) || width < MinPopitWidth || width > MaxPopitWidth)
+                    {
+                        why = $"popit width '{field}' is not {MinPopitWidth}..{MaxPopitWidth}";
+                        return false;
+                    }
+
+                    popit.Width = width;
+                    break;
+
+                case "frame":
+                    var frame = field.ToLowerInvariant();
+                    if (!PopitFrames.Contains(frame, StringComparer.Ordinal))
+                    {
+                        why = $"popit frame '{field}' is not one of {string.Join(", ", PopitFrames)}";
+                        return false;
+                    }
+
+                    popit.Frame = frame;
+                    break;
+
+                case "mode":
+                    var mode = field.ToLowerInvariant();
+                    if (!PopitModes.Contains(mode, StringComparer.Ordinal))
+                    {
+                        why = $"popit mode '{field}' is not one of {string.Join(", ", PopitModes)}";
+                        return false;
+                    }
+
+                    popit.Mode = mode;
+                    break;
+
+                case "order":
+                    if (field.Length == 0)
+                        break;
+                    var ids = field.Split('+', StringSplitOptions.RemoveEmptyEntries);
+                    if (ids.Length > MaxPopitOrder)
+                    {
+                        why = $"popit order has {ids.Length} tiles; the limit is {MaxPopitOrder}";
+                        return false;
+                    }
+
+                    foreach (var id in ids)
+                    {
+                        if (!WindowPattern.IsMatch(id))
+                        {
+                            why = $"popit order tile '{id}' is not a safe window id";
+                            return false;
+                        }
+
+                        if (!popit.Order.Contains(id, StringComparer.OrdinalIgnoreCase))
+                            popit.Order.Add(id);
+                    }
+
+                    break;
+
+                default:
+                    why = $"popit field '{key}' is not one of columns, width, frame, mode, order";
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ValidPopit(PopitLayout popit, out string why)
+    {
+        why = "";
+        if (popit.Columns < 1 || popit.Columns > 4)
+        {
+            why = $"popit columns {popit.Columns} is not 1..4";
+            return false;
+        }
+
+        if (popit.Width < MinPopitWidth || popit.Width > MaxPopitWidth)
+        {
+            why = $"popit width {popit.Width} is not {MinPopitWidth}..{MaxPopitWidth}";
+            return false;
+        }
+
+        if (!PopitFrames.Contains(popit.Frame ?? "", StringComparer.Ordinal))
+        {
+            why = $"popit frame '{popit.Frame}' is not one of {string.Join(", ", PopitFrames)}";
+            return false;
+        }
+
+        if (!PopitModes.Contains(popit.Mode ?? "", StringComparer.Ordinal))
+        {
+            why = $"popit mode '{popit.Mode}' is not one of {string.Join(", ", PopitModes)}";
+            return false;
+        }
+
+        var order = popit.Order ?? [];
+        if (order.Count > MaxPopitOrder)
+        {
+            why = $"popit order has {order.Count} tiles; the limit is {MaxPopitOrder}";
+            return false;
+        }
+
+        if (order.Any(id => !WindowPattern.IsMatch(id)))
+        {
+            why = "popit order names an unsafe tile id";
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>Writes one scheme profile, replacing any previous snapshot with an atomic move.</summary>
@@ -302,6 +490,9 @@ public sealed class LayoutProfiles
             return false;
         }
 
+        if (state.Popit is not null && !ValidPopit(state.Popit, out why))
+            return false;
+
         try
         {
             var profile = new Profile
@@ -313,6 +504,16 @@ public sealed class LayoutProfiles
                 Tab = state.Tab,
                 Pinned = [.. state.Pinned],
                 Minimized = [.. state.Minimized],
+                Popit = state.Popit is null
+                    ? null
+                    : new PopitLayout
+                    {
+                        Columns = state.Popit.Columns,
+                        Width = state.Popit.Width,
+                        Frame = state.Popit.Frame,
+                        Mode = state.Popit.Mode,
+                        Order = [.. state.Popit.Order],
+                    },
                 Windows = windows.ToDictionary(pair => pair.Key, pair => new Rect
                 {
                     X = pair.Value.X,
@@ -495,6 +696,7 @@ public sealed class LayoutProfiles
                             Tab = profile.Tab ?? "",
                             Pinned = profile.Pinned ?? [],
                             Minimized = profile.Minimized ?? [],
+                            Popit = profile.Popit,
                         };
                     }
                 }
@@ -560,6 +762,8 @@ public sealed class LayoutProfiles
             profile.Tab ??= "";
             profile.Pinned ??= [];
             profile.Minimized ??= [];
+            if (profile.Popit is not null && !ValidPopit(profile.Popit, out why))
+                return null;
             if ((profile.Active.Length > 0 && !WindowPattern.IsMatch(profile.Active))
                 || (profile.Tab.Length > 0 && !WindowPattern.IsMatch(profile.Tab))
                 || profile.Pinned.Count > MaxStateIds

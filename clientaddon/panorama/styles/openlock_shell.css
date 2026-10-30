@@ -418,6 +418,67 @@
     visibility: collapse;
 }
 
+/* A focused HUD window stops being compact. Focus is the promotion point, so it gets the same
+   title height and the same 26 dp controls as a window the shell opens itself. The JS clears its
+   inline compact values when focus arrives; these rules are what those values fall back to. */
+.WindowFrame.CompactHud.Focused .WindowTitle {
+    height: 30px;
+    padding-left: 0px;
+    padding-right: 0px;
+    background-color: #241a10f2;
+    border-bottom: 1px solid #8a6f42;
+}
+
+.WindowFrame.CompactHud.Focused .GripNW,
+.WindowFrame.CompactHud.Focused .GripNE {
+    visibility: visible;
+}
+
+.WindowFrame.CompactHud.Focused .WindowTitleLabel {
+    margin-left: 28px;
+    color: #f4e6c8;
+    font-size: 13px;
+    font-weight: bold;
+    visibility: visible;
+}
+
+.WindowFrame.CompactHud.Focused .WindowButton {
+    width: 26px;
+    height: 22px;
+    margin-right: 4px;
+    background-color: #3a2416;
+    border: 1px solid #8a6f42;
+    border-radius: 2px;
+}
+
+.WindowFrame.CompactHud.Focused .WindowButton:hover {
+    border: 1px solid #e0b56a;
+}
+
+.WindowFrame.CompactHud.Focused .WindowButton Label {
+    color: #e0b56a;
+    font-size: 14px;
+}
+
+.WindowFrame.CompactHud.Focused .WindowGlyph {
+    color: #e0b56a;
+    font-size: 16px;
+    line-height: 15px;
+}
+
+.WindowFrame.CompactHud.Focused .WindowButton.PinOn {
+    background-color: #5a4218;
+    border: 1px solid #e0b56a;
+}
+
+.WindowFrame.CompactHud.Focused .WindowClose {
+    margin-right: 30px;
+}
+
+.WindowFrame.CompactHud.Focused .WindowMeta {
+    visibility: visible;
+}
+
 /* --- windows the shell draws itself -------------------------------------- */
 
 .WindowFrame {
@@ -700,6 +761,57 @@
     overflow: squish scroll;
 }
 
+/* The engine's own scrollbar, drawn in the compact schema's cell language: a black track and a
+   white thumb, with no rounded corners. CSDK 10 asserts unless the scrollbar itself declares a
+   transform transition, so the transition properties below are required, not decoration. The
+   stock UI gets this from citadel_base_styles; the shell does not include that sheet. */
+VerticalScrollBar,
+HTMLVerticalScrollBar {
+    width: 7px;
+    background-color: #000000c4;
+    border-radius: 0px;
+    transition-property: transform;
+    transition-duration: 0.18s;
+    transition-timing-function: linear;
+}
+
+VerticalScrollBar .ScrollThumb,
+HTMLVerticalScrollBar .ScrollThumb {
+    width: 7px;
+    min-height: 18px;
+    background-color: #ffffff;
+    border-radius: 0px;
+    transition-property: background-color, transform, position;
+    transition-duration: 0.1s;
+    transition-timing-function: linear;
+}
+
+VerticalScrollBar:hover .ScrollThumb,
+HTMLVerticalScrollBar:hover .ScrollThumb {
+    background-color: #e0b56a;
+}
+
+HorizontalScrollBar,
+HTMLHorizontalScrollBar {
+    height: 7px;
+    background-color: #000000c4;
+    border-radius: 0px;
+    transition-property: transform;
+    transition-duration: 0.18s;
+    transition-timing-function: linear;
+}
+
+HorizontalScrollBar .ScrollThumb,
+HTMLHorizontalScrollBar .ScrollThumb {
+    height: 7px;
+    min-width: 18px;
+    background-color: #ffffff;
+    border-radius: 0px;
+    transition-property: background-color, transform, position;
+    transition-duration: 0.1s;
+    transition-timing-function: linear;
+}
+
 .ViewRow {
     width: 100%;
     margin-bottom: 3px;
@@ -740,6 +852,188 @@
 .ViewAction Label {
     color: #e0b56a;
     font-size: 11px;
+}
+
+/* One tile of the Popit layout editor: its slot number and title, then the two moves. The rows
+   are the dashboard's own ordering control, so they flow like the console's input row. */
+.ViewOrderRow {
+    width: 100%;
+    height: fit-children;
+    flow-children: right;
+    margin-bottom: 2px;
+}
+
+.ViewOrderRow .ViewLine {
+    width: 300px;
+    padding-top: 4px;
+}
+
+.ViewOrderRow .ViewAction {
+    margin-left: 4px;
+}
+/* --- shell dashboard: the planet-shploingus window model ----------------- */
+/* Title 34 dp, seam 1 px, rail 160 dp, slot 48 dp, status 32 dp (planet-shploingus
+   docs/SHELL.md). The dashboard is an app inside one shell window, not a second window system. */
+.DashApp {
+    width: 100%;
+    height: 100%;
+    flow-children: down;
+}
+
+.DashHeader {
+    width: 100%;
+    height: 34px;
+    background-color: #1b1409;
+    flow-children: right;
+}
+
+.DashTitle {
+    font-size: 15px;
+    font-weight: bold;
+    color: #e0b56a;
+    margin-left: 12px;
+    padding-top: 7px;
+}
+
+.DashSubtitle {
+    font-size: 11px;
+    color: #a8977c;
+    margin-left: 12px;
+    padding-top: 11px;
+}
+
+/* A seam is one pixel: depth is a step between planes, never a soft shadow. */
+.DashSeam {
+    width: 100%;
+    height: 1px;
+    background-color: #6b5433;
+}
+
+.DashBody {
+    width: 100%;
+    height: fill-parent-flow(1);
+    flow-children: right;
+}
+
+.DashRail {
+    width: 160px;
+    height: 100%;
+    background-color: #17110a;
+    border-right: 1px solid #6b5433;
+}
+
+.DashRailSlot {
+    width: 100%;
+    height: 48px;
+    flow-children: right;
+    padding-top: 14px;
+    padding-left: 12px;
+}
+
+.DashRailSlot:hover {
+    background-color: #2a2012;
+}
+
+.DashRailSlot.Active {
+    background-color: #3a2c14;
+    border-left: 2px solid #e0b56a;
+}
+
+.DashRailMark {
+    font-size: 14px;
+    font-weight: bold;
+    color: #a8977c;
+    width: 20px;
+}
+
+.DashRailSlot.Active .DashRailMark {
+    color: #e0b56a;
+}
+
+.DashRailLabel {
+    font-size: 12px;
+    color: #a8977c;
+    padding-top: 1px;
+}
+
+.DashRailSlot.Active .DashRailLabel {
+    color: #efe4cf;
+}
+
+.DashPanel {
+    width: fill-parent-flow(1);
+    height: 100%;
+    padding: 10px 12px;
+}
+
+.DashStatus {
+    width: 100%;
+    height: 32px;
+    flow-children: right;
+    background-color: #17110a;
+    border-top: 1px solid #6b5433;
+}
+
+.DashStatusLabel {
+    font-size: 11px;
+    color: #a8977c;
+    margin-left: 12px;
+    padding-top: 8px;
+}
+
+/* The dp grid is 1:1: one dp is one pixel and the canvas crops the screen at the window's
+   corner, so a square stays the step the editor says it is. */
+.DashCanvas {
+    width: 320px;
+    height: 224px;
+    background-color: #0d0a05;
+    border: 1px solid #6b5433;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    overflow: clip;
+}
+
+.DashGridLine {
+    background-color: #241b0f;
+}
+
+.DashGridLine.Vertical {
+    position: absolute;
+    width: 1px;
+    height: 100%;
+}
+
+.DashGridLine.Horizontal {
+    position: absolute;
+    height: 1px;
+    width: 100%;
+}
+
+.DashWindowRect {
+    position: absolute;
+    border: 1px solid #e0b56a;
+    background-color: #e0b56a18;
+}
+
+.DashCell {
+    position: absolute;
+    border: 1px solid #33b5e5;
+    background-color: #33b5e522;
+}
+
+.DashCellLabel {
+    font-size: 10px;
+    color: #efe4cf;
+    margin-left: 3px;
+}
+
+.DashXmlHost {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #6b5433;
+    background-color: #0d0a05;
+    margin-top: 4px;
+    margin-bottom: 6px;
 }
 
 /* The console is the one text-entry surface. It is deliberately outside the game's focus graph;

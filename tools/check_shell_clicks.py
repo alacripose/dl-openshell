@@ -24,6 +24,7 @@ STYLE = ROOT / "clientaddon" / "panorama" / "styles" / "openlock_shell.css"
 # These are the shell-owned pointer surfaces. A layout regression on any of
 # them is a dead button, even when the drawing still looks correct.
 REQUIRED_CLICK_PATHS = (
+    "DashboardButton",
     "WindowsButton",
     "LauncherButton",
     "SchemeButton",
@@ -126,6 +127,13 @@ def main() -> int:
         if required not in script:
             errors.append(f"script: missing idle-hover path '{required}'")
 
+    # A focused compact HUD window must promote to the full chrome schema. The old path only
+    # restored on hover, so a window focused from the taskbar stayed in the 14 dp strip while a
+    # newly opened shell window used the 30 dp title and 26 dp controls.
+    for required in ("clearCompactChrome", "focused === f.win.id", "focused === id"):
+        if required not in script:
+            errors.append(f"script: focus does not promote the compact chrome ({required})")
+
     # The reduced tools client exposes no cursor at all, so the pointer rectangle alone cannot
     # restore a window. Each window keeps its own hover state, bound to the live panel it frames,
     # and its own idle clock; a global clock would leave every other window expanded.
@@ -157,6 +165,22 @@ def main() -> int:
     idle_cost = re.search(r"\.WindowFrame\.CompactHud\.IdleCompact \.WindowCost[^{]*\{([^}]*)\}", style)
     if idle_cost and "visibility: collapse" in idle_cost.group(1):
         errors.append(".IdleCompact .WindowCost: the performance metric is hidden at idle")
+
+    focused_schema = re.search(r"\.WindowFrame\.CompactHud\.Focused \.WindowTitle\s*\{([^}]*)\}", style)
+    if not focused_schema or "height: 30px" not in focused_schema.group(1):
+        errors.append(".CompactHud.Focused .WindowTitle: focused HUD window keeps the compact title")
+
+    # CSDK10 asserts in CBaseScrollBar::LoadTransitionData when a scrollbar has no transform
+    # transition. The shell sheet is the only place the legacy renderer gets one.
+    scrollbar = re.search(r"VerticalScrollBar[^{]*\{([^}]*)\}", style)
+    if not scrollbar or "transition-property: transform" not in scrollbar.group(1):
+        errors.append("VerticalScrollBar: no transform transition; CSDK10 asserts when a body scrolls")
+
+    # A cell can be split again. The id carries the declared root and the full component path, so
+    # a saved row can rebuild each ancestor split before applying the final rectangle.
+    for required in ("cellRoot", "cellPath", "function ensureSplitPath", "ensureSplitPath(parentId"):
+        if required not in script:
+            errors.append(f"script: nested cells cannot be saved and restored ({required})")
 
     # Taskbar entries expose the same window actions as the title bar. The menu must include a
     # maximize/restore toggle; a menu that can only open, minimize, pin and close strands a

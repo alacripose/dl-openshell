@@ -55,6 +55,30 @@
     var REPO_URL = "https://github.com/alacripose/dl-openshell";
     var LANDING_URL = "https://alacripose.github.io/dl-openshell/";
     var WINDOWS_ID = "__windows";
+    // The shell's own dashboard. The game's Citadel dashboard is a full screen in the tools
+    // client, but in the release build it is reachable only through the pause menu, so the shell
+    // cannot depend on it. This window is drawn by the shell, opens over whatever the game has on
+    // screen — in release that is the pause menu's blurred world — and carries the shell's menu
+    // and the Popit surface layout editor.
+    var DASHBOARD_ID = "__dashboard";
+    var DASHBOARD_VIEW = {
+        id: DASHBOARD_ID,
+        title: "Dashboard",
+        content: "dashboard",
+        lane: "shell",
+        view: "dashboard",
+        x: 96, y: 96, width: 640, height: 560,
+        minWidth: 380, minHeight: 240,
+        opacity: 960,
+        "theme-role": "surface",
+        pinnable: false
+    };
+    // The Popit surface's arrangement, edited on the dashboard and saved in the layout profile
+    // beside the window rectangles. openlock_popit.js owns the legal range and clamps this copy.
+    var popitLayout = { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [] };
+    function defaultPopitLayout() {
+        return { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [] };
+    }
     var WINDOWS_VIEW = {
         id: WINDOWS_ID,
         title: "Windows",
@@ -237,6 +261,7 @@
 
     function windowById(id) {
         if (id === WINDOWS_ID) return WINDOWS_VIEW;
+        if (id === DASHBOARD_ID) return DASHBOARD_VIEW;
         return index[id] || null;
     }
 
@@ -1463,10 +1488,17 @@
         }
 
         var nat = b.natural;
-        if (!g.init) {
+        // A frame the player has not placed is a frame around whatever the game is drawing, so it
+        // follows the panel: when the HUD reflows, the window moves with it. Pinning a window does
+        // not place it — only a drag, a resize, a nudge or a loaded profile does, and those set
+        // `g.userSet`. Without this, a HUD panel that moved after its first sample was pushed back
+        // to that sample on every poll, which is the window that walked around on its own.
+        var follows = !g.userSet && !splitCells[win.id] &&
+            (win.autoFrame || win.discovered || win["theme-role"] === "hud");
+        if (!g.init || follows) {
             // A scaled window is placed at the schema's point; a 1:1 window starts where the game
             // already drew it, so a HUD element is not yanked across the screen on first bind.
-            if (win.panelScale && win.panelScale !== 1) {
+            if (!follows && win.panelScale && win.panelScale !== 1) {
                 g.x = num(win.x) || 16;
                 g.y = num(win.y) || 64;
                 g.w = Math.max(120, Math.round(nat.w * win.panelScale));
@@ -1482,6 +1514,8 @@
         // Keep a grab area on screen when a window was dragged past the right or bottom edge.
         g.x = clamp(g.x, 4, Math.max(4, screenW - 160));
         g.y = clamp(g.y, 0, Math.max(0, screenH - 80));
+        // The clamp is the shell's own adjustment, not a placement: a window that followed the
+        // game into the edge keeps following it.
 
         // The title bar is drawn above the content. A compact HUD title is 16 dp; a shell window
         // carries the full title and meta. If the content is in the shell bar's row, ease the
@@ -1746,11 +1780,46 @@
     // Panorama rejects CSS transitions with a cubic-bezier function, so the fallback is eased
     // here. The title strip shrinks from 16 dp to 10 dp and fades while the compact controls
     // fade out; the next pointer interaction runs the same curve back to the expanded state.
+    function clearCompactChrome(f) {
+        // Clearing the inline values, rather than writing the full sizes here, lets the
+        // stylesheet own the expanded schema. The Focused rules then restore the 30 dp title and
+        // the 26 dp controls that a newly opened shell window uses.
+        try { f.titleBar.style.height = ""; } catch (e) {}
+        try { f.titleBar.style.opacity = ""; } catch (e) {}
+        try { f.title.style.opacity = ""; } catch (e) {}
+        try { f.title.style.transform = ""; } catch (e) {}
+        try { f.title.style.visibility = ""; } catch (e) {}
+        var buttons = f.buttons || [];
+        for (var i = 0; i < buttons.length; i++) {
+            try { buttons[i].style.opacity = ""; } catch (e) {}
+            try { buttons[i].style.transform = ""; } catch (e) {}
+        }
+        var cost = f.cost || null;
+        if (cost) {
+            try { cost.style.opacity = ""; } catch (e) {}
+            try { cost.style.fontSize = ""; } catch (e) {}
+        }
+        try { f.frame.RemoveClass("IdleCompact"); } catch (e) {}
+    }
+
     function paintCompact(f) {
         if (!f || !f.titleBar) return;
         // The compact schema belongs to automatic HUD windows only. A shell window keeps its
         // full title height even when hover runs the restore path.
         if (!f.win || !(f.win.autoFrame || f.win.discovered)) return;
+        // Focus is the promotion point: a focused HUD window uses the same full chrome as a
+        // window the shell opens itself. Clearing the compact inline overrides hands the title
+        // strip and its controls back to the Focused rules in openlock_shell.css.
+        if (focused === f.win.id) {
+            // Focus pins the expanded schema. Reset the idle curve here so moving focus away
+            // starts from the full chrome and waits out the normal idle interval instead of
+            // collapsing on the same tick.
+            f.idleMix = 0;
+            f.idleTarget = 0;
+            f.idleCompact = false;
+            clearCompactChrome(f);
+            return;
+        }
         var e = easeInOut(clamp(num(f.idleMix) || 0, 0, 1));
         // The frame is the 1 px outline and the corner grips: those are the only parts that go
         // away at idle. The chrome stays on screen as a compact black-and-white strip, with its
@@ -1894,10 +1963,13 @@
             var f = frames[id];
             if (!f || !f.win || !(f.win.autoFrame || f.win.discovered)) continue;
             var hovered = hoveredByPointer(f, now);
+            // A focused window is actively in use even when the pointer is elsewhere. It keeps
+            // the full chrome schema; focus moving away is what lets the compact schema return.
+            var active = hovered || focused === id;
             // Each window owns its own idle clock. A hover on one window must not keep every
             // other window's chrome expanded, and leaving this window must not reset the others.
-            if (hovered) f.lastActiveAt = now;
-            var idle = !pointerDrag && !hovered && (now - (num(f.lastActiveAt) || 0)) > 3200;
+            if (active) f.lastActiveAt = now;
+            var idle = !pointerDrag && !active && (now - (num(f.lastActiveAt) || 0)) > 3200;
             if (idle && !f.loggedIdle) {
                 f.loggedIdle = true;
                 $.Msg("[Openlock] chrome idle: ", id, " grade=", shellGrade);
@@ -1981,9 +2053,11 @@
             // around nothing is worse than the game's own HUD. Poll re-shows it when the panel
             // appears. A window the player just opened shows a compact refusal instead of a
             // screen-sized hole.
-            if (!resolved && f.auto) {
-                // An auto-framed window follows its game screen: when the shop or the map closes,
-                // the chrome goes away rather than sitting there as a refusal.
+            if (!resolved && (f.auto || pinned[win.id])) {
+                // A window that follows its game screen — the shop, the map, a pinned HUD element —
+                // draws nothing while the game is not drawing that panel. The presence came from
+                // the panel tree, not from the package: on the dashboard none of these exist, and
+                // a card saying so is the shell assuming elements that are not there.
                 setFrameVisible(f, false);
                 return;
             }
@@ -2647,8 +2721,22 @@
     // clearest example: health, shield, four slots and their labels share one transparent root).
     // Splitting replaces the one screen-sized frame with a frame per visible component. The game
     // panel is never reparented or rebuilt; each cell frame binds the child that already draws.
-    function cellIdFor(parentId, key) {
-        return "cell:" + parentId + ":" + key;
+    function cellIdFor(rootId, path) {
+        return "cell:" + rootId + ":" + path;
+    }
+
+    // Cells created before nested splits existed carry only the old `cell:<parent>:<key>` id.
+    // Derive the root and path from that id so such a cell can still be split without a reload.
+    function cellRootAndPath(win) {
+        if (!win) return { root: "", path: "" };
+        if (win.cellRoot) return { root: win.cellRoot, path: win.cellPath || "" };
+        var id = String(win.id || "");
+        if (id.indexOf("cell:") === 0) {
+            var rest = id.substring(5);
+            var at = rest.indexOf(":");
+            if (at > 0) return { root: rest.substring(0, at), path: rest.substring(at + 1) };
+        }
+        return { root: id, path: "" };
     }
 
     function componentParts(panel) {
@@ -2700,12 +2788,12 @@
 
     function splitWindow(win) {
         if (!win || !isPanelWindow(win)) return false;
-        if (win.cellWindow) return false;
         if (splitCells[win.id] && splitCells[win.id].length) return true;
-        // Colon ids (discovered `live:` / `popup:` windows) encode their measured size and are
-        // not stable across a HUD rebuild. A declared package window has a stable slug and is
-        // the only thing a saved profile can name again.
-        if (String(win.id).indexOf(":") >= 0) {
+        // A cell can be split again. Its children stay under the declared root and carry the
+        // parent path, so the id survives a reload and the saved profile can rebuild the tree.
+        // Colon ids on a non-cell (discovered `live:` / `popup:` windows) encode their measured
+        // size and are not stable across a HUD rebuild; only a declared window is nameable.
+        if (!win.cellWindow && String(win.id).indexOf(":") >= 0) {
             globalThis.OpenlockToast("Split refused",
                 "Only a declared window can be split; this one is discovered and its id changes with the HUD.", "", true);
             return false;
@@ -2722,12 +2810,21 @@
             return false;
         }
 
+        var coords = win.cellWindow ? cellRootAndPath(win) : { root: win.id, path: "" };
+        var rootId = coords.root;
+        var basePath = coords.path;
         var used = {};
         var cells = [];
         for (var i = 0; i < parts.length; i++) {
             var part = parts[i];
             var key = partKey(part.panel, i, used);
-            var cellId = cellIdFor(win.id, key);
+            var path = basePath ? basePath + ":" + key : key;
+            var cellId = cellIdFor(rootId, path);
+            if (cellId.length > 192) {
+                globalThis.OpenlockToast("Split refused",
+                    "The component path exceeds the layout id limit; split the parent instead.", "", true);
+                return false;
+            }
             var label = key;
             var cell = index[cellId];
             if (!cell) {
@@ -2738,6 +2835,8 @@
                     lane: "game",
                     "theme-role": "hud",
                     cellWindow: true,
+                    cellRoot: rootId,
+                    cellPath: path,
                     cellParent: win.id,
                     cellKey: key,
                     panelCandidates: [{ kind: "ref", panel: part.panel }],
@@ -2755,6 +2854,10 @@
                 data.windows.push(cell);
             } else {
                 cell.panelCandidates = [{ kind: "ref", panel: part.panel }];
+                cell.cellRoot = rootId;
+                cell.cellPath = path;
+                cell.cellParent = win.id;
+                cell.cellKey = key;
                 cell.title = (win.title || win.id) + " · " + label;
             }
             cells.push({ id: cellId, key: key, panel: part.panel, label: label });
@@ -2778,6 +2881,14 @@
         if (!cells || !cells.length) return false;
         for (var i = 0; i < cells.length; i++) openWindow(cells[i].id, true);
         return true;
+    }
+
+    // A split container has no frame of its own. Focus belongs to the first leaf, not to a
+    // hidden parent, so a restored layout reports the same active surface the player left.
+    function firstLeafId(id) {
+        var guard = 0;
+        while (splitCells[id] && splitCells[id].length && guard++ < 24) id = splitCells[id][0].id;
+        return id;
     }
 
     // --- discovery -----------------------------------------------------------
@@ -3448,7 +3559,7 @@
         if (isPanelWindow(win)) contextAction(contextMenu,
             (liveSkin[win.id] && liveSkin[win.id].on ? "Remove live skin" : "Theme live panel (experimental)"),
             function () { toggleLiveSkin(win); });
-        if (isPanelWindow(win) && !win.cellWindow && !splitCells[win.id]) {
+        if (isPanelWindow(win) && !(splitCells[win.id] && splitCells[win.id].length)) {
             contextAction(contextMenu, "Split into cells", function () { splitWindow(win); });
         }
         if (win.cellWindow) {
@@ -3663,6 +3774,7 @@
             g.h = Math.max(160, screenH - g.y - 12);
         }
         g.init = true;
+        g.userSet = true;
         if (f.maxButton) {
             f.maxButton.SetHasClass("Maximized", !!maximized[id]);
             if (f.maxButton.glyph) f.maxButton.glyph.text = maximized[id] ? "▣" : "□";
@@ -3815,10 +3927,15 @@
         zTop += 1;
         var f = frames[id];
         if (f) {
+            f.lastActiveAt = Date.now();
             try { f.frame.style.zIndex = String(zTop); } catch (e) {}
             for (var key in frames) {
                 if (!frames.hasOwnProperty(key)) continue;
                 frames[key].frame.SetHasClass("Focused", key === id);
+                // Focus changes which chrome schema a compact frame uses. Repaint both the new
+                // and the previous frame now; waiting for the idle clock left a focused window
+                // in the small schema and the unfocused one in the big schema.
+                paintCompact(frames[key]);
             }
         }
     }
@@ -3840,7 +3957,7 @@
             delete minimized[id];
             freeCursor(true);
             openSplitCells(id);
-            activeId = splitCells[id][0].id;
+            activeId = firstLeafId(splitCells[id][0].id);
             renderBar();
             render();
             focusWindow(activeId);
@@ -4180,6 +4297,16 @@
 
     globalThis.OpenlockRestoreLayout = restoreUiLayout;
 
+    // The dashboard is the shell's fallback surface: when the game is drawing no panel the shell
+    // owns, opening it lands on a menu that exists instead of on a frame around nothing.
+    globalThis.OpenlockDashboard = function () {
+        expanded = true;
+        hudScanSig = "";
+        freeCursor(true);
+        choose(DASHBOARD_ID);
+        render();
+    };
+
     globalThis.OpenlockToggle = function () {
         skipPreload();
         expanded = !expanded;
@@ -4187,7 +4314,16 @@
         if (expanded) showTaskbar();
         if (expanded) cue("select");
         freeCursor(expanded);
-        if (expanded && !activeId) activeId = data.tabs.length ? data.tabs[0] : WINDOWS_ID;
+        if (expanded && !activeId) {
+            // The dashboard is the shell's own screen and the only one that is guaranteed to
+            // exist: the game's dashboard sits behind the pause menu in release. So a shell that
+            // opens while no declared game panel is on screen opens its dashboard, not a tab that
+            // would frame a panel the game is not drawing.
+            activeId = presenceReading().live
+                ? (data.tabs.length ? data.tabs[0] : WINDOWS_ID)
+                : DASHBOARD_ID;
+            if (activeId === DASHBOARD_ID) openWindow(DASHBOARD_ID, true);
+        }
         render();
     };
 
@@ -4359,7 +4495,22 @@
             g.x = clamp(pointerDrag.x + dx, 4, Math.max(4, screenW - 160));
             g.y = clamp(pointerDrag.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
         }
+        // The dp grid is the layout unit made visible. While the dashboard is open, a drag lands
+        // on the grid and a resize keeps a whole number of grid squares, so the numbers in the
+        // editor and the rectangle on screen are the same numbers.
+        if (dashSnap && dashGrid > 0 && open[DASHBOARD_ID]) {
+            g.x = clamp(Math.round(g.x / dashGrid) * dashGrid, 4, Math.max(4, screenW - 160));
+            g.y = clamp(Math.round(g.y / dashGrid) * dashGrid, SHELL_TOP_DP,
+                Math.max(SHELL_TOP_DP, screenH - 80));
+            if (pointerDrag.mode.indexOf("resize") === 0) {
+                g.w = Math.max(num(win.minWidth) || 160, Math.round(g.w / dashGrid) * dashGrid);
+                if (!isPanelWindow(win)) {
+                    g.h = Math.max(num(win.minHeight) || 120, Math.round(g.h / dashGrid) * dashGrid);
+                }
+            }
+        }
         g.init = true;
+        g.userSet = true;
         applyWindow(win);
         $.Schedule(0.016, pollPointerDrag);
     }
@@ -4543,6 +4694,7 @@
         }
 
         g.init = true;
+        g.userSet = true;
         hideGrid();
         applyWindow(win);
     }
@@ -5450,7 +5602,7 @@
                         "PaletteNote");
                 }
                 var owner = windowForPanel(p);
-                if (owner && !owner.cellWindow && !splitCells[owner.id] && isPanelWindow(owner)) {
+                if (owner && !(splitCells[owner.id] && splitCells[owner.id].length) && isPanelWindow(owner)) {
                     actionXd(body, "Split " + (owner.title || owner.id) + " into cells", function () {
                         splitWindow(owner);
                         renderOwn(win, body);
@@ -5659,6 +5811,7 @@
         actionXd(body, "Reset saved layout", function () {
             send("layout-reset", scheme.id);
             delete layoutProfiles[scheme.id];
+            popitLayout = defaultPopitLayout();
             layoutLoadedFor = "";
             layoutExportPath = "";
             globalThis.OpenlockToast("Layout reset", scheme.id + " profile removed; package defaults remain.", "", false);
@@ -5703,8 +5856,713 @@
         });
     }
 
+    // --- shell dashboard -----------------------------------------------------
+    // The release game's dashboard is behind the pause menu, so the shell ships its own. The
+    // layout is planet-shploingus's shell (f:/planet-shploingus): one window with a 34 dp title,
+    // a 1 px seam, a 160 dp left rail of 48 dp destinations and a 32 dp status strip. Destinations
+    // are apps inside this window, never extra windows.
+    var DASH_DESTINATIONS = [
+        { id: "menu", label: "MENU", hint: "the shell's surfaces" },
+        { id: "layout", label: "LAYOUT", hint: "declared package, cells, contents and the dp grid" },
+        { id: "xml", label: "XML", hint: "a game layout opened outside its window" },
+        { id: "popit", label: "POPIT", hint: "the Popit surface's arrangement" },
+        { id: "build", label: "BUILD", hint: "game panels, build and update" }
+    ];
+    var dashDest = "layout";
+    var dashSelected = "";
+    var dashGrid = 8;
+    var dashSnap = true;
+
+    function dashboardEntries() {
+        var wanted = [
+            { id: "windows", title: "All windows", win: WINDOWS_ID },
+            { id: "uitree", title: "UI tree and layout", win: "uitree" },
+            { id: "picker", title: "Pick a live element", win: "picker" },
+            { id: "palette", title: "Theme palette", win: "palette" },
+            { id: "settings", title: "Settings", win: "settings" },
+            { id: "updates", title: "Updates", win: "updates" },
+            { id: "refusals", title: "Refusals", win: "refusals" },
+            { id: "performance", title: "Performance", win: "performance" },
+            { id: "console", title: "Console", win: "console" }
+        ];
+        var out = [];
+        for (var i = 0; i < wanted.length; i++) {
+            if (wanted[i].win !== WINDOWS_ID && !windowById(wanted[i].win)) continue;
+            out.push(wanted[i]);
+        }
+        return out;
+    }
+
+    function dashboardPopitActions() {
+        var entries = dashboardEntries();
+        var actions = [];
+        for (var i = 0; i < entries.length; i++) {
+            actions.push({ id: entries[i].id, label: entries[i].title, window: entries[i].win });
+        }
+        return actions;
+    }
+
+    // Presence is read from the live panel tree, never from the package: a declared window exists
+    // when the game is drawing its panel, and on the dashboard none of them are.
+    function panelOnScreen(win) {
+        if (!isPanelWindow(win)) return false;
+        var b = bound[win.id];
+        if (!b || !b.panel) return false;
+        return alive(b.panel) && panelVisible(b.panel);
+    }
+
+    function presenceReading() {
+        var declared = 0, live = 0, absent = [];
+        for (var i = 0; i < data.windows.length; i++) {
+            var win = data.windows[i];
+            if (!isPanelWindow(win)) continue;
+            declared++;
+            if (panelOnScreen(win)) live++;
+            else if (absent.length < 6) absent.push(win.title || win.id);
+        }
+        return { declared: declared, live: live, absent: absent };
+    }
+
+    function refreshDashboard() {
+        var f = frames[DASHBOARD_ID];
+        if (f) renderOwn(f.win || DASHBOARD_VIEW, f.body);
+    }
+
+    function popitLayoutNow() {
+        if (globalThis.OpenlockPopit) popitLayout = globalThis.OpenlockPopit.normalizeLayout(popitLayout);
+        return popitLayout;
+    }
+
+    // One edit path: clamp through the module, repaint the editor, and re-place the open surface
+    // so the player sees the arrangement they are editing instead of a stale menu.
+    function setPopitLayout(patch) {
+        var next = {
+            columns: popitLayout.columns, width: popitLayout.width, frame: popitLayout.frame,
+            mode: popitLayout.mode, order: popitLayout.order.slice(0)
+        };
+        for (var key in patch) if (patch.hasOwnProperty(key)) next[key] = patch[key];
+        popitLayout = globalThis.OpenlockPopit
+            ? globalThis.OpenlockPopit.normalizeLayout(next)
+            : next;
+        refreshDashboard();
+        var st = globalThis.OpenlockPopit ? globalThis.OpenlockPopit.status() : null;
+        if (st && st.visible) showDashboardPopit();
+    }
+
+    function movePopitTile(id, delta) {
+        var actions = dashboardPopitActions();
+        var order = popitLayout.order.slice(0);
+        // The first move starts from what is on screen, so a fresh profile reorders in place
+        // instead of jumping to a list that has only the tile the player pressed.
+        for (var i = 0; i < actions.length; i++) {
+            if (order.indexOf(actions[i].id) < 0) order.push(actions[i].id);
+        }
+        var at = order.indexOf(id);
+        var to = at + delta;
+        if (at < 0 || to < 0 || to >= order.length) return;
+        order[at] = order[to];
+        order[to] = id;
+        setPopitLayout({ order: order });
+    }
+
+    function showDashboardPopit() {
+        closePopit();
+        if (!globalThis.OpenlockPopit || typeof globalThis.OpenlockPopit.show !== "function") {
+            refuseFeature("Popit refused", "the surface module is not in this build");
+            return;
+        }
+        var win = DASHBOARD_VIEW;
+        var g = ensureGeometry(win);
+        measureScreen();
+        var openRects = [];
+        for (var id in open) {
+            if (!open.hasOwnProperty(id) || id === win.id || minimized[id]) continue;
+            var other = geometry[id];
+            if (!other) continue;
+            openRects.push({
+                id: id,
+                title: (windowById(id) || {}).title || id,
+                x: other.x, y: other.y, w: other.w, h: other.h
+            });
+        }
+        var actions = dashboardPopitActions();
+        cue("select");
+        var result = globalThis.OpenlockPopit.show({
+            root: root,
+            window: { id: win.id, title: win.title },
+            geometry: { x: g.x, y: g.y, w: g.w, h: g.h },
+            screen: { w: screenW, h: screenH, top: SHELL_TOP_DP },
+            openRects: openRects,
+            form: currentForm,
+            layout: popitLayoutNow(),
+            layer: {
+                title: "Openlock",
+                hint: "The shell's own menu. Its arrangement is saved with this scheme.",
+                actions: actions
+            },
+            actions: actions,
+            onAction: function (action) {
+                closePopit();
+                if (action.window) openWindow(action.window);
+                else cue("place");
+            },
+            onRefusal: function (title, why) { refuseFeature(title, why); },
+            onHover: function (panel, label, body) {
+                try { dwellAt(label, body, panel); } catch (e) {}
+                try { enterFrame(win.id, "dwell"); } catch (e) {}
+            },
+            onHoverEnd: function () {
+                hideDwell();
+                try { leaveFrame(win.id, "dwell"); } catch (e) {}
+            }
+        });
+        if (result && result.ok) {
+            popitLayout = result.layout;
+            logPerf("info", "dashboard popit: " + result.layout.columns + " column(s), " +
+                result.layout.width + " px, " + result.tiles + " tile(s)");
+            refreshDashboard();
+        }
+    }
+
+    // --- the app shell (planet-shploingus' window model) ---------------------
+    // Title 34 dp, seam 1 px, rail 160 dp, slot 48 dp, status 32 dp. These are the same metrics
+    // docs/SHELL.md fixes, so a dashboard and a planet shell window read as one system.
+    function dashRail(body, active) {
+        var rail = $.CreatePanel("Panel", body, "");
+        rail.AddClass("DashRail");
+        for (var i = 0; i < DASH_DESTINATIONS.length; i++) {
+            (function (dest) {
+                var slot = $.CreatePanel("Panel", rail, "");
+                slot.AddClass("DashRailSlot");
+                if (dest.id === active) slot.AddClass("Active");
+                slot.hittest = true;
+                slot.SetPanelEvent("onmouseactivate", function () {
+                    dashDest = dest.id;
+                    refreshDashboard();
+                    cue("select");
+                });
+                var mark = $.CreatePanel("Label", slot, "");
+                mark.AddClass("DashRailMark");
+                mark.text = dest.label.charAt(0);
+                mark.hittest = false;
+                var label = $.CreatePanel("Label", slot, "");
+                label.AddClass("DashRailLabel");
+                label.text = dest.label;
+                label.hittest = false;
+            })(DASH_DESTINATIONS[i]);
+        }
+        return rail;
+    }
+
+    function dashHeader(body, reading) {
+        var header = $.CreatePanel("Panel", body, "");
+        header.AddClass("DashHeader");
+        var title = $.CreatePanel("Label", header, "");
+        title.AddClass("DashTitle");
+        title.text = "Openlock";
+        title.hittest = false;
+        var sub = $.CreatePanel("Label", header, "");
+        sub.AddClass("DashSubtitle");
+        sub.text = "shell dashboard  ·  " + reading.live + "/" + reading.declared + " game panels on screen";
+        sub.hittest = false;
+        var seam = $.CreatePanel("Panel", body, "");
+        seam.AddClass("DashSeam");
+        seam.hittest = false;
+        return header;
+    }
+
+    function dashStatus(body, reading) {
+        var status = $.CreatePanel("Panel", body, "");
+        status.AddClass("DashStatus");
+        var parts = [
+            presencePart(reading),
+            "grid " + dashGrid + " dp",
+            dashSnap ? "snap on" : "snap off",
+            dashDest
+        ];
+        for (var i = 0; i < parts.length; i++) {
+            var part = $.CreatePanel("Label", status, "");
+            part.AddClass("DashStatusLabel");
+            part.text = parts[i];
+            part.hittest = false;
+        }
+        return status;
+    }
+
+    function presencePart(reading) {
+        return reading.live + "/" + reading.declared + " panels";
+    }
+
+    // --- LAYOUT: each window's declaration, cells and contents ---------------
+    function dashWindowList() {
+        var out = [];
+        for (var i = 0; i < data.windows.length; i++) out.push(data.windows[i]);
+        return out;
+    }
+
+    function dashSelectedWindow() {
+        var win = dashSelected ? windowById(dashSelected) : null;
+        if (!win) {
+            var list = dashWindowList();
+            win = null;
+            for (var i = 0; i < list.length && !win; i++) if (isPanelWindow(list[i])) win = list[i];
+            if (!win && list.length) win = list[0];
+            dashSelected = win ? win.id : "";
+        }
+        return win;
+    }
+
+    function dashCellsOf(win, g) {
+        var out = [];
+        var split = splitCells[win.id] || [];
+        if (split.length) {
+            for (var i = 0; i < split.length; i++) {
+                var cell = split[i];
+                var cg = geometry[cell.id] || {};
+                out.push({
+                    id: cell.id,
+                    label: cell.label || cell.key || cell.id,
+                    contents: cell.label || cell.key || "cell",
+                    x: num(cg.x), y: num(cg.y), w: num(cg.w), h: num(cg.h)
+                });
+            }
+            return out;
+        }
+        out.push({
+            id: win.id,
+            label: win.title || win.id,
+            contents: win.content || (isPanelWindow(win) ? "live panel" : "shell content"),
+            x: num(g.x), y: num(g.y), w: num(g.w), h: num(g.h)
+        });
+        return out;
+    }
+
+    // One dp is one pixel at 100% zoom, so the canvas is a cropped viewport, not a scaled map:
+    // the grid keeps its dp step and the window's rectangle keeps its real size.
+    var DASH_CANVAS_W = 320;
+    var DASH_CANVAS_H = 224;
+
+    function dashGridCanvas(body, win, g, cells) {
+        var canvas = $.CreatePanel("Panel", body, "");
+        canvas.AddClass("DashCanvas");
+        canvas.hittest = false;
+
+        var originX = Math.max(0, Math.floor(g.x / dashGrid) * dashGrid - dashGrid);
+        var originY = Math.max(0, Math.floor(g.y / dashGrid) * dashGrid - dashGrid);
+
+        for (var x = 0; x <= DASH_CANVAS_W; x += dashGrid) {
+            var v = $.CreatePanel("Panel", canvas, "");
+            v.AddClass("DashGridLine");
+            v.AddClass("Vertical");
+            v.style.marginLeft = x + "px";
+            v.hittest = false;
+        }
+        for (var y = 0; y <= DASH_CANVAS_H; y += dashGrid) {
+            var h = $.CreatePanel("Panel", canvas, "");
+            h.AddClass("DashGridLine");
+            h.AddClass("Horizontal");
+            h.style.marginTop = y + "px";
+            h.hittest = false;
+        }
+
+        var rect = $.CreatePanel("Panel", canvas, "");
+        rect.AddClass("DashWindowRect");
+        rect.style.marginLeft = Math.round(g.x - originX) + "px";
+        rect.style.marginTop = Math.round(g.y - originY) + "px";
+        rect.style.width = Math.max(2, Math.min(DASH_CANVAS_W, g.w)) + "px";
+        rect.style.height = Math.max(2, Math.min(DASH_CANVAS_H, g.h)) + "px";
+        rect.hittest = false;
+
+        for (var c = 0; c < cells.length; c++) {
+            var cell = cells[c];
+            var box = $.CreatePanel("Panel", canvas, "");
+            box.AddClass("DashCell");
+            box.style.marginLeft = Math.round(cell.x - originX) + "px";
+            box.style.marginTop = Math.round(cell.y - originY) + "px";
+            box.style.width = Math.max(2, Math.min(DASH_CANVAS_W, cell.w)) + "px";
+            box.style.height = Math.max(2, Math.min(DASH_CANVAS_H, cell.h)) + "px";
+            box.hittest = false;
+            if (cell.w >= 40 && cell.h >= 14) {
+                var label = $.CreatePanel("Label", box, "");
+                label.AddClass("DashCellLabel");
+                label.text = cell.label;
+                label.hittest = false;
+            }
+        }
+        return canvas;
+    }
+
+    function nudgeSelected(dx, dy, dw, dh) {
+        var win = dashSelectedWindow();
+        if (!win) return;
+        var g = ensureGeometry(win);
+        g.x = clamp(g.x + dx, 0, Math.max(0, screenW - 160));
+        g.y = clamp(g.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
+        g.w = clamp(g.w + dw, num(win.minWidth) || 160, screenW);
+        if (!isPanelWindow(win)) g.h = clamp(g.h + dh, num(win.minHeight) || 120, screenH);
+        g.init = true;
+        g.userSet = true;
+        applyWindow(win);
+        refreshDashboard();
+    }
+
+    function renderDashLayout(body) {
+        var win = dashSelectedWindow();
+        if (!win) {
+            rowXd(body, "the package declares no window to lay out", "ViewMuted");
+            return;
+        }
+        var g = ensureGeometry(win);
+        var cells = dashCellsOf(win, g);
+
+        headingXd(body, "declared windows  ·  " + dashWindowList().length);
+        for (var i = 0; i < data.windows.length; i++) {
+            (function (entry) {
+                var active = entry.id === win.id;
+                actionXd(body, (active ? "●  " : "○  ") + entry.title + "  ·  " + entry.id, function () {
+                    dashSelected = entry.id;
+                    refreshDashboard();
+                });
+            })(data.windows[i]);
+        }
+
+        headingXd(body, "declared package  ·  " + win.id);
+        rowXd(body, "title " + (win.title || "—") + "  ·  lane " + (win.lane || "—") +
+            "  ·  extent " + (win.extent || "—"), "PaletteValue");
+        rowXd(body, "content " + (win.content || "—") + "  ·  role " + (win["theme-role"] || "—") +
+            "  ·  scale " + (win.scale === undefined ? "—" : win.scale + "%"), "ViewMuted");
+        var candidates = win.panelCandidates || [];
+        var panelText = [];
+        for (var c = 0; c < candidates.length; c++) {
+            panelText.push((candidates[c].name || candidates[c].kind) + " (" + candidates[c].kind + ")");
+        }
+        rowXd(body, "panel " + (panelText.length ? panelText.join(", ") : "drawn by the shell"), "ViewMuted");
+        rowXd(body, "geometry " + Math.round(g.x) + "," + Math.round(g.y) + "  ·  " +
+            Math.round(g.w) + "×" + Math.round(g.h) + " dp", "ViewMuted");
+        rowXd(body, "presence " + (panelOnScreen(win) ? "on screen" : "not on screen") +
+            (isPanelWindow(win) ? "" : "  ·  no game panel to watch"), "ViewMuted");
+
+        headingXd(body, "visual cells  ·  " + cells.length);
+        for (var v = 0; v < cells.length; v++) {
+            rowXd(body, (v + 1) + "  " + cells[v].label + "  ·  " + cells[v].id, "ViewMuted");
+            rowXd(body, "    contents " + cells[v].contents + "  ·  " +
+                Math.round(cells[v].w) + "×" + Math.round(cells[v].h) + " dp at " +
+                Math.round(cells[v].x) + "," + Math.round(cells[v].y), "ViewMuted");
+        }
+        rowXd(body, splitCells[win.id] && splitCells[win.id].length
+            ? "Cells are this window's split components; each is framed, themed and saved on its own."
+            : "One cell: this window has no split components, so its whole panel is the content.",
+            "PaletteNote");
+
+        headingXd(body, "dp pixel grid  ·  " + dashGrid + " dp");
+        dashGridCanvas(body, win, g, cells);
+        rowXd(body, "1 dp is 1 pixel at 100%; the canvas is a cropped viewport at the window's " +
+            "corner, so a grid square is exactly " + dashGrid + " dp.", "PaletteNote");
+        var steps = [8, 16, 32];
+        for (var s = 0; s < steps.length; s++) {
+            (function (step) {
+                actionXd(body, step + " dp" + (dashGrid === step ? "  ·  active" : ""), function () {
+                    dashGrid = step;
+                    refreshDashboard();
+                });
+            })(steps[s]);
+        }
+        actionXd(body, dashSnap ? "Snap while dragging  ·  on" : "Snap while dragging  ·  off", function () {
+            dashSnap = !dashSnap;
+            refreshDashboard();
+        });
+        actionXd(body, "← " + dashGrid + " dp", function () { nudgeSelected(-dashGrid, 0, 0, 0); });
+        actionXd(body, "→ " + dashGrid + " dp", function () { nudgeSelected(dashGrid, 0, 0, 0); });
+        actionXd(body, "↑ " + dashGrid + " dp", function () { nudgeSelected(0, -dashGrid, 0, 0); });
+        actionXd(body, "↓ " + dashGrid + " dp", function () { nudgeSelected(0, dashGrid, 0, 0); });
+        actionXd(body, "wider " + dashGrid + " dp", function () { nudgeSelected(0, 0, dashGrid, 0); });
+        actionXd(body, "narrower " + dashGrid + " dp", function () { nudgeSelected(0, 0, -dashGrid, 0); });
+        if (!isPanelWindow(win)) {
+            actionXd(body, "taller " + dashGrid + " dp", function () { nudgeSelected(0, 0, 0, dashGrid); });
+            actionXd(body, "shorter " + dashGrid + " dp", function () { nudgeSelected(0, 0, 0, -dashGrid); });
+        }
+        actionXd(body, "Find its XML in the XML app", function () {
+            dashLayoutQuery = win.content || win.id;
+            dashDest = "xml";
+            refreshDashboard();
+        });
+        actionXd(body, "Save this layout", function () { saveLayoutNow(false); });
+    }
+
+    // --- XML: a game layout opened outside its window ------------------------
+    // The package format is what makes this safe: the layout is mounted into a shell-owned frame,
+    // so the window that owns the XML is untouched and the dashboard's own cells, themes and
+    // frames still govern what is drawn. Nothing is reparented into the game's tree.
+    var dashLayoutQuery = "";
+    var dashLayoutPath = "";
+    var dashPackageTree = "";
+
+    function renderDashXml(body) {
+        rowXd(body, "A closed game window's layout XML can be mounted here, outside the window " +
+            "that owns it. The mount draws into this shell-owned frame: the game's window and its " +
+            "layout are not touched, so a window that is closed in the game still opens here.",
+            "PaletteNote");
+
+        // The shell already sends and receives XML packages at runtime: the host publishes them on
+        // its addon attribute and openlock_delivery.js builds the node tree with CreatePanel. The
+        // dashboard reads that same channel, so a package delivered while the game runs appears
+        // here without a rebuild or a file read.
+        var packages = [];
+        for (var pi = 0; pi < data.windows.length; pi++) {
+            if (data.windows[pi].liveTree && data.windows[pi].liveTree.length) packages.push(data.windows[pi]);
+        }
+        headingXd(body, "delivered packages  ·  " + packages.length);
+        if (!packages.length) {
+            rowXd(body, "no package is delivering an XML tree to this shell right now; one arrives " +
+                "from the host while the game is running", "ViewMuted");
+        }
+        for (var pd = 0; pd < packages.length; pd++) {
+            (function (win) {
+                actionXd(body, (dashPackageTree === win.id ? "\u25cf  " : "\u25cb  ") +
+                    win.title + "  ·  " + win.id, function () {
+                    dashPackageTree = win.id;
+                    dashLayoutPath = "";
+                    refreshDashboard();
+                });
+            })(packages[pd]);
+        }
+        if (dashPackageTree) {
+            var pkg = windowById(dashPackageTree);
+            if (pkg && pkg.liveTree && globalThis.OpenlockDelivery) {
+                headingXd(body, "package tree  ·  " + pkg.id);
+                var hostTree = $.CreatePanel("Panel", body, "");
+                hostTree.AddClass("DashXmlHost");
+                globalThis.OpenlockDelivery.renderTree(hostTree, pkg.liveTree, "dash:" + pkg.id);
+                rowXd(body, "This is the package's own tree, built by the shell's receiver; the " +
+                    "package format is what makes a delivered window safe to draw.", "ViewMuted");
+                actionXd(body, "Clear package tree", function () {
+                    dashPackageTree = "";
+                    refreshDashboard();
+                });
+            }
+        }
+        headingXd(body, "mounted game layouts");
+        rowXd(body, "the stock layouts this install mounts; a layout that is closed in the game " +
+            "opens here without its window", "ViewMuted");
+        uiField(body, "layout", dashLayoutQuery, function (text) {
+            dashLayoutQuery = text;
+            refreshDashboard();
+        });
+
+        var layouts = data.layouts || [];
+        var query = String(dashLayoutQuery || "").toLowerCase();
+        var matches = [];
+        for (var i = 0; i < layouts.length && matches.length < 24; i++) {
+            if (query && String(layouts[i]).toLowerCase().indexOf(query) < 0) continue;
+            matches.push(layouts[i]);
+        }
+        headingXd(body, "mounted layouts  ·  " + matches.length + " of " + layouts.length);
+        if (!matches.length) {
+            rowXd(body, "no mounted layout matches '" + dashLayoutQuery + "'", "ViewMuted");
+        }
+        for (var m = 0; m < matches.length; m++) {
+            (function (path) {
+                actionXd(body, (dashLayoutPath === path ? "\u25cf  " : "\u25cb  ") +
+                    layoutFont(path) + "  ·  " + path, function () {
+                    dashLayoutPath = path;
+                    refreshDashboard();
+                });
+            })(matches[m]);
+        }
+
+        if (!dashLayoutPath) return;
+        headingXd(body, "preview  ·  " + layoutFont(dashLayoutPath));
+        var resolved = normalizeLayoutPath(dashLayoutPath);
+        rowXd(body, resolved || "not a mounted panorama layout", "ViewMuted");
+        var host = $.CreatePanel("Panel", body, "");
+        host.AddClass("DashXmlHost");
+        if (resolved) {
+            try {
+                host.BLoadLayout(resolved, false, false);
+            } catch (e) {
+                rowXd(body, "refused: " + String(e), "PaletteNote");
+            }
+        }
+        rowXd(body, "The mount is a preview and a readout. Its cells are the layout's own; the " +
+            "shell's per-cell frames and themes apply only to a window the shell owns.", "ViewMuted");
+        actionXd(body, "Open as its own shell window", function () { openLayout(dashLayoutPath); });
+        actionXd(body, "Clear preview", function () {
+            dashLayoutPath = "";
+            refreshDashboard();
+        });
+    }
+
+    // --- MENU: the shell's surfaces -----------------------------------------
+    function renderDashMenu(body) {
+        rowXd(body, "The shell's own surfaces. The game's Citadel dashboard is a full screen only " +
+            "in the tools client; in the release build it lives behind the pause menu, so this " +
+            "dashboard is drawn by the shell and opens over whatever the game is showing — on " +
+            "release, the pause menu's blurred world.", "PaletteNote");
+        headingXd(body, "surfaces");
+        var entries = dashboardEntries();
+        for (var i = 0; i < entries.length; i++) {
+            (function (entry) {
+                actionXd(body, entry.title, function () { openWindow(entry.win); });
+            })(entries[i]);
+        }
+        headingXd(body, "popit");
+        actionXd(body, "Open the Popit surface", showDashboardPopit);
+        actionXd(body, "Edit its arrangement", function () {
+            dashDest = "popit";
+            refreshDashboard();
+        });
+    }
+
+    // --- POPIT: the surface's arrangement -----------------------------------
+    function renderDashPopit(body) {
+        var L = popitLayoutNow();
+        var actions = dashboardPopitActions();
+        rowXd(body, "The Popit surface is the shell's menu: one frame, rows of tiles and a mode. " +
+            "This editor is the layout it was missing; the arrangement is saved with this scheme.",
+            "PaletteNote");
+        rowXd(body, L.columns + " column(s)  ·  " + L.width + " px  ·  frame " +
+            String(L.frame).toUpperCase() + "  ·  " + String(L.mode).toUpperCase() + "  ·  " +
+            actions.length + " tile(s)", "PaletteValue");
+        rowXd(body, actions.length > L.columns * 4
+            ? "Only " + (L.columns * 4) + " tiles fit this frame; widen the surface or use more columns."
+            : "Up to " + (L.columns * 4) + " tiles fit at this column count.",
+            actions.length > L.columns * 4 ? "PaletteNote" : "ViewMuted");
+        actionXd(body, "Preview on the dashboard", showDashboardPopit);
+
+        var columns = [1, 2, 3, 4];
+        for (var c = 0; c < columns.length; c++) {
+            (function (n) {
+                actionXd(body, n + (L.columns === n ? " column  ·  active" : " column(s)"), function () {
+                    setPopitLayout({ columns: n });
+                });
+            })(columns[c]);
+        }
+        actionXd(body, "Narrower  ·  " + (L.width - 24) + " px", function () {
+            setPopitLayout({ width: L.width - 24 });
+        });
+        actionXd(body, "Wider  ·  " + (L.width + 24) + " px", function () {
+            setPopitLayout({ width: L.width + 24 });
+        });
+        var frames = (globalThis.OpenlockPopit && globalThis.OpenlockPopit.frameList)
+            ? globalThis.OpenlockPopit.frameList()
+            : [{ id: "lbp3", label: "LBP3" }];
+        var at = 0;
+        for (var f = 0; f < frames.length; f++) if (frames[f].id === L.frame) at = f;
+        var nextFrame = frames[(at + 1) % frames.length];
+        actionXd(body, "Frame  ·  " + frames[at].label + "  →  " + nextFrame.label, function () {
+            setPopitLayout({ frame: nextFrame.id });
+        });
+        actionXd(body, "Mode  ·  " + String(L.mode).toUpperCase() + "  →  " +
+            (L.mode === "play" ? "CREATE" : "PLAY"), function () {
+            setPopitLayout({ mode: L.mode === "play" ? "create" : "play" });
+        });
+
+        headingXd(body, "tile order");
+        var ordered = [];
+        for (var o = 0; o < L.order.length; o++) {
+            for (var a = 0; a < actions.length; a++) {
+                if (actions[a].id === L.order[o] && ordered.indexOf(actions[a]) < 0) ordered.push(actions[a]);
+            }
+        }
+        for (var r = 0; r < actions.length; r++) {
+            if (ordered.indexOf(actions[r]) < 0) ordered.push(actions[r]);
+        }
+        for (var t = 0; t < ordered.length; t++) {
+            (function (action, index) {
+                var row = $.CreatePanel("Panel", body, "");
+                row.AddClass("ViewOrderRow");
+                var label = $.CreatePanel("Label", row, "");
+                label.AddClass("ViewLine");
+                label.text = (index + 1) + "  " + action.title;
+                addControl(row, "ViewAction", "Up", function () { movePopitTile(action.id, -1); });
+                addControl(row, "ViewAction", "Down", function () { movePopitTile(action.id, 1); });
+            })(ordered[t], t);
+        }
+
+        actionXd(body, "Reset popit layout", function () {
+            popitLayout = defaultPopitLayout();
+            refreshDashboard();
+            globalThis.OpenlockToast("Popit layout reset",
+                "four columns, 356 px, LBP3 frame, CREATE mode, package order", "", false);
+        });
+    }
+
+    // --- BUILD: presence and the record -------------------------------------
+    function renderDashBuild(body) {
+        var reading = presenceReading();
+        headingXd(body, "game windows  ·  " + reading.live + " of " + reading.declared + " on screen");
+        if (!reading.declared) {
+            rowXd(body, "the package declares no game panel window; every surface here is the " +
+                "shell's own", "ViewMuted");
+        } else if (!reading.live) {
+            rowXd(body, "No declared game panel is on screen: the game is on its dashboard or in a " +
+                "menu. A window is framed only when the game draws its panel, so nothing is drawn " +
+                "here that does not exist.", "ViewMuted");
+        } else {
+            rowXd(body, "Presence is read from the live panel tree. A window appears when its " +
+                "panel appears and leaves when it closes.", "ViewMuted");
+        }
+        if (reading.absent.length) rowXd(body, "not on screen: " + reading.absent.join(", "), "ViewMuted");
+        actionXd(body, "Rescan game panels", function () {
+            for (var k in findCache) if (findCache.hasOwnProperty(k)) delete findCache[k];
+            for (var m in findMissAt) if (findMissAt.hasOwnProperty(m)) delete findMissAt[m];
+            for (var id in bound) {
+                if (!bound.hasOwnProperty(id)) continue;
+                var b = bound[id];
+                if (!b || !b.panel || !alive(b.panel)) bound[id] = null;
+            }
+            refreshDashboard();
+            globalThis.OpenlockToast("Rescan",
+                presenceReading().live + " game panel(s) on screen", "", false);
+        });
+
+        var build = data.build || {};
+        headingXd(body, "build");
+        rowXd(body, (build.version || "unrecorded") + "  ·  " + (build.grade || "dev") +
+            (build.commit ? "  ·  " + build.commit : ""), "PaletteValue");
+        if (build.stage) rowXd(body, String(build.stage), "ViewMuted");
+        headingXd(body, "layout");
+        rowXd(body, (currentScheme || "default") + "  ·  saved " +
+            (layoutProfiles[currentScheme || "default"] ? "yes" : "no") +
+            "  ·  popit saved with it", "ViewMuted");
+        actionXd(body, "Save this layout", function () { saveLayoutNow(false); });
+        actionXd(body, "Load saved layout", function () {
+            var scheme = currentScheme || themes.default;
+            send("layout-load", scheme);
+            applyLayoutProfile(scheme, true);
+            refreshDashboard();
+        });
+    }
+
+    function renderDashboard(win, body) {
+        measureScreen();
+        var reading = presenceReading();
+        var app = $.CreatePanel("Panel", body, "");
+        app.AddClass("DashApp");
+        dashHeader(app, reading);
+
+        var row = $.CreatePanel("Panel", app, "");
+        row.AddClass("DashBody");
+        dashRail(row, dashDest);
+
+        var panel = $.CreatePanel("Panel", row, "");
+        panel.AddClass("DashPanel");
+        if (dashDest === "layout") renderDashLayout(panel);
+        else if (dashDest === "xml") renderDashXml(panel);
+        else if (dashDest === "popit") renderDashPopit(panel);
+        else if (dashDest === "build") renderDashBuild(panel);
+        else renderDashMenu(panel);
+
+        dashStatus(app, reading);
+    }
+
     function renderOwn(win, body) {
         body.RemoveAndDeleteChildren();
+
+        if (win.id === DASHBOARD_ID || win.view === "dashboard") {
+            renderDashboard(win, body);
+            return;
+        }
 
         if (win.id === WINDOWS_ID || win.view === "windows") {
             renderWindowBrowser(body);
@@ -5880,6 +6738,7 @@
             actionXd(body, "Reset saved layout", function () {
                 send("layout-reset", currentScheme || themes.default);
                 delete layoutProfiles[currentScheme || themes.default];
+                popitLayout = defaultPopitLayout();
                 layoutLoadedFor = "";
                 layoutExportPath = "";
                 globalThis.OpenlockToast("Layout reset",
@@ -6000,6 +6859,10 @@
             });
         }
 
+        actionXd(body, "Dashboard  ·  the shell's own menu and Popit layout", function () {
+            openWindow(DASHBOARD_ID);
+        });
+
         headingXd(body, "live under the HUD (" + (hudStreamActive ? "streaming…" : live.length) + ")");
         if (hudStreamActive) {
             rowXd(body, "the panel tree is streamed in bounded chunks; this list fills without blocking a frame", "ViewMuted");
@@ -6083,6 +6946,11 @@
             if (!minimized.hasOwnProperty(minId) || !minimized[minId] || !open[minId] || !windowById(minId)) continue;
             rows.push("min=" + minId);
         }
+        // The Popit surface's arrangement travels with the desktop it belongs to. Tiles are
+        // `+`-joined because a comma already separates a rectangle row.
+        rows.push("popit=columns:" + popitLayout.columns + ";width:" + popitLayout.width +
+            ";frame:" + popitLayout.frame + ";mode:" + popitLayout.mode +
+            ";order:" + popitLayout.order.join("+"));
         for (var id in open) {
             if (!open.hasOwnProperty(id) || !open[id] || !windowById(id)) continue;
             var g = geometry[id];
@@ -6128,26 +6996,37 @@
         var win = windowById(id);
         if (!win) return false;
         if (!open[id]) openWindow(id, true);
-        geometry[id] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h, init: true };
+        geometry[id] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h, init: true, userSet: true };
         if (frames[id]) applyWindow(win);
         return true;
     }
 
-    function ensureSplitCell(parentId, key, themed, rect) {
-        var parent = windowById(parentId);
-        if (!parent || !isPanelWindow(parent)) return false;
-        if (!splitCells[parentId] || !splitCells[parentId].length) {
-            if (!bound[parentId]) openWindow(parentId, true);
-            if (!splitWindow(windowById(parentId))) return false;
+    // A saved cell row is `cell:<root>:<key>[:<key>...]`. Each prefix is a split container, so a
+    // nested cell is restored by splitting its parent cell before restoring the final rectangle.
+    function ensureSplitPath(rootId, path, themed, rect) {
+        var parts = String(path || "").split(":");
+        var root = windowById(rootId);
+        if (!root || !isPanelWindow(root) || !parts.length || !parts[0]) return false;
+        var containerId = rootId;
+        var walked = "";
+        for (var i = 0; i < parts.length; i++) {
+            if (!parts[i]) return false;
+            walked = walked ? walked + ":" + parts[i] : parts[i];
+            if (!splitCells[containerId] || !splitCells[containerId].length) {
+                if (!open[containerId]) openWindow(containerId, true);
+                var container = windowById(containerId);
+                if (!container || !splitWindow(container)) return false;
+            }
+            var cellId = cellIdFor(rootId, walked);
+            if (!windowById(cellId)) return false;
+            containerId = cellId;
         }
-        var cellId = cellIdFor(parentId, key);
-        var cell = windowById(cellId);
-        if (!cell) return false;
-        if (!applyRect(cellId, rect)) return false;
+        if (!applyRect(containerId, rect)) return false;
         if (themed) {
+            var cell = windowById(containerId);
             cell.themed = true;
-            var b = bound[cellId];
-            if (b && b.panel) themePanel(b.panel, key);
+            var b = bound[containerId];
+            if (b && b.panel) themePanel(b.panel, parts[parts.length - 1]);
         }
         return true;
     }
@@ -6171,16 +7050,15 @@
             if (String(id).indexOf("cell:") === 0) expectedCells++;
             if (String(id).indexOf("cell:") === 0) {
                 var rest = String(id).substring(5);
-                var at = rest.indexOf(":");
-                if (at <= 0) continue;
-                var parentId = rest.substring(0, at);
-                var tail = rest.substring(at + 1);
                 var themed = false;
-                if (tail.substring(tail.length - 2) === ":t") {
+                if (rest.substring(rest.length - 2) === ":t") {
                     themed = true;
-                    tail = tail.substring(0, tail.length - 2);
+                    rest = rest.substring(0, rest.length - 2);
                 }
-                if (ensureSplitCell(parentId, tail, themed, rect)) cells++;
+                var pieces = rest.split(":");
+                var parentId = pieces.shift();
+                if (!parentId || !pieces.length) continue;
+                if (ensureSplitPath(parentId, pieces.join(":"), themed, rect)) cells++;
                 continue;
             }
             if (applyRect(id, rect)) applied++;
@@ -6210,9 +7088,17 @@
             if (!windowById(mins[m]) || !open[mins[m]]) continue;
             minimized[mins[m]] = true;
         }
+        // The Popit arrangement is part of the scheme, so loading a layout restores the menu the
+        // player laid out for it. A profile written before the surface had an editor has none and
+        // keeps the current arrangement.
+        if (profile.popit) {
+            popitLayout = globalThis.OpenlockPopit
+                ? globalThis.OpenlockPopit.normalizeLayout(profile.popit)
+                : popitLayout;
+        }
         if (profile.tab && windowById(profile.tab)) activeTab = profile.tab;
         if (profile.active && splitCells[profile.active] && splitCells[profile.active].length) {
-            activeId = splitCells[profile.active][0].id;
+            activeId = firstLeafId(profile.active);
             focusWindow(activeId);
         } else if (profile.active && open[profile.active] && windowById(profile.active)) {
             activeId = profile.active;
@@ -6288,7 +7174,8 @@
                 active: typeof entry.active === "string" ? entry.active : "",
                 tab: typeof entry.tab === "string" ? entry.tab : "",
                 pinned: entry.pinned instanceof Array ? entry.pinned : [],
-                minimized: entry.minimized instanceof Array ? entry.minimized : []
+                minimized: entry.minimized instanceof Array ? entry.minimized : [],
+                popit: entry.popit && typeof entry.popit === "object" ? entry.popit : null
             };
         }
         layoutNotices = parsed.notices || [];
