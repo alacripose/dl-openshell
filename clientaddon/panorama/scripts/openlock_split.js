@@ -10,7 +10,7 @@
 // A window with neither a name nor a class family cannot be pinned. That case keeps its refusal,
 // and the refusal names why.
 //
-// Run: node .scratch/split-identity-test.js
+// Run: node tools/tests/split-identity-test.js
 var OpenlockSplit = (function () {
     "use strict";
 

@@ -22,21 +22,21 @@ OUT = ROOT / "docs" / "shell-test-surface.html"
 MINIMAL_OUT = ROOT / "docs" / "shell-minimal.html"
 
 SUITES = (
-    ("chrome-test", "Window chrome, drag, resize and glyphs", ["node", ".scratch/chrome-test.js"]),
-    ("dashboard-test", "Dashboard, cells and saved layout", ["node", ".scratch/dashboard-test.js"]),
-    ("layout-arbitration", "Layout arbitration and restore", ["node", ".scratch/layout-arbitration-test.js"]),
-    ("package-delivery", "shploingus package delivery and live XML", ["node", ".scratch/test_delivery.js"]),
+    ("chrome-test", "Window chrome, drag, resize and glyphs", ["node", "tools/tests/chrome-test.js"]),
+    ("dashboard-test", "Dashboard, cells and saved layout", ["node", "tools/tests/dashboard-test.js"]),
+    ("layout-arbitration", "Layout arbitration and restore", ["node", "tools/tests/layout-arbitration-test.js"]),
+    ("package-delivery", "shploingus package delivery and live XML", ["node", "tools/tests/test_delivery.js"]),
     ("package-envelope", "Optional axis envelope: accept, tamper, authority, work",
-     [sys.executable, ".scratch/envelope-test.py"]),
+     [sys.executable, "tools/tests/envelope-test.py"]),
     ("browser-minimal-shell", "Real shell in an isolated browser: taskbar, windows, controls",
      [sys.executable, "tools/browser_shell_check.py"]),
     ("static-check", "Static pointer and regression checker", [sys.executable, "tools/check_shell_clicks.py"]),
     ("release-download", "Release downloader: retry a dropped connection, refuse by name",
-     [sys.executable, ".scratch/download-retry-server.py"]),
+     [sys.executable, "tools/tests/download-retry-server.py"]),
     ("split-identity", "Split identity: durable key, id churn across reload, unpinnable refused by name",
-     ["node", ".scratch/split-identity-test.js"]),
+     ["node", "tools/tests/split-identity-test.js"]),
     ("installer-pair", "Installer pair: current, stale, absent, incompatible, consent seed, Steam library record, another game's tree",
-     [sys.executable, ".scratch/installer-pair-test.py"]),
+     [sys.executable, "tools/tests/installer-pair-test.py"]),
 )
 
 
