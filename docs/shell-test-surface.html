@@ -76,7 +76,7 @@
 <body>
   <header class="top">
     <h1>Openlock shell test surface</h1>
-    <div class="sub">Browser witness for the CML/Panorama suites · generated 2026-10-30 07:31 UTC</div>
+    <div class="sub">Browser witness for the CML/Panorama suites · generated 2026-10-30 07:36 UTC</div>
   </header>
   <div class="banner pass">All headless suites passed; the live-client rows below remain refused.</div>
   <main>
@@ -88,7 +88,7 @@
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 56 checks</p>
-        <code>node .scratch/chrome-test.js</code>
+        <code>node tools/tests/chrome-test.js</code>
         <pre>ok 1 - dashboard exposes LAYOUT
 ok 2 - dashboard exposes Abilities
 ok 3 - the fake tree built the Abilities frame
@@ -153,7 +153,7 @@ chrome-test OK 56 checks</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 55 checks</p>
-        <code>node .scratch/dashboard-test.js</code>
+        <code>node tools/tests/dashboard-test.js</code>
         <pre>nlockDashboard is exported
 ok 2 - opening the dashboard opens the layout pass
 ok 3 - a shell-drawn window is a participant in the same layout pass
@@ -219,7 +219,7 @@ dashboard-test OK 55 checks</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 19 checks</p>
-        <code>node .scratch/layout-arbitration-test.js</code>
+        <code>node tools/tests/layout-arbitration-test.js</code>
         <pre>ok 1 - closed shell leaves the top bar at its game rect
 ok 2 - open shell reserves the 46 dp bar plus 16 dp chrome: 62
 ok 3 - the top bar is shifted by the reserved delta
@@ -247,7 +247,7 @@ layout-arbitration-test OK 19 checks</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · no check count</p>
-        <code>node .scratch/test_delivery.js</code>
+        <code>node tools/tests/test_delivery.js</code>
         <pre>delivery harness: PASS
 info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=25 hidden=1 disabled=0 selected=1
 info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=75 hidden=1 disabled=1 selected=1
@@ -259,7 +259,7 @@ info: render slider nodes=1 images=0 progress=50 hidden=0 disabled=0 selected=0<
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 28 checks</p>
-        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/envelope-test.py</code>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe tools/tests/envelope-test.py</code>
         <pre>ok 1 - a machine key outside the checkout is read
 ok 2 - a key inside the checkout is refused (it would name no one)
 ok 3 - an unsigned package is unsigned, not refused
@@ -320,7 +320,7 @@ envelope-test OK 28 checks</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 6 checks</p>
-        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/download-retry-server.py</code>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe tools/tests/download-retry-server.py</code>
         <pre>ok: a dropped first connection is retried
 ok: the retry wrote the whole asset
 ok: the asset is the served payload
@@ -332,7 +332,7 @@ ok: an unreachable asset is a refusal, not a throw
 ok: the refusal names the URL and every attempt
 ok: the retries waited between attempts
 ok: 6 download checks
-flaky server on 127.0.0.1:62493; dead port 62494
+flaky server on 127.0.0.1:59373; dead port 59374
 requests seen: 2 (first was dropped)</pre>
       </article>
       <article class="card pass" data-suite="split-identity">
@@ -341,7 +341,7 @@ requests seen: 2 (first was dropped)</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 14 checks</p>
-        <code>node .scratch/split-identity-test.js</code>
+        <code>node tools/tests/split-identity-test.js</code>
         <pre>ok 1 - a declared window keeps its own id
 ok 2 - a discovered window pins to kind + name: split:live_AbilityContainer
 ok 3 - the measured size is not part of the key
@@ -364,7 +364,7 @@ ok: 14 split identity check(s)</pre>
           <span class="badge">PASS</span>
         </header>
         <p class="meta">exit 0 · 32 checks</p>
-        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/installer-pair-test.py</code>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe tools/tests/installer-pair-test.py</code>
         <pre>ok: a tree with this checkout&#x27;s pair reads current
 ok: an older pair reads stale
 ok: a compatible tree with no pair reads absent

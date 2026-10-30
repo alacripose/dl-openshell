@@ -67,12 +67,12 @@ observed in an earlier live pass (§3).
 
 ## 2. Deterministic harness over the same module
 
-`.scratch/test_delivery.js` runs `clientaddon/panorama/scripts/openlock_delivery.js` in Node with
+`tools/tests/test_delivery.js` runs `clientaddon/panorama/scripts/openlock_delivery.js` in Node with
 a small fake panel API, so the payload parsing, version gate, atomic window set, node attribute
 mapping and render log are the same code the client runs.
 
 ```text
-$ node .scratch/test_delivery.js
+$ node tools/tests/test_delivery.js
 delivery harness: PASS
 info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=25 hidden=1 disabled=0 selected=1
 info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=75 hidden=1 disabled=1 selected=1
