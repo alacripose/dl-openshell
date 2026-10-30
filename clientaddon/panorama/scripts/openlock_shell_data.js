@@ -32,7 +32,7 @@ var SHELL = {
         {
           "id": "inventory",
           "title": "Inventory tools",
-          "surface": "ring",
+          "surface": "grid",
           "hint": "Select a tool, then a slot. The surface is data from this package.",
           "actions": [
             {
@@ -56,7 +56,7 @@ var SHELL = {
               "window": ""
             }
           ],
-          "line": 470
+          "line": 487
         }
       ],
       "panelCandidates": [
@@ -154,7 +154,7 @@ var SHELL = {
         {
           "id": "mods",
           "title": "Package tools",
-          "surface": "bar",
+          "surface": "grid",
           "hint": "A package is mounted by the server; these tools inspect what it delivered.",
           "actions": [
             {
@@ -178,7 +178,7 @@ var SHELL = {
               "window": "picker"
             }
           ],
-          "line": 478
+          "line": 495
         }
       ],
       "view": "mods"
@@ -210,7 +210,7 @@ var SHELL = {
         {
           "id": "docs",
           "title": "Record tools",
-          "surface": "bar",
+          "surface": "grid",
           "hint": "The repository, landing page and update record are the motd addon's window shape.",
           "actions": [
             {
@@ -234,7 +234,7 @@ var SHELL = {
               "window": "picker"
             }
           ],
-          "line": 502
+          "line": 519
         }
       ],
       "view": "ledger"
@@ -318,7 +318,7 @@ var SHELL = {
         {
           "id": "map-plan",
           "title": "Map tools",
-          "surface": "ring",
+          "surface": "grid",
           "hint": "Frame the live surfaces, or open the record views filed beside the map.",
           "actions": [
             {
@@ -347,7 +347,7 @@ var SHELL = {
               "window": "picker"
             }
           ],
-          "line": 493
+          "line": 510
         }
       ],
       "panelCandidates": [
@@ -886,7 +886,7 @@ var SHELL = {
         {
           "id": "performance",
           "title": "Measurement tools",
-          "surface": "bar",
+          "surface": "grid",
           "hint": "Readings are sampled while this window is open; the log keeps the last 64 entries.",
           "actions": [
             {
@@ -905,7 +905,7 @@ var SHELL = {
               "window": ""
             }
           ],
-          "line": 486
+          "line": 503
         }
       ],
       "view": "performance"
@@ -1015,11 +1015,37 @@ var SHELL = {
       "view": "readout"
     },
     {
+      "id": "wishes",
+      "line": 455,
+      "title": "Wishes",
+      "content": "wishes",
+      "contentLine": 457,
+      "lane": "beacon",
+      "extent": "square-pixels",
+      "theme-role": "hud",
+      "behavior": "drag,resize,maximize,minimize,close",
+      "layout": "minimize,close,title-position",
+      "record-id": "window-wishes",
+      "panel": "",
+      "scale": 100,
+      "x": 928,
+      "y": 96,
+      "width": 336,
+      "height": 260,
+      "minWidth": 240,
+      "minHeight": 192,
+      "opacity": 930,
+      "elevation": 1,
+      "pinnable": true,
+      "layers": [],
+      "view": "wishes"
+    },
+    {
       "id": "refusals",
-      "line": 452,
+      "line": 469,
       "title": "Refusals",
       "content": "table",
-      "contentLine": 454,
+      "contentLine": 471,
       "lane": "beacon",
       "extent": "square-pixels",
       "theme-role": "hud",
@@ -11274,87 +11300,92 @@ var SHELL = {
     {
       "window": "tools",
       "tab": "inventory",
-      "line": 521
+      "line": 538
     },
     {
       "window": "api-viewer",
       "tab": "mods",
-      "line": 522
+      "line": 539
+    },
+    {
+      "window": "wishes",
+      "tab": "docs",
+      "line": 540
     },
     {
       "window": "refusals",
       "tab": "docs",
-      "line": 523
+      "line": 541
     },
     {
       "window": "notifications",
       "tab": "settings",
-      "line": 524
+      "line": 542
     },
     {
       "window": "uitree",
       "tab": "settings",
-      "line": 525
+      "line": 543
     },
     {
       "window": "determinism",
       "tab": "settings",
-      "line": 526
+      "line": 544
     },
     {
       "window": "world",
       "tab": "map-plan",
-      "line": 527
+      "line": 545
     },
     {
       "window": "minimap",
       "tab": "map-plan",
-      "line": 528
+      "line": 546
     },
     {
       "window": "abilities",
       "tab": "map-plan",
-      "line": 529
+      "line": 547
     },
     {
       "window": "quickbuy",
       "tab": "map-plan",
-      "line": 530
+      "line": 548
     },
     {
       "window": "combat-log",
       "tab": "docs",
-      "line": 531
+      "line": 549
     },
     {
       "window": "game-settings",
       "tab": "settings",
-      "line": 532
+      "line": 550
     },
     {
       "window": "updates",
       "tab": "settings",
-      "line": 533
+      "line": 551
     },
     {
       "window": "performance",
       "tab": "settings",
-      "line": 534
+      "line": 552
     },
     {
       "window": "picker",
       "tab": "settings",
-      "line": 535
+      "line": 553
     },
     {
       "window": "repo",
       "tab": "docs",
-      "line": 536
+      "line": 554
     },
     {
       "window": "landing",
       "tab": "docs",
-      "line": 537
+      "line": 555
     }
   ],
   "pins": [
@@ -11367,7 +11398,7 @@ var SHELL = {
     {
       "id": "inventory",
       "title": "Inventory tools",
-      "surface": "ring",
+      "surface": "grid",
       "hint": "Select a tool, then a slot. The surface is data from this package.",
       "actions": [
         {
@@ -11391,12 +11422,12 @@ var SHELL = {
           "window": ""
         }
       ],
-      "line": 470
+      "line": 487
     },
     {
       "id": "mods",
       "title": "Package tools",
-      "surface": "bar",
+      "surface": "grid",
       "hint": "A package is mounted by the server; these tools inspect what it delivered.",
       "actions": [
         {
@@ -11420,12 +11451,12 @@ var SHELL = {
           "window": "picker"
         }
       ],
-      "line": 478
+      "line": 495
     },
     {
       "id": "performance",
       "title": "Measurement tools",
-      "surface": "bar",
+      "surface": "grid",
       "hint": "Readings are sampled while this window is open; the log keeps the last 64 entries.",
       "actions": [
         {
@@ -11444,12 +11475,12 @@ var SHELL = {
           "window": ""
         }
       ],
-      "line": 486
+      "line": 503
     },
     {
       "id": "map-plan",
       "title": "Map tools",
-      "surface": "ring",
+      "surface": "grid",
       "hint": "Frame the live surfaces, or open the record views filed beside the map.",
       "actions": [
         {
@@ -11478,12 +11509,12 @@ var SHELL = {
           "window": "picker"
         }
       ],
-      "line": 493
+      "line": 510
     },
     {
       "id": "docs",
       "title": "Record tools",
-      "surface": "bar",
+      "surface": "grid",
       "hint": "The repository, landing page and update record are the motd addon's window shape.",
       "actions": [
         {
@@ -11507,7 +11538,7 @@ var SHELL = {
           "window": "picker"
         }
       ],
-      "line": 502
+      "line": 519
     }
   ],
   "refusals": [
@@ -11566,8 +11597,270 @@ var SHELL = {
       "why": "cell data frame: shaper 'profile32' and its projection cannot be drawn as a Panorama panel"
     }
   ],
+  "wishes": [
+    {
+      "id": "package:package.shspec",
+      "kind": "package",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "load package.shspec",
+      "state": "loaded",
+      "why": "",
+      "detail": "unsigned"
+    },
+    {
+      "id": "package:deadlock.windows",
+      "kind": "package",
+      "surface": "deadlock.windows",
+      "line": 1,
+      "plan": "load deadlock.windows",
+      "state": "loaded",
+      "why": "",
+      "detail": "unsigned"
+    },
+    {
+      "id": "package:package.cells",
+      "kind": "package",
+      "surface": "package.cells",
+      "line": 1,
+      "plan": "load package.cells",
+      "state": "loaded",
+      "why": "",
+      "detail": "unsigned"
+    },
+    {
+      "id": "package:patches/openlock.baselines.shspec",
+      "kind": "package",
+      "surface": "patches/openlock.baselines.shspec",
+      "line": 1,
+      "plan": "load patches/openlock.baselines.shspec",
+      "state": "loaded",
+      "why": "",
+      "detail": "unsigned"
+    },
+    {
+      "id": "content:streamer",
+      "kind": "content",
+      "surface": "package.shspec",
+      "line": 344,
+      "plan": "open Streamers",
+      "state": "missing",
+      "why": "content 'streamer': no streamer source exists on this build; there is nothing to mount",
+      "detail": ""
+    },
+    {
+      "id": "renderer:map-plan",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'map-plan'",
+      "state": "differs",
+      "why": "renderers differ: CitadelHudMap, CitadelHudMapScreen, HudMap",
+      "detail": "the game answers this content with more than one live panel; the first is the window map-plan"
+    },
+    {
+      "id": "renderer:minimap",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'minimap'",
+      "state": "differs",
+      "why": "renderers differ: CitadelHudMinimap, HudMinimap, minimap",
+      "detail": "the game answers this content with more than one live panel; the first is the window minimap"
+    },
+    {
+      "id": "renderer:abilities",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'abilities'",
+      "state": "differs",
+      "why": "renderers differ: AbilitiesContainer, CitadelHudAbilities, HudAbilities, abilities",
+      "detail": "the game answers this content with more than one live panel; the first is the window abilities"
+    },
+    {
+      "id": "renderer:hero-select",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'hero-select'",
+      "state": "differs",
+      "why": "renderers differ: CitadelDashboard, CitadelHeroGrid, hero_grid",
+      "detail": "the game answers this content with more than one live panel; the first is the window hero-select"
+    },
+    {
+      "id": "renderer:quickbuy",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'quickbuy'",
+      "state": "differs",
+      "why": "renderers differ: HudQuickbuy, quickbuy",
+      "detail": "the game answers this content with more than one live panel; the first is the window quickbuy"
+    },
+    {
+      "id": "renderer:combat-log",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'combat-log'",
+      "state": "differs",
+      "why": "renderers differ: CitadelHudCombatLog, combat",
+      "detail": "the game answers this content with more than one live panel; the first is the window combat-log"
+    },
+    {
+      "id": "renderer:game-settings",
+      "kind": "renderer",
+      "surface": "package.shspec",
+      "line": 1,
+      "plan": "frame content 'game-settings'",
+      "state": "differs",
+      "why": "renderers differ: CitadelHudEscapeMenu, escapemenu",
+      "detail": "the game answers this content with more than one live panel; the first is the window game-settings"
+    },
+    {
+      "id": "game:citadel@D:/SteamLibrary/steamapps/common/Deadlock",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the shell UI into citadel · game · release shape · D:/SteamLibrary/steamapps/common/Deadlock",
+      "state": "loaded",
+      "why": "",
+      "detail": "renderer panorama at game/citadel/panorama · release shape · D:/SteamLibrary/steamapps/common/Deadlock"
+    },
+    {
+      "id": "game:citadel@D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the installer host into citadel · tools · dev shape · D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10",
+      "state": "loaded",
+      "why": "",
+      "detail": "renderer panorama at content/citadel/panorama · dev shape · D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10"
+    },
+    {
+      "id": "game:citadel@D:/Users/alacrity/Downloads/Reduced_CSDK_12",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the installer host into citadel · tools · dev shape · D:/Users/alacrity/Downloads/Reduced_CSDK_12",
+      "state": "loaded",
+      "why": "",
+      "detail": "renderer panorama at content/citadel/panorama · dev shape · D:/Users/alacrity/Downloads/Reduced_CSDK_12"
+    },
+    {
+      "id": "game:citadel@H:/SteamLibrary/steamapps/common/Deadlock",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the shell UI into citadel · game · release shape · H:/SteamLibrary/steamapps/common/Deadlock",
+      "state": "planned",
+      "why": "the shell is not installed in this tree",
+      "detail": "renderer panorama at game/citadel/panorama · release shape · H:/SteamLibrary/steamapps/common/Deadlock"
+    },
+    {
+      "id": "game:citadel@D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the installer host into citadel · tools · release shape · D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12",
+      "state": "loaded",
+      "why": "",
+      "detail": "renderer panorama at game/citadel/panorama · release shape · D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12"
+    },
+    {
+      "id": "game:citadel@D:/Users/alacrity/Documents/Reduced_CSDK_12",
+      "kind": "game",
+      "surface": "citadel/gameinfo.gi",
+      "line": 1,
+      "plan": "load the installer host into citadel · tools · release shape · D:/Users/alacrity/Documents/Reduced_CSDK_12",
+      "state": "planned",
+      "why": "the installer host is not installed in this tree",
+      "detail": "renderer panorama at content/citadel/panorama · release shape · D:/Users/alacrity/Documents/Reduced_CSDK_12"
+    },
+    {
+      "id": "game:core@F:/Downloaded Files/CSwin64_build_10924",
+      "kind": "game",
+      "surface": "core/gameinfo.gi",
+      "line": 1,
+      "plan": "load the installer host into core · tools · release shape · F:/Downloaded Files/CSwin64_build_10924",
+      "state": "planned",
+      "why": "the installer host is not installed in this tree",
+      "detail": "renderer panorama at game/core/panorama · release shape · F:/Downloaded Files/CSwin64_build_10924"
+    },
+    {
+      "id": "store:Alpha Shell",
+      "kind": "store",
+      "surface": "landing/tools/addons.json",
+      "line": 1,
+      "plan": "install Alpha Shell",
+      "state": "loaded",
+      "why": "",
+      "detail": "shploingus.recipe/3 · game 6821 · https://github.com/alacripose/dl-openshell/tree/main/shell/alpha-shell"
+    },
+    {
+      "id": "store:Server MOTD",
+      "kind": "store",
+      "surface": "landing/tools/addons.json",
+      "line": 1,
+      "plan": "install Server MOTD",
+      "state": "planned",
+      "why": "available from the GitHub addon store",
+      "detail": "SHPKG003 · VPK · game 6821 · https://github.com/alacripose/dl-openshell/tree/main/examples/motd-addon"
+    }
+  ],
   "cellsFormat": "shploingus.cells/1",
   "cellsVersion": 1,
+  "envelopes": [
+    {
+      "format": "openlock.envelope/1",
+      "state": "unsigned",
+      "authority": "",
+      "key": "",
+      "work": 0,
+      "nonce": "",
+      "digest": "",
+      "line": 1,
+      "refusals": [],
+      "file": "package.shspec"
+    },
+    {
+      "format": "openlock.envelope/1",
+      "state": "unsigned",
+      "authority": "",
+      "key": "",
+      "work": 0,
+      "nonce": "",
+      "digest": "",
+      "line": 1,
+      "refusals": [],
+      "file": "deadlock.windows"
+    },
+    {
+      "format": "openlock.envelope/1",
+      "state": "unsigned",
+      "authority": "",
+      "key": "",
+      "work": 0,
+      "nonce": "",
+      "digest": "",
+      "line": 1,
+      "refusals": [],
+      "file": "package.cells"
+    },
+    {
+      "format": "openlock.envelope/1",
+      "state": "unsigned",
+      "authority": "",
+      "key": "",
+      "work": 0,
+      "nonce": "",
+      "digest": "",
+      "line": 1,
+      "refusals": [],
+      "file": "patches/openlock.baselines.shspec"
+    }
+  ],
   "searchPaths": [
     {
       "kind": "Game",
@@ -11577,9 +11870,30 @@ var SHELL = {
       "mounts": "vpk"
     },
     {
+      "kind": "addonroot",
+      "path": "citadel/deadworks_addons",
+      "line": 66,
+      "exists": true,
+      "mounts": "empty"
+    },
+    {
+      "kind": "Game",
+      "path": "citadel/grimoire",
+      "line": 68,
+      "exists": true,
+      "mounts": "empty"
+    },
+    {
+      "kind": "Game",
+      "path": "citadel/addons",
+      "line": 69,
+      "exists": true,
+      "mounts": "empty"
+    },
+    {
       "kind": "Game",
       "path": "citadel/addons/mods",
-      "line": 77,
+      "line": 70,
       "exists": true,
       "mounts": "panorama tree"
     },
@@ -11593,7 +11907,7 @@ var SHELL = {
     {
       "kind": "Game",
       "path": "core",
-      "line": 85,
+      "line": 81,
       "exists": true,
       "mounts": "vpk"
     }
@@ -11626,16 +11940,16 @@ var SHELL = {
       "path": "D:/SteamLibrary/steamapps/common/Deadlock",
       "kind": "tools",
       "shell": "mounted",
-      "vpkBytes": 1887660,
+      "vpkBytes": 2228849,
       "toolsPresent": 1,
       "toolsTotal": 3,
-      "version": "2026-10-29 09:50:16",
+      "version": "2026-10-30 01:01:48",
       "build": {
-        "grade": "dev",
+        "grade": "player",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-10-29 09:50:16",
-        "vpkBytes": 1887660
+        "finishedAt": "2026-10-30 01:01:48",
+        "vpkBytes": 2228849
       },
       "exe": "D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe"
     },
@@ -11643,28 +11957,34 @@ var SHELL = {
       "path": "D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10",
       "kind": "tools",
       "shell": "mounted",
-      "vpkBytes": 1767112,
+      "vpkBytes": 0,
       "toolsPresent": 2,
       "toolsTotal": 3,
-      "version": "2026-10-29 07:53:49",
+      "version": "2026-10-30 01:00:38",
       "build": {
         "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-10-29 07:53:49",
-        "vpkBytes": 1767112
+        "finishedAt": "2026-10-30 01:00:38",
+        "vpkBytes": 0
       },
       "exe": "D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10/game/bin/win64/project8.exe"
     },
     {
       "path": "D:/Users/alacrity/Downloads/Reduced_CSDK_12",
       "kind": "tools",
-      "shell": "not installed",
+      "shell": "installed, not mounted",
       "vpkBytes": 0,
       "toolsPresent": 3,
       "toolsTotal": 3,
-      "version": "",
-      "build": {},
+      "version": "2026-10-30 01:01:00",
+      "build": {
+        "grade": "dev",
+        "stage": "installed",
+        "state": "ok",
+        "finishedAt": "2026-10-30 01:01:00",
+        "vpkBytes": 0
+      },
       "exe": "D:/Users/alacrity/Downloads/Reduced_CSDK_12/game/bin/win64/deadlock.exe"
     },
     {
@@ -11677,6 +11997,78 @@ var SHELL = {
       "version": "",
       "build": {},
       "exe": "H:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe"
+    }
+  ],
+  "gameInstalls": [
+    {
+      "path": "D:/SteamLibrary/steamapps/common/Deadlock",
+      "game": "citadel",
+      "role": "game",
+      "compatible": true,
+      "why": "",
+      "shell": "mounted",
+      "panorama": "game/citadel/panorama",
+      "shape": "release"
+    },
+    {
+      "path": "D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10",
+      "game": "citadel",
+      "role": "tools",
+      "compatible": true,
+      "why": "",
+      "shell": "mounted",
+      "panorama": "content/citadel/panorama",
+      "shape": "dev"
+    },
+    {
+      "path": "D:/Users/alacrity/Downloads/Reduced_CSDK_12",
+      "game": "citadel",
+      "role": "tools",
+      "compatible": true,
+      "why": "",
+      "shell": "installed, not mounted",
+      "panorama": "content/citadel/panorama",
+      "shape": "dev"
+    },
+    {
+      "path": "H:/SteamLibrary/steamapps/common/Deadlock",
+      "game": "citadel",
+      "role": "game",
+      "compatible": true,
+      "why": "",
+      "shell": "not installed",
+      "panorama": "game/citadel/panorama",
+      "shape": "release"
+    },
+    {
+      "path": "D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12",
+      "game": "citadel",
+      "role": "tools",
+      "compatible": true,
+      "why": "",
+      "shell": "installed",
+      "panorama": "game/citadel/panorama",
+      "shape": "release"
+    },
+    {
+      "path": "D:/Users/alacrity/Documents/Reduced_CSDK_12",
+      "game": "citadel",
+      "role": "tools",
+      "compatible": true,
+      "why": "",
+      "shell": "not installed",
+      "panorama": "content/citadel/panorama",
+      "shape": "release"
+    },
+    {
+      "path": "F:/Downloaded Files/CSwin64_build_10924",
+      "game": "core",
+      "role": "tools",
+      "compatible": true,
+      "why": "",
+      "shell": "not installed",
+      "panorama": "game/core/panorama",
+      "shape": "release"
     }
   ],
   "layouts": [
@@ -12021,12 +12413,12 @@ var SHELL = {
     "panorama/layout/map_ping_panel.xml",
     "panorama/layout/match_details_graphs.xml",
     "panorama/layout/match_details_replay_button.xml",
+    "panorama/layout/motd-panel.xml",
     "panorama/layout/movie.xml",
     "panorama/layout/number_entry.xml",
     "panorama/layout/objectives_map.xml",
     "panorama/layout/openlock_hud.xml",
     "panorama/layout/openlock_shell.xml",
-    "panorama/layout/openlock_shell_legacy.xml",
     "panorama/layout/openlock_shell_server.xml",
     "panorama/layout/players_list.xml",
     "panorama/layout/players_list_entry.xml",
@@ -12152,15 +12544,15 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "628d7b7",
+    "commit": "53c1d94",
     "branch": "main",
     "dirty": true,
-    "sourceDigest": "6a36236250ab60f6c3f21fadf0dfd05cfc97f7dcd9b5c19ed1362129eceb734e",
+    "sourceDigest": "8cb42a2973485548b1a9771bfae7b5cf35235f4744886d3eabbb54123dee7111",
     "gameVersion": "6821",
-    "generatedAt": "2026-10-29 10:12",
-    "grade": "dev",
+    "generatedAt": "2026-10-30 01:06",
+    "grade": "player",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  628d7b7+  ·  game 6821"
+    "label": "v0.7.0  ·  53c1d94+  ·  game 6821"
   },
   "themes": {
     "default": "popit",
@@ -12691,7 +13083,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -13342,7 +13734,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -13998,7 +14390,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -14664,7 +15056,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -15330,7 +15722,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -15996,7 +16388,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -16662,7 +17054,7 @@ var SHELL = {
           {
             "selector": ".PopitHexEdge",
             "property": "background-color",
-            "role": "accent"
+            "role": "border"
           },
           {
             "selector": ".PopitHeaderTitle",
@@ -16847,49 +17239,49 @@ var SHELL = {
   },
   "buildState": {
     "format": "openlock.build/1",
-    "grade": "dev",
+    "grade": "player",
     "stage": "installed",
     "state": "ok",
-    "startedAt": "2026-10-29 09:49:48",
-    "updatedAt": "2026-10-29 09:50:16",
-    "finishedAt": "2026-10-29 09:50:16",
+    "startedAt": "2026-10-30 01:01:21",
+    "updatedAt": "2026-10-30 01:01:48",
+    "finishedAt": "2026-10-30 01:01:48",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 1887660,
-    "resources": 21,
+    "vpkBytes": 2228849,
+    "resources": 22,
     "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
         "name": "prepare",
         "state": "ok",
-        "startedAt": "09:49:48",
-        "finishedAt": "09:50:10"
+        "startedAt": "01:01:21",
+        "finishedAt": "01:01:28"
       },
       {
         "name": "compile",
         "state": "ok",
-        "startedAt": "09:50:10",
-        "finishedAt": "09:50:15"
+        "startedAt": "01:01:28",
+        "finishedAt": "01:01:46"
       },
       {
         "name": "pack",
         "state": "ok",
-        "startedAt": "09:50:15",
-        "finishedAt": "09:50:16"
+        "startedAt": "01:01:47",
+        "finishedAt": "01:01:48"
       },
       {
         "name": "install",
         "state": "ok",
-        "startedAt": "09:50:16",
-        "finishedAt": "09:50:16"
+        "startedAt": "01:01:48",
+        "finishedAt": "01:01:48"
       },
       {
         "name": "installed",
         "state": "ok",
-        "startedAt": "09:50:16",
-        "finishedAt": "09:50:16"
+        "startedAt": "01:01:48",
+        "finishedAt": "01:01:48"
       }
     ],
-    "message": "installed 1887660 bytes",
+    "message": "installed 2228849 bytes",
     "packages": []
   },
   "update": {

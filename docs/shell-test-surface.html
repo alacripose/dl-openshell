@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Openlock shell test surface</title>
+<style>
+  :root {
+    --body: #14100b; --panel: #241a10; --ink: #f4e6c8; --muted: #a8977c;
+    --gold: #e0b56a; --green: #8fd18f; --red: #e88a72; --line: #8a6f42;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--body); color: var(--ink);
+    font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header.top { padding: 18px 24px 14px; border-bottom: 1px solid var(--line);
+    background: #100d09; }
+  h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: .02em; }
+  .sub { color: var(--muted); }
+  .banner { margin: 18px 24px 0; padding: 10px 14px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); }
+  .banner.pass { border-color: #4e7a4e; }
+  .banner.refused { border-color: #9a4a3a; color: #f0b09e; }
+  main { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, .7fr);
+    gap: 18px; padding: 18px 24px 40px; }
+  .cards { display: grid; gap: 14px; }
+  .card { border: 1px solid var(--line); background: var(--panel); padding: 12px 14px; }
+  .card.refused { border-color: #9a4a3a; }
+  .card header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .card h2 { margin: 0; font-size: 15px; }
+  .badge { font-size: 11px; letter-spacing: .08em; padding: 3px 7px;
+    border: 1px solid var(--line); color: var(--green); }
+  .card.refused .badge { color: var(--red); border-color: #9a4a3a; }
+  .meta { margin: 4px 0 8px; color: var(--muted); font-size: 12px; }
+  code { display: block; color: var(--gold); font-size: 12px; margin-bottom: 8px;
+    overflow-wrap: anywhere; }
+  pre { margin: 0; max-height: 250px; overflow: auto; white-space: pre-wrap;
+    color: #d8c7a8; font-size: 11px; background: #0d0a07; padding: 8px 10px;
+    border: 1px solid #33281a; }
+  aside { display: grid; gap: 14px; align-content: start; }
+  .surface { border: 1px solid var(--line); background: #100d09; padding: 12px; }
+  .surface h2 { margin: 0 0 10px; font-size: 15px; }
+  .mock-window { border: 1px solid var(--gold); background: #14100b; }
+  .mock-title { height: 30px; display: flex; align-items: center; gap: 8px;
+    padding-left: 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .mock-title span.label { flex: 1; font-weight: 600; }
+  .mock-buttons { display: flex; gap: 4px; padding-right: 6px; }
+  .mock-btn { width: 22px; height: 18px; border: 1px solid var(--line);
+    background: #3a2416; position: relative; }
+  .bar { position: absolute; left: 6px; top: 8px; width: 8px; height: 1px;
+    background: var(--gold); }
+  .square { position: absolute; left: 6px; top: 5px; width: 7px; height: 7px;
+    border: 1px solid var(--gold); }
+  .restore { position: absolute; width: 5px; height: 5px; border: 1px solid var(--gold); }
+  .restore.back { left: 5px; top: 4px; }
+  .restore.front { left: 9px; top: 8px; }
+  .x { position: absolute; width: 6px; height: 1px; background: var(--gold); }
+  .x.a { left: 5px; top: 5px; } .x.b { left: 7px; top: 7px; }
+  .x.c { left: 9px; top: 9px; } .x.d { left: 9px; top: 5px; }
+  .x.e { left: 7px; top: 7px; } .x.f { left: 5px; top: 9px; }
+  .mock-body { height: 120px; display: grid; place-items: center; color: var(--muted); }
+  .envelopes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
+  .envelopes li { margin: 3px 0; }
+  .envelopes code { display: inline; margin: 0; font-size: 11px; }
+  .env { font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    padding: 1px 5px; border: 1px solid var(--line); }
+  .env.signed { color: var(--green); border-color: #4e7a4e; }
+  .env.unsigned { color: var(--muted); }
+  .env.refused, .env.absent { color: var(--red); border-color: #9a4a3a; }
+  .refusal { border: 1px solid #9a4a3a; background: #2a1410; padding: 12px 14px; }
+  .refusal h2 { margin: 0 0 6px; color: #f0b09e; font-size: 14px; }
+  .refusal p { margin: 0; color: #d6a28f; }
+  footer { padding: 0 24px 28px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header class="top">
+    <h1>Openlock shell test surface</h1>
+    <div class="sub">Browser witness for the CML/Panorama suites · generated 2026-10-30 07:31 UTC</div>
+  </header>
+  <div class="banner pass">All headless suites passed; the live-client rows below remain refused.</div>
+  <main>
+    <section class="cards">
+      
+      <article class="card pass" data-suite="chrome-test">
+        <header>
+          <h2>chrome-test</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 56 checks</p>
+        <code>node .scratch/chrome-test.js</code>
+        <pre>ok 1 - dashboard exposes LAYOUT
+ok 2 - dashboard exposes Abilities
+ok 3 - the fake tree built the Abilities frame
+ok 4 - a 100 dp frame is Narrow
+ok 5 - focusing Abilities promotes the frame
+ok 6 - the narrow frame still owns all controls (6)
+ok 7 - every narrow control remains hit-testable
+ok 8 - window controls draw no text glyphs
+ok 9 - minimize is an explicit bar
+ok 10 - maximize is an explicit square
+ok 11 - restore is two offset squares, not a second codepoint
+ok 12 - close is a drawn staircase, not a Unicode × (6)
+ok 13 - the maximize control owns its shape button
+ok 14 - maximize toggles a state class, not glyph text
+ok 15 - restore returns the maximize control state
+ok 16 - the dashboard exposes the snap toggle
+ok 17 - the title strip owns a drag handler
+ok 18 - a drag survives null probes and lands at the pointer x: 4 -&gt; 124
+ok 19 - a drag survives null probes and lands at the pointer y: 46 -&gt; 86
+ok 20 - GripSE is a real drag surface
+ok 21 - GripSE is a real drag surface
+ok 22 - SE resize changes width: 200 -&gt; 280
+ok 23 - SE resize changes height independently: 96 -&gt; 136
+ok 24 - GripNW is a real drag surface
+ok 25 - NW resize pins the opposite corner and moves the origin
+ok 26 - NW resize shrinks width and height independently
+ok 27 - a user-placed frame does not follow a live-panel reflow
+ok 28 - a user-placed frame keeps the size the player set
+ok 29 - the taskbar strip owns its final tabs before a game package arrives
+ok 30 - a payload in another format is refused, not streamed
+ok 31 - the shell publishes the game package streamer format
+ok 32 - a game package opens its window and its cell
+ok 33 - a game window without a readable source is refused by id
+ok 34 - the streamed game window has a shell frame
+ok 35 - the streamed game window is on the streamer surface
+ok 36 - the streamed cell has a shell frame
+ok 37 - the streamed game window has a taskbar entry
+ok 38 - the streamed window starts under the entrance curve
+ok 39 - the streamed window opens at the rect the package declared: 140 96
+ok 40 - the streamed window eases in instead of cutting in
+ok 41 - the entrance moves no geometry
+ok 42 - the streamed window settles at the declared opacity: 0.93
+ok 43 - a non-finite saved rect refuses the layout profile by name
+ok 44 - the refusal says which fact failed
+ok 45 - a layout payload over 4 MiB is refused before it is parsed
+ok 46 - an observer layout path outside the resources layout directory is not loaded
+ok 47 - the observer refusal names the missing prefix
+ok 48 - an observer layout path inside the resources layout directory still loads
+ok 49 - the frame title exposes a context-menu handler
+ok 50 - right-click opens the context menu
+ok 51 - a hovered menu survives a burst of outside cursor probes
+ok 52 - the measured menu rect keeps a menu the old guess would have dismissed
+ok 53 - a leave does not close the menu before the dwell
+ok 54 - a real leave plus dwell closes the menu
+ok 55 - the menu and its dismiss surface are paired
+ok 56 - clicking the dismiss surface closes the menu
+chrome-test OK 56 checks</pre>
+      </article>
+      <article class="card pass" data-suite="dashboard-test">
+        <header>
+          <h2>dashboard-test</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 55 checks</p>
+        <code>node .scratch/dashboard-test.js</code>
+        <pre>nlockDashboard is exported
+ok 2 - opening the dashboard opens the layout pass
+ok 3 - a shell-drawn window is a participant in the same layout pass
+ok 4 - the app draws its 34 dp header
+ok 5 - the header is followed by a 1 px seam
+ok 6 - the app draws its rail
+ok 7 - the rail has five destinations (5)
+ok 8 - LAYOUT is the active destination
+ok 9 - the app draws its 32 dp status strip
+ok 10 - the header reads the live tree before any panel is bound
+ok 11 - the status strip names the dp grid: 0/328 panels | grid 8 dp | snap on | layout
+ok 12 - the status strip names the snap state
+ok 13 - the layout destination shows the declared package
+ok 14 - the layout destination shows visual cells
+ok 15 - the layout destination shows contents
+ok 16 - the layout destination shows the dp grid
+ok 17 - 8 dp grid: 41 vertical seams (41)
+ok 18 - 8 dp grid: 29 horizontal seams (29)
+ok 19 - the window rect is drawn once
+ok 20 - the window cell is drawn
+ok 21 - the window list offers Inventory
+ok 22 - selecting a window re-reads its package
+ok 23 - a closed game window reads as not on screen
+ok 24 - the package row carries the declared panel candidate
+ok 25 - a closed window is not reported as present
+ok 26 - the window browser offers the Inventory hook
+ok 27 - the layout destination selects Abilities
+ok 28 - the shell records the Abilities window in the layout pass
+ok 29 - the top-row ability window is shifted below the shell chrome: 0 -&gt; 62
+ok 30 - the live panel transform carries the shift: translate3d(4px,62px,0px) scale3d(1,1,1)
+ok 31 - the editor offers a one-grid nudge
+ok 32 - the nudge moved Abilities by one 8 dp square in the saved row: popit@active=__windows@tab=__windows@pin=minimap@pin=abilities@popit=columns:4;width:356;frame:lbp3;mode:create;order:@abilities,12,46,420,140
+ok 33 - the editor offers a 16 dp grid
+ok 34 - 16 dp grid: 21 vertical seams (21)
+ok 35 - the popit editor opens on the default arrangement: The Popit surface is the shell&#x27;s menu: one frame, rows of ti
+ok 36 - the editor took two columns: 2 column(s)  ·  356 px  ·  frame LBP3  ·  CREATE  ·  9 tile(s)
+ok 37 - two columns cannot fit nine tiles and says so
+ok 38 - a surface that cannot show every tile is refused, not drawn clipped
+ok 39 - the preview draws the popit surface at three columns
+ok 40 - the preview is laid out with three columns
+ok 41 - the default surface width is applied to the frame
+ok 42 - every dashboard surface is a tile (9)
+ok 43 - the menu offers the window browser
+ok 44 - pressing a tile closes the surface
+MID&gt;&gt;&gt; @popit=columns:3;width:356;frame:lbp3;mode:create;order:@abilities,12,46,420,140
+ok 45 - build counts the one panel the fake HUD is drawing: game windows  ·  1 of 328 on screen
+Presence is read from the live panel tree. A window ap
+ok 46 - build names the live tree as its source
+ok 47 - the XML app lists mounted layouts
+ok 48 - the selected layout mounts into the shell-owned host
+ok 49 - the mount is not reparented into the game tree
+ok 50 - the layout destination offers a save
+ok 51 - save dispatches a layout snapshot to the host
+ok 52 - the snapshot carries the edited popit arrangement: popit@active=__windows@tab=__windows@pin=minimap@pin=abilities@popit=columns:3;width:356;frame:lbp3;mode:create;order:@a
+ok 53 - closing the shell closes the layout pass
+ok 54 - the closed pass returns the stored pre-shell rect
+ok 55 - closing the shell removes the chrome shift from the live panel: translate3d(12px,46px,0px) scale3d(1,1,1)
+dashboard-test OK 55 checks</pre>
+      </article>
+      <article class="card pass" data-suite="layout-arbitration">
+        <header>
+          <h2>layout-arbitration</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 19 checks</p>
+        <code>node .scratch/layout-arbitration-test.js</code>
+        <pre>ok 1 - closed shell leaves the top bar at its game rect
+ok 2 - open shell reserves the 46 dp bar plus 16 dp chrome: 62
+ok 3 - the top bar is shifted by the reserved delta
+ok 4 - the first placement is marked as a layout, not a tween
+ok 5 - the next placement is motion so the shell can ease a reflow
+ok 6 - the pre-shell rect is kept for the close path
+ok 7 - the record carries both pre-shell and placed rects
+ok 8 - a shell window keeps its own below-bar y: 46
+ok 9 - a shell window clamps under the bar without a second shift
+ok 10 - right/bottom edges clamp inside the reserved space: 1200,800
+ok 11 - an element that cannot fit is refused, not scaled into a hole
+ok 12 - the refusal is a real record with the element id
+ok 13 - taking refusals does not leave a duplicate
+ok 14 - closing the shell leaves a shell window at its own y
+ok 15 - closing the shell releases the reserved top space
+ok 16 - closing the shell returns the edge window to its own rect
+ok 17 - reopening reserves the space again
+ok 18 - reopening is a fresh layout for the shell to apply immediately
+ok 19 - a new session records the current game rect, not the previous session
+layout-arbitration-test OK 19 checks</pre>
+      </article>
+      <article class="card pass" data-suite="package-delivery">
+        <header>
+          <h2>package-delivery</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · no check count</p>
+        <code>node .scratch/test_delivery.js</code>
+        <pre>delivery harness: PASS
+info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=25 hidden=1 disabled=0 selected=1
+info: render addon:addon:proof-ui:proof-panel nodes=6 images=1 progress=75 hidden=1 disabled=1 selected=1
+info: render slider nodes=1 images=0 progress=50 hidden=0 disabled=0 selected=0</pre>
+      </article>
+      <article class="card pass" data-suite="package-envelope">
+        <header>
+          <h2>package-envelope</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 28 checks</p>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/envelope-test.py</code>
+        <pre>ok 1 - a machine key outside the checkout is read
+ok 2 - a key inside the checkout is refused (it would name no one)
+ok 3 - an unsigned package is unsigned, not refused
+ok 4 - an unsigned package raises no refusal
+ok 5 - a signed package holds
+ok 6 - the envelope names its authority
+ok 7 - the envelope names the machine key
+ok 8 - the envelope carries proof of work
+ok 9 - one byte changed is refused as a digest mismatch
+ok 10 - a foreign authority is refused as an untrusted key
+ok 11 - a signature by another key is refused as an untrusted key
+ok 12 - a check with no key refuses rather than inventing one
+ok 13 - a declared work below the floor is insufficient work
+ok 14 - a nonce that proves too few bits is insufficient work
+ok 15 - a missing signature field is an unreadable envelope
+ok 16 - an envelope with no record-id is unreadable
+ok 17 - an envelope below the first record is unreadable, not a window field
+ok 18 - an unsigned package still loads its windows unchanged
+ok 19 - an unsigned package adds no envelope refusal
+ok 20 - the read path reports unsigned for each unsigned surface
+ok 21 - a tampered package contributes no window to the shell data
+ok 22 - the untouched game-window surface still loads
+ok 23 - the read path names the refused surface
+ok 24 - the read-time refusal carries the digest-mismatch name, not a paint-time guess
+ok 25 - the same package signed with a valid envelope loads
+ok 26 - a valid envelope adds no refusal
+ok 27 - all four package surfaces are read
+ok 28 - no shipped surface carries a refused envelope
+envelope-test OK 28 checks</pre>
+      </article>
+      <article class="card pass" data-suite="browser-minimal-shell">
+        <header>
+          <h2>browser-minimal-shell</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · no check count</p>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe tools/browser_shell_check.py</code>
+        <pre>browser minimal shell HELD
+  msedge.exe drew 5 window(s) and 0 launcher row(s) at 1280x900, 1024x768, 900x1000: OpenlockFrame___dashboard 640x560 (5 controls, 4 grips), OpenlockFrame_mods 480x440 (6 controls, 4 grips), OpenlockFrame_docs 480x440 (6 controls, 4 grips), OpenlockFrame_settings 480x440 (5 controls, 4 grips), OpenlockFrame_addon_sandbox_proof_proof_panel 380x230 (5 controls, 4 grips) | streamer format openlock.game/1 present, game declarations refused | other-game wishes: citadel/gameinfo.gi loaded, citadel/gameinfo.gi loaded, citadel/gameinfo.gi loaded, citadel/gameinfo.gi planned, citadel/gameinfo.gi loaded, citadel/gameinfo.gi planned, core/gameinfo.gi planned (0 game templates) | envelopes package.shspec:unsigned deadlock.windows:unsigned package.cells:unsigned patches/openlock.baselines.shspec:unsigned | refusal probe: a game-* frame is refused by name
+  docs\shell-minimal.html</pre>
+      </article>
+      <article class="card pass" data-suite="static-check">
+        <header>
+          <h2>static-check</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 7 checks</p>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe tools/check_shell_clicks.py</code>
+        <pre>ok: 7 pointer control(s) reachable in openlock_shell.xml
+  reachable: DashboardButton
+  reachable: WindowsButton
+  reachable: LauncherButton
+  reachable: SchemeButton</pre>
+      </article>
+      <article class="card pass" data-suite="release-download">
+        <header>
+          <h2>release-download</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 6 checks</p>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/download-retry-server.py</code>
+        <pre>ok: a dropped first connection is retried
+ok: the retry wrote the whole asset
+ok: the asset is the served payload
+  download attempt 1 for openshell-player.vpk failed: Unable to connect to the remote server
+  retrying in 2 s
+  download attempt 2 for openshell-player.vpk failed: Unable to connect to the remote server
+  retrying in 4 s
+ok: an unreachable asset is a refusal, not a throw
+ok: the refusal names the URL and every attempt
+ok: the retries waited between attempts
+ok: 6 download checks
+flaky server on 127.0.0.1:62493; dead port 62494
+requests seen: 2 (first was dropped)</pre>
+      </article>
+      <article class="card pass" data-suite="split-identity">
+        <header>
+          <h2>split-identity</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 14 checks</p>
+        <code>node .scratch/split-identity-test.js</code>
+        <pre>ok 1 - a declared window keeps its own id
+ok 2 - a discovered window pins to kind + name: split:live_AbilityContainer
+ok 3 - the measured size is not part of the key
+ok 4 - a cell id is keyed to the durable split key: cell:split:live_AbilityContainer:Damage
+ok 5 - a resized HUD window resolves to the pinned split
+ok 6 - the size change does not move the key
+ok 7 - a renamed panel resolves by its class family
+ok 8 - the renamed window gets its own key, and the saved split still resolves to it
+ok 9 - both saved cells belong to the resolved split key
+ok 10 - a cell still carries its component path
+ok 11 - the saved rects are unchanged by the reload
+ok 12 - a window with no name or class is refused with the reason: its id carries no name and it declares no class or label to pin
+ok 13 - a discovery fallback name is a position, not an identity: its discovery name is a position, not an identity
+ok 14 - a split whose window is gone stays unresolved with its reason
+ok: 14 split identity check(s)</pre>
+      </article>
+      <article class="card pass" data-suite="installer-pair">
+        <header>
+          <h2>installer-pair</h2>
+          <span class="badge">PASS</span>
+        </header>
+        <p class="meta">exit 0 · 32 checks</p>
+        <code>C:\Users\ala\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe .scratch/installer-pair-test.py</code>
+        <pre>ok: a tree with this checkout&#x27;s pair reads current
+ok: an older pair reads stale
+ok: a compatible tree with no pair reads absent
+ok: a tree without gameinfo is not compatible
+ok: seeding a stale tree writes the current pair
+ok: the seeded pair now reads current
+ok: seeding an opted-in tree with no pair works
+ok: the seeded tree now reads current
+ok: seeding an incompatible tree is refused
+ok: a refused seed writes nothing
+ok: a current pair can be rewritten without a partial
+ok: Steam&#x27;s library record names a library outside the default leaves
+ok: discovery offers an install found only through that record
+ok: a client other than deadlock.exe is a compatible install
+ok: another game&#x27;s install accepts the release pair
+ok: its installer is the release installer byte for byte
+ok: a checkout-shaped tree accepts the development installer
+ok: a dev-grade tree with no checkout reads as the dev shape
+ok: a dev-grade tree receives this worktree&#x27;s installer
+ok: and its reading follows the dev pair, not the release one
+ok: the library&#x27;s titles are enumerated by gameinfo, whatever the game is
+ok: CS2&#x27;s tree reads compatible and names its game
+ok: Deadlock&#x27;s tree names citadel
+ok: CS2&#x27;s tree accepts the release pair
+ok: the wish layer reads both discovered games
+ok: the other game&#x27;s Panorama root is read, not assumed
+ok: each discovered install is a game wish, never a refusal
+ok: the CS2 wish names the game, its shape, and the tree
+ok: the wish detail names the Panorama renderer it would load
+ok: a CSwin64 build is read as a tools host, not a game
+ok: the tools host is planned, not missing a Panorama UI it never had
+ok: the generated shell data carries this machine&#x27;s game wishes
+ok: 32 installer pair check(s)</pre>
+      </article>
+    </section>
+    <aside>
+      <section class="surface">
+        <h2>Launcher / installer surface</h2>
+        <div class="mock-window" aria-label="Gameless launcher window with drawn controls">
+          <div class="mock-title">
+            <span class="label">Launcher</span>
+            <span class="mock-buttons">
+              <span class="mock-btn"><span class="bar"></span></span>
+              <span class="mock-btn"><span class="square"></span></span>
+              <span class="mock-btn"><span class="restore back"></span><span class="restore front"></span></span>
+              <span class="mock-btn"><span class="x a"></span><span class="x b"></span><span class="x c"></span><span class="x d"></span><span class="x e"></span><span class="x f"></span></span>
+            </span>
+          </div>
+          <div class="mock-body">choose a game install · the shell mounts after launch</div>
+        </div>
+        <p class="sub">The fake-tree suites assert the DOM classes; this panel makes the drawn
+        controls visible so a font or clipping regression is not hidden in terminal output.</p>
+      </section>
+      
+      <section class="surface">
+        <h2>Wishes — 21 planned load(s)</h2>
+        <p class="sub">What this package plans to load, what is missing, where the game answers
+        one content with more than one live panel, and the GitHub addon store rows. Rendered by
+        the shell's own Wishes window from the same generated list.</p>
+        <ul class="envelopes"><li><code>package.shspec</code> <span class="env loaded">loaded</span> load package.shspec <span class="sub">unsigned</span></li><li><code>deadlock.windows</code> <span class="env loaded">loaded</span> load deadlock.windows <span class="sub">unsigned</span></li><li><code>package.cells</code> <span class="env loaded">loaded</span> load package.cells <span class="sub">unsigned</span></li><li><code>patches/openlock.baselines.shspec</code> <span class="env loaded">loaded</span> load patches/openlock.baselines.shspec <span class="sub">unsigned</span></li><li><code>package.shspec</code> <span class="env missing">missing</span> open Streamers <span class="sub">content &#x27;streamer&#x27;: no streamer source exists on this build; there is nothing to mount</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;map-plan&#x27; <span class="sub">renderers differ: CitadelHudMap, CitadelHudMapScreen, HudMap</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;minimap&#x27; <span class="sub">renderers differ: CitadelHudMinimap, HudMinimap, minimap</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;abilities&#x27; <span class="sub">renderers differ: AbilitiesContainer, CitadelHudAbilities, HudAbilities, abilities</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;hero-select&#x27; <span class="sub">renderers differ: CitadelDashboard, CitadelHeroGrid, hero_grid</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;quickbuy&#x27; <span class="sub">renderers differ: HudQuickbuy, quickbuy</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;combat-log&#x27; <span class="sub">renderers differ: CitadelHudCombatLog, combat</span></li><li><code>package.shspec</code> <span class="env differs">differs</span> frame content &#x27;game-settings&#x27; <span class="sub">renderers differ: CitadelHudEscapeMenu, escapemenu</span></li><li><code>citadel/gameinfo.gi</code> <span class="env loaded">loaded</span> load the shell UI into citadel · game · release shape · D:/SteamLibrary/steamapps/common/Deadlock <span class="sub">renderer panorama at game/citadel/panorama · release shape · D:/SteamLibrary/steamapps/common/Deadlock</span></li><li><code>citadel/gameinfo.gi</code> <span class="env loaded">loaded</span> load the installer host into citadel · tools · dev shape · D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10 <span class="sub">renderer panorama at content/citadel/panorama · dev shape · D:/Users/alacrity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10</span></li><li><code>citadel/gameinfo.gi</code> <span class="env loaded">loaded</span> load the installer host into citadel · tools · dev shape · D:/Users/alacrity/Downloads/Reduced_CSDK_12 <span class="sub">renderer panorama at content/citadel/panorama · dev shape · D:/Users/alacrity/Downloads/Reduced_CSDK_12</span></li><li><code>citadel/gameinfo.gi</code> <span class="env planned">planned</span> load the shell UI into citadel · game · release shape · H:/SteamLibrary/steamapps/common/Deadlock <span class="sub">the shell is not installed in this tree</span></li><li><code>citadel/gameinfo.gi</code> <span class="env loaded">loaded</span> load the installer host into citadel · tools · release shape · D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12 <span class="sub">renderer panorama at game/citadel/panorama · release shape · D:/Users/alacrity/Documents/Documents/Reduced_CSDK_12</span></li><li><code>citadel/gameinfo.gi</code> <span class="env planned">planned</span> load the installer host into citadel · tools · release shape · D:/Users/alacrity/Documents/Reduced_CSDK_12 <span class="sub">the installer host is not installed in this tree</span></li><li><code>core/gameinfo.gi</code> <span class="env planned">planned</span> load the installer host into core · tools · release shape · F:/Downloaded Files/CSwin64_build_10924 <span class="sub">the installer host is not installed in this tree</span></li><li><code>landing/tools/addons.json</code> <span class="env loaded">loaded</span> install Alpha Shell <span class="sub">shploingus.recipe/3 · game 6821 · https://github.com/alacripose/dl-openshell/tree/main/shell/alpha-shell</span></li><li><code>landing/tools/addons.json</code> <span class="env planned">planned</span> install Server MOTD <span class="sub">available from the GitHub addon store</span></li></ul>
+      </section>
+      
+      <section class="surface">
+        <h2>Package envelopes</h2>
+        <p class="sub">Optional axis security: a signed package is checked before any of its
+        records are used. An unsigned package loads unchanged.</p>
+        <ul class="envelopes"><li><code>shell/alpha-shell/package.shspec</code> <span class="env unsigned">unsigned</span></li><li><code>shell/alpha-shell/deadlock.windows</code> <span class="env unsigned">unsigned</span></li><li><code>shell/alpha-shell/package.cells</code> <span class="env unsigned">unsigned</span></li><li><code>patches/openlock.baselines.shspec</code> <span class="env unsigned">unsigned</span></li></ul>
+      </section>
+      <section class="refusal">
+        <h2>REFUSED — game files and templates</h2>
+        <p>The browser witness is gameless. It carries the shell's streamer format
+        (<code>openlock.game/1</code>) as code, but any <code>game-*</code> window, game layout
+        entry, <code>file://</code> resource path, live-panel declaration or streamed game frame in
+        the page fails the browser check by name; only the shell/launcher windows the user,
+        developer or observer asked for are allowed.</p>
+      </section>
+      <section class="refusal">
+        <h2>REFUSED — live client input</h2>
+        <p>Drag, resize, glyph rendering, and the streamed game-window entrance in the running game
+        were not observed in this pass. The browser surface is the gameless installer witness: it
+        proves the shell's own frames and package surface only, and it refuses any game window or
+        cell. The live client remains unobserved; <code>python tools/parity_check.py</code> is the
+        separate live-install reading.</p>
+      </section>
+      <section class="refusal">
+        <h2>REFUSED — Go shell port</h2>
+        <p>The <code>agent_god_files/holo_shell</code> selftest was not run. It is the alternative
+        witness when the browser surface cannot exercise a suite.</p>
+      </section>
+    </aside>
+  </main>
+  <footer>
+    Reproduce with <code>python tools/shell_test_surface.py</code>. A suite with no card here is
+    refused, not green. The parity gate is a separate live-install reading.
+  </footer>
+</body>
+</html>

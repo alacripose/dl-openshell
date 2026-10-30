@@ -179,10 +179,48 @@ A window's delivered XML layout is looked up as `panorama/layout/<window-id>.xml
 shell builds every panel with `$.CreatePanel`. Labels and images are pointer-transparent; panels
 and buttons are hit-testable, so a control cannot be swallowed by a transparent layout host. This
 is the port of the original client-side DOM renderer, and it is the path a package uses whenever
-its source XML is present. A package carrying only compiled resources keeps the mounted path: the
+its source XML is present. The same streamed surface is used for an arbitrary game layout and for
+a game window or cell the host delivers while the client is running: `OpenlockStream` takes one
+window, and `OpenlockStreamPackage` takes an `openlock.game/1` payload of the game's own
+`{id,title,tree,geometry,cell}` window and cell rows. Each row opens at the rect its package
+declared, before the first paint, and enters with
+the same short curve the taskbar tabs use (opacity only — the frame never eases through an
+intermediate position). A row with no readable source is refused by id and opens nothing.
+`BLoadLayout` remains only the
+named fallback when a package or game source carries compiled resources and no source tree. A package carrying only compiled resources keeps the mounted path: the
 resource is looked up as `panorama/layout/<window-id>.vxml_c` and mounted with `BLoadLayout`.
 A loose `.shpkg` is read and its windows are listed; with XML artifacts it can be drawn without a
 VPK. A window with neither keeps its declared content kind.
+
+### Optional package envelopes
+
+Axis's package security, in the smallest slice that fits these five files. A package may carry an
+`envelope` record directly after its first line: `digest`, `authority`, `work`, `nonce`,
+`algorithm`, `key`, `signature` and a closing `record-id`. The digest covers every other line; the
+proof of work is a nonce with `work` leading zero bits over `digest\nauthority\nwork\nnonce`; the
+signature is HMAC-SHA256 under the machine key, held outside the checkout, over that same
+statement. The record is **optional**: an unsigned package loads unchanged, and the split is
+reported as `unsigned` in the shell data's `envelopes` rows.
+
+`tools/gen_shell_data.py` reads `package.shspec`, `deadlock.windows`, `package.cells` and
+`patches/openlock.baselines.shspec` through [tools/package_envelope.py](tools/package_envelope.py)
+**before any record from them is used**. A declared envelope that does not hold is refused by
+name — `digest-mismatch`, `untrusted-key` (missing or foreign authority), `insufficient-work`,
+`signature-invalid` or `unreadable-envelope` — and that surface contributes no window to the
+shell data. The refusal is therefore at the read, not at the paint. `python
+tools/package_envelope.py --check` reads all four surfaces; `--sign <file>` attaches an envelope
+on this machine (the key is created in the per-user data directory, or at
+`OPENLOCK_SIGNING_KEY`, and is refused inside the repository).
+
+Beside the refusals the data carries **wishes**: the loads the package planned, one row per item.
+A refusal is the host's verdict; a wish is the intent that verdict is about. `build_wishes` in
+[tools/gen_shell_data.py](tools/gen_shell_data.py) emits four kinds — `package` (each of the four
+signed regions), `content` (a window whose content has no mounted source), `renderer` (a content
+the game answers with more than one live panel, so the framed surface differs by lookup) and
+`store` (each row of the GitHub addon store manifest, [landing/tools/addons.json](landing/tools/addons.json)).
+The shell reports them in one toast at boot, logs the counts to the performance ring, and draws
+them in the **Wishes** window (`content wishes`) filed under Docs. Nothing in the list is retyped
+in JS: the window renders the generated rows.
 
 A package can also arrive after the client is already in the game, where Deadworks and Deadlock
 cannot add a resource path live. Run `dl_openshell_deliver <path-to.shpkg-or-addon.vpk>` on the
@@ -285,6 +323,7 @@ generated file or a successful pack as proof that the UI drew.
 - [tools/list_installs.py](tools/list_installs.py) — discovery shared by launch.ps1 and the in-game Tools window.
 - [tools/axis_witness.py](tools/axis_witness.py) — axis code witnesses; records and verifies worktree results in MongoDB.
 - [tools/parity_check.py](tools/parity_check.py) — double-verifies an installed VPK against the build, the repo, GitHub and the live Steam client.
+- [tools/refresh_installs.py](tools/refresh_installs.py) — rebuilds every tree that already carries the shell when the source moved; `install.ps1` runs it at the end of every install, so one install brings the dev-grade hosts and the live client to the current source.
 - [install.ps1](install.ps1) — compile, pack and mount the UI addon.
 - [install.cmd](install.cmd) — double-click launcher for a downloaded install.ps1.
 - [clientaddon/panorama/layout/openlock_shell.xml](clientaddon/panorama/layout/openlock_shell.xml) — shell layout.

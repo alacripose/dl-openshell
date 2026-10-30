@@ -1,6 +1,12 @@
-// CSDK 10 mount. Only the reduced tools build includes this file: its base_hud and
-// base_dashboard override the stock root, keep the host's own child (CitadelHud / CitadelDB),
-// and load the legacy shell entry generated from the live shell at pack time.
+// CSDK 10 mount. Only the reduced tools build includes this file: its base_hud, base_dashboard
+// and dashboard overrides keep the host's own children (CitadelHud / CitadelDB) and load the
+// legacy shell entry generated from the live shell at pack time.
+//
+// This older client is not the live game in two ways that matter here:
+//   * base_dashboard.xml is never loaded; the full-screen menu is the stock dashboard.xml root.
+//   * the menu and settings are separate layout roots, and a host inside a host root's child is
+//     painted underneath the menu rather than over it.
+// The shell host therefore belongs on the layout root itself, as a sibling of the stock content.
 //
 // The live mount (openlock_boot.js) is untouched, so a workaround for this older Panorama parser
 // can never change what the live game loads.
@@ -25,95 +31,75 @@
             top = parent;
             depth++;
         }
-
-        // The host is one per layout tree. base_hud and base_dashboard can both run this script,
-        // and a single root can load the layout more than once in the same frame. Checking child
-        // count lost that race: the first host existed but BLoadLayout had not added its child
-        // yet, so every later script created another host. Three shells then drew three taskbars
-        // and three sets of frames over the same pixels, which reads as the bar flickering.
-        // Claim the host before loading, and treat a claim as owned even while it is empty.
-        var mountedHost = null;
-        try { mountedHost = top.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
-        if (mountedHost) {
-            var claimed = "";
-            try { claimed = mountedHost.GetAttributeString("openlock_claimed", ""); } catch (e) {}
-            var mountedChildren = 0;
-            try { mountedChildren = mountedHost.GetChildCount(); } catch (e) {}
-            if (claimed === "1" || mountedChildren > 0) {
-                log("shell already hosted at " + String(mountedHost.GetParent ? (mountedHost.GetParent().id || "root") : "root") + "; yielding");
-                return;
-            }
-            // An empty, unclaimed host is debris from a refused mount. Replace it.
-            try { mountedHost.DeleteAsync(0); } catch (e) {}
-        }
-
-        var hostRoot = null;
-        try { hostRoot = top.FindChildTraverse("Dashboard"); } catch (e) {}
-        if (!hostRoot) {
-            try { hostRoot = top.FindChildTraverse("Hud"); } catch (e) {}
-        }
-        if (!hostRoot) {
-            log("REFUSED: no Dashboard or Hud host root");
+        if (!top) {
+            log("no layout root");
             return;
         }
 
-        var mountKey = String(hostRoot.id || "root");
+        // The layout root is the only panel that survives every screen in this build: the stock
+        // dashboard is its child, the HUD is its child, and popups are grandchildren. A host on
+        // the root is above all of them.
+        var mountKey = String(top.id || "root");
 
-        // Dashboard and Hud are separate roots and the client can load either first. A single
-        // session flag put the shell only in whichever loaded first, so the dashboard showed no
-        // shell after the HUD had mounted. Each root owns one host; reopening a root is a no-op.
-        // The reduced tools build exposes no shared client object (Game and Steam are absent), so
-        // the map below can only dedupe within one JS context. Separate layout trees each get
-        // their own shell and report their mount line in the console.
+        var rootClaim = "";
+        try { rootClaim = top.GetAttributeString("openlock_shell_root", ""); } catch (e) {}
+        if (rootClaim === "1") {
+            log("layout root already carries the shell");
+            return;
+        }
+
+        // A layout root can be loaded more than once in a session, and each instance is a new
+        // panel whose attribute claim is empty. The session map is the claim that survives that:
+        // one shell per root id, not one per load. Dashboard and HUD have different ids and each
+        // gets its own shell, which is the screen the player is on.
         var mountedRoots = globalThis.__openlockCsdk10MountedRoots;
         if (!mountedRoots) {
             mountedRoots = {};
             globalThis.__openlockCsdk10MountedRoots = mountedRoots;
         }
         if (mountedRoots[mountKey]) {
-            log("already mounted into " + mountKey);
+            log("root " + mountKey + " already mounted this session; yielding");
             return;
         }
-        // Claim before the panel exists. Two Hud loads can interleave inside one frame, and a
-        // claim written after BLoadLayout is too late for the second one.
         mountedRoots[mountKey] = true;
 
-        var claimId = "OpenlockMountClaim_" + mountKey;
-        var claimed = null;
-        try { claimed = top.FindChildTraverse(claimId); } catch (e) {}
-        if (claimed) {
-            log("mount already claimed for " + mountKey);
-            return;
-        }
-        try { $.CreatePanel("Panel", top, claimId); } catch (e) {}
-
-        var host = null;
-        try { host = hostRoot.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
-        if (!host) {
-            try { host = $.CreatePanel("Panel", hostRoot, "OpenlockStandaloneHost"); } catch (e) {
-                log("host create threw: " + String(e));
+        var existing = null;
+        try { existing = top.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        if (existing) {
+            var existingChildren = 0;
+            try { existingChildren = existing.GetChildCount(); } catch (e) {}
+            if (existingChildren > 0) {
+                log("shell already hosted on " + mountKey + "; yielding");
                 return;
             }
+            try { existing.DeleteAsync(0); } catch (e) {}
+        }
+
+        // Claim before the panel exists. Two script loads can interleave inside one frame, and a
+        // claim written after BLoadLayout is too late for the second one. The attribute belongs
+        // to the layout root, so two separate roots (dashboard and HUD) each get one shell.
+        try { top.SetAttributeString("openlock_shell_root", "1"); } catch (e) {}
+
+        var host = null;
+        try { host = $.CreatePanel("Panel", top, "OpenlockStandaloneHost"); } catch (e) {
+            try { top.SetAttributeString("openlock_shell_root", "0"); } catch (e2) {}
+            log("host create threw: " + String(e));
+            return;
         }
         if (!host) {
+            try { top.SetAttributeString("openlock_shell_root", "0"); } catch (e) {}
             log("host was not created");
             return;
         }
 
-        var children = 0;
-        try { children = host.GetChildCount(); } catch (e) {}
-        if (children > 0) {
-            log("host already carries a shell");
-            return;
-        }
-
-        // Claim before the load. A second script in the same frame now yields instead of
-        // creating a peer host whose child count is still zero.
-        try { host.SetAttributeString("openlock_claimed", "1"); } catch (e) {}
-
         host.style.width = "100%";
         host.style.height = "100%";
         host.style.zIndex = "10000";
+        // This parser has no `position`; ignore-parent-flow is the absolute-positioning
+        // equivalent the legacy sheet already uses. Both are set so neither parser drops the host
+        // into the stock root's flow.
+        try { host.style.ignoreParentFlow = true; } catch (e) {}
+        try { host.style.position = "absolute"; } catch (e) {}
         host.hittest = false;
         host.hittestchildren = true;
 
@@ -125,14 +111,15 @@
         }
         if (!mounted) {
             try { host.RemoveAndDeleteChildren(); } catch (e) {}
-            try { host.SetAttributeString("openlock_claimed", "0"); } catch (e) {}
+            try { host.DeleteAsync(0); } catch (e) {}
+            try { top.SetAttributeString("openlock_shell_root", "0"); } catch (e) {}
+            try { delete mountedRoots[mountKey]; } catch (e) {}
             log("REFUSED: openlock_shell_legacy.xml did not mount");
             return;
         }
 
-        mountedRoots[mountKey] = true;
         globalThis.__openlockShellMounted = true;
-        log("legacy shell mounted from " + mountKey);
+        log("legacy shell mounted over " + mountKey);
     } catch (e) {
         log("REFUSED: " + String(e));
     }

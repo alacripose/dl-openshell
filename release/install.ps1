@@ -406,7 +406,7 @@ function Test-VpkArchive([string]$Path) {
 }
 
 function Get-ReleaseAsset {
-    param([string]$Name, [string]$Destination)
+    param([string]$Name, [string]$Destination, [int]$Attempts = 3)
     $base = if ($ReleaseBase) {
         $ReleaseBase.TrimEnd('/')
     } elseif ($ReleaseTag -and $ReleaseTag -ne 'latest') {
@@ -414,12 +414,29 @@ function Get-ReleaseAsset {
     } else {
         "https://github.com/$ReleaseRepo/releases/latest/download"
     }
-    try {
-        Invoke-WebRequest -Uri "$base/$Name" -OutFile $Destination -UseBasicParsing -TimeoutSec 120
-        return $null
-    } catch {
-        return $_.Exception.Message
+    $uri = "$base/$Name"
+    # A CDN can close a connection mid-response, and one dropped socket is not a missing release.
+    # Retry with backoff, discard the partial file before each attempt so a truncated archive is
+    # never verified as if it were complete, and return one refusal that names the URL, the number
+    # of attempts and the last error instead of the raw exception.
+    $lastError = ''
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Force }
+            Invoke-WebRequest -Uri $uri -OutFile $Destination -UseBasicParsing -TimeoutSec 180
+            if (Test-Path -LiteralPath $Destination) { return $null }
+            $lastError = 'the request completed but wrote no file'
+        } catch {
+            $lastError = $_.Exception.Message
+        }
+        if ($attempt -lt $Attempts) {
+            $wait = [Math]::Pow(2, $attempt - 1) * 2
+            Write-Host "  download attempt $attempt for $Name failed: $lastError"
+            Write-Host "  retrying in $wait s"
+            Start-Sleep -Seconds $wait
+        }
     }
+    return "$uri — $Attempts attempt(s): $lastError"
 }
 
 $temp = Join-Path $env:TEMP ('openlock-release-' + [guid]::NewGuid().ToString('N'))
@@ -465,7 +482,7 @@ try {
             Update-ShellUi -Percent 12 -Stage 'download' -Message "downloading the verified player archive from $ReleaseRepo"
             $errorText = Get-ReleaseAsset -Name 'openshell-player.vpk' -Destination $downloadedVpk
             if ($errorText) {
-                throw "Could not download the player archive from ${ReleaseRepo}: $errorText"
+                throw "Could not download the player archive from ${ReleaseRepo}: $errorText. A connection that keeps dropping is not a reason to install an unverified archive: retry later, or pass -VpkPath <file> -HashPath <file> to install a verified archive already on disk."
             }
             $checksumPath = Join-Path $temp 'openshell-player.sha256'
             Update-ShellUi -Percent 32 -Stage 'download' -Message 'downloading the release checksum'

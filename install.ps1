@@ -38,6 +38,11 @@ param(
     [string]$Grade = '',
     [switch]$VpkOnly,
     [switch]$Compile,
+    # A nested install (one this installer started for another tree's refresh) must not start its
+    # own fleet pass or its own parity gate: the outer run owns both, and a nested gate would
+    # refuse the fleet that is still being repaired.
+    [switch]$NoRefresh,
+    [switch]$NoParity,
     [int]$PackTimeoutSeconds = 30
 )
 
@@ -65,7 +70,10 @@ function Show-InstallFailure {
 
 trap {
     $failure = $_.Exception.Message
-    if (Get-Command Write-BuildRecord -ErrorAction SilentlyContinue) {
+    # Once this tree's own slot is written the install record stays installed/ok: a refusal from
+    # the fleet or parity gate is about another tree, and rewriting this one as failed would make
+    # the tree that was just installed read as drift on the next gate.
+    if (-not $script:treeInstalled -and (Get-Command Write-BuildRecord -ErrorAction SilentlyContinue)) {
         try { Write-BuildRecord -Stage $script:buildStage -State 'failed' -Message $failure } catch { }
     }
     if (Get-Command Complete-InstallUi -ErrorAction SilentlyContinue) {
@@ -194,6 +202,7 @@ $script:buildPackages = @()
 $script:installUi = $null
 $script:noUi = [bool]($NoUi -or $BootShellHost)
 $script:installGrade = 'dev'
+$script:treeInstalled = $false
 
 # The installer is the only Openlock surface when the game is closed. A small WinForms window
 # shows the stage the record is actually in, and a tray balloon reports the final result. The UI
@@ -412,6 +421,99 @@ function Start-InstallUi {
     }
 }
 
+# The installer window also owns the question the entry point cannot answer: which compatible
+# installs should carry this installer. `install.cmd` runs whatever `install.ps1` sits beside it, so
+# a tree seeded once keeps an older pair and nothing says so. This prompt reads every compatible
+# install through tools/installer_pair.py, checks the pairs that are stale, and writes only the
+# installs the user checks. A tree with no installer is never seeded without a tick: adding the
+# script to an install the user did not choose would be the drift this exists to stop.
+function Invoke-InstallerSeedPrompt {
+    if ($script:noUi -or -not [Environment]::UserInteractive -or $env:CI) { return }
+    $tool = Join-Path $PSScriptRoot 'tools\installer_pair.py'
+    if (-not (Test-Path -LiteralPath $tool)) { return }
+
+    try {
+        $raw = & $Python $tool --json 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $raw) { Write-Warning 'installer discovery returned no reading'; return }
+        $rows = @(($raw | Out-String | ConvertFrom-Json).trees | Where-Object { $_.compatible })
+        if (-not $rows.Count) { Write-Host 'Installer: no compatible install was found to seed.'; return }
+
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = 'dl-openshell install · add the installer to an install'
+        $form.ClientSize = New-Object System.Drawing.Size(720, 380)
+        $form.StartPosition = 'CenterScreen'
+        $form.FormBorderStyle = 'FixedDialog'
+        $form.MaximizeBox = $false
+        $form.MinimizeBox = $false
+        $form.TopMost = $true
+
+        $heading = New-Object System.Windows.Forms.Label
+        $heading.Location = New-Object System.Drawing.Point(16, 12)
+        $heading.Size = New-Object System.Drawing.Size(688, 24)
+        $heading.Font = [System.Drawing.Font]::new('Segoe UI', 11, [System.Drawing.FontStyle]::Bold)
+        $heading.Text = 'Add the installer to an install'
+
+        $sub = New-Object System.Windows.Forms.Label
+        $sub.Location = New-Object System.Drawing.Point(16, 40)
+        $sub.Size = New-Object System.Drawing.Size(688, 34)
+        $sub.Text = 'Every install of a Source 2 game with a gameinfo.gi is listed. A checked install gets install.cmd and the install.ps1 for its shape. Stale pairs are checked; an install with no installer is yours to opt into.'
+
+        $list = New-Object System.Windows.Forms.CheckedListBox
+        $list.Location = New-Object System.Drawing.Point(16, 78)
+        $list.Size = New-Object System.Drawing.Size(688, 228)
+        $list.CheckOnClick = $true
+        $list.Font = [System.Drawing.Font]::new('Consolas', 9)
+        $list.HorizontalScrollbar = $true
+        $paths = @{}
+        $index = 0
+        foreach ($row in $rows) {
+            $game = if ($row.game) { [string]$row.game } else { '-' }
+            $null = $list.Items.Add(('{0,-8} {1,-8} {2,-10} {3}' -f $row.installer, $row.shape, $game, $row.path))
+            $paths[$index] = [string]$row.path
+            if ($row.installer -eq 'stale' -or $row.installer -eq 'partial') { $list.SetItemChecked($index, $true) }
+            $index++
+        }
+
+        $add = New-Object System.Windows.Forms.Button
+        $add.Location = New-Object System.Drawing.Point(520, 318)
+        $add.Size = New-Object System.Drawing.Size(184, 30)
+        $add.Text = 'Add to checked'
+        $add.DialogResult = 'OK'
+
+        $skip = New-Object System.Windows.Forms.Button
+        $skip.Location = New-Object System.Drawing.Point(408, 318)
+        $skip.Size = New-Object System.Drawing.Size(104, 30)
+        $skip.Text = 'Not now'
+        $skip.DialogResult = 'Cancel'
+
+        $note = New-Object System.Windows.Forms.Label
+        $note.Location = New-Object System.Drawing.Point(16, 324)
+        $note.Size = New-Object System.Drawing.Size(380, 20)
+        $note.Text = 'Refused: a tree without a gameinfo.gi or a client exe.'
+
+        $form.Controls.AddRange(@($heading, $sub, $list, $add, $skip, $note))
+        $form.AcceptButton = $add
+        $form.CancelButton = $skip
+        if ($form.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+
+        $chosen = @()
+        for ($n = 0; $n -lt $list.Items.Count; $n++) {
+            if ($list.GetItemChecked($n)) { $chosen += $paths[$n] }
+        }
+        if (-not $chosen.Count) { return }
+
+        $result = & $Python $tool --apply @chosen 2>&1
+        $result | ForEach-Object { Write-Host "  $_" }
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'One or more installs refused the installer pair; see the named tree above.' }
+    } catch {
+        Write-Warning "installer seed prompt unavailable: $($_.Exception.Message)"
+    }
+}
+
 function Update-InstallUi {
     param([int]$Percent, [string]$Stage, [string]$Message, [string]$State = 'running')
     if ($null -eq $script:installUi) { return }
@@ -566,7 +668,29 @@ function Write-BuildRecord {
     Update-InstallUi -Percent $percent -Stage $script:buildStage -Message $script:buildMessage -State $script:buildState
 }
 
+# A shipped change is not installed until every tree that already carries the shell carries this
+# source. Running the installer once is the trigger: the refresh tool compares each known tree's
+# baked digest, commit and feature markers with this worktree through the same reading the parity
+# gate uses, and runs this script into every stale tree. Drift is then repaired by installing,
+# which is the only thing that ever repaired it, instead of by remembering every tree by hand.
+function Invoke-FleetRefresh {
+    if ($NoRefresh) { return }
+
+    $tool = Join-Path $PSScriptRoot 'tools\refresh_installs.py'
+    if (-not (Test-Path -LiteralPath $tool)) {
+        throw "The fleet refresh tool is missing at '$tool'; this install cannot prove the other shell trees carry this source."
+    }
+    Write-Host 'Fleet refresh: rebuilding every other tree that carries the shell.'
+    $refreshOut = & $Python $tool --python $Python 2>&1
+    $refreshCode = $LASTEXITCODE
+    $refreshOut | ForEach-Object { Write-Host "  $_" }
+    if ($refreshCode -ne 0) {
+        throw 'The fleet refresh refused: a shell tree still is not this source. The tree(s) are named above; run install.ps1 there once its client is closed.'
+    }
+}
+
 $script:installGrade = Select-InstallGrade -Selected $Grade
+Invoke-InstallerSeedPrompt
 Start-InstallUi
 
 Write-BuildRecord -Stage 'prepare' -State 'running' -Message 'assembling the client tree'
@@ -845,9 +969,20 @@ Write-BuildRecord -Stage 'prepare' -State 'ok' -Message 'client tree assembled'
 # 3. Compile. The shipping client resolves `panorama/layout/base_hud.vxml_c`, not an .xml source:
 #    a source-only archive draws nothing. Compiling is therefore part of the install, and the
 #    override is only accepted once every compiled artifact the layout names is on disk.
-$compiler = Join-Path $SdkRoot 'game\bin\win64\resourcecompiler.exe'
-$sdkContent = Join-Path $SdkRoot 'content\citadel_addons\openlock_ui'
-$sdkBuilt = Join-Path $SdkRoot 'game\citadel_addons\openlock_ui'
+#
+#    A CSDK10 tools tree compiles into the loose addon it actually mounts, `citadel_addons/server`.
+#    That client reloads compiled XML from the addon tree; it does not reload a VPK. Compiling in
+#    the server addon's own source tree is therefore what lets a map reload pick up a change
+#    without restarting the game. The compiler is the target tree's own compiler: a newer SDK's
+#    compiled resources are not a substitute for the client that will read them.
+$compileRoot = if ($toolsTarget) { $DeadlockRoot } else { $SdkRoot }
+# The tools client mounts the addon named by `-addon`. A minimal shell addon is the mount; the
+# game's own `server` tree is not, because mounting it recompiles the whole stock UI and hits
+# schema errors the client rejects.
+$compileAddon = 'openlock_ui'
+$compiler = Join-Path $compileRoot 'game\bin\win64\resourcecompiler.exe'
+$sdkContent = Join-Path $compileRoot "content\citadel_addons\$compileAddon"
+$sdkBuilt = Join-Path $compileRoot "game\citadel_addons\$compileAddon"
 
 if (-not (Test-Path $compiler)) {
     throw "resourcecompiler.exe is not at '$compiler'. The client loads compiled Panorama resources, so a source-only install cannot draw.'"
@@ -860,6 +995,8 @@ if (-not $Compile) {
 $compiledCount = 0
 if (Test-Path $compiler) {
     Write-BuildRecord -Stage 'compile' -State 'running' -Message 'compiling Panorama resources'
+    # The addon tree is ours. Replace it, never merge: a stale layout or script from an older
+    # install is exactly the "addon is out of date" state the client keeps loading.
     if (Test-Path $sdkContent) { Remove-Item $sdkContent -Recurse -Force }
     if (Test-Path $sdkBuilt) { Remove-Item $sdkBuilt -Recurse -Force }
     New-Item -ItemType Directory -Force -Path (Join-Path $sdkContent 'panorama'), (Join-Path $sdkContent 'sounds'), (Join-Path $sdkContent 'soundevents') | Out-Null
@@ -875,6 +1012,7 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_hud.xml',
         'panorama\layout\base_hud.xml',
         'panorama\scripts\openlock_shell.js',
+        'panorama\scripts\openlock_layout.js',
         'panorama\scripts\openlock_audio.js',
         'panorama\scripts\openlock_delivery.js',
         'panorama\scripts\openlock_popit.js',
@@ -893,14 +1031,15 @@ if (Test-Path $compiler) {
             'panorama\styles\openlock_shell_legacy.css'
         )
     }
+    $inputRelatives = $inputs
     $inputs = $inputs | ForEach-Object { (Join-Path $sdkContent $_).Replace('\', '/') }
 
     # One command-line string: PowerShell 5.1 does not reliably split an array into separate
     # native arguments, and a compiler that receives one space-joined path compiles nothing.
     $compileArgs = '-f -nop4 -DANGER_MODE_ignore_schema_mismatches -game "' +
-        (Join-Path $SdkRoot 'game\citadel') + '" -i ' + ($inputs -join ' ')
+        (Join-Path $compileRoot 'game\citadel') + '" -i ' + ($inputs -join ' ')
 
-    $process = Start-Process -FilePath $compiler -ArgumentList $compileArgs -WorkingDirectory $SdkRoot -Wait -PassThru -NoNewWindow
+    $process = Start-Process -FilePath $compiler -ArgumentList $compileArgs -WorkingDirectory $compileRoot -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -ne 0) {
         throw "resourcecompiler failed with exit code $($process.ExitCode)."
     }
@@ -918,25 +1057,39 @@ if (Test-Path $compiler) {
     if (-not (Test-Path $soundManifest)) { throw "audio manifest not generated at '$soundManifest'." }
 
     $soundArgs = '-f -nop4 -DANGER_MODE_ignore_schema_mismatches -game "' +
-        (Join-Path $SdkRoot 'game\citadel') + '" -i ' + ($soundWavs -join ' ')
-    $soundProcess = Start-Process -FilePath $compiler -ArgumentList $soundArgs -WorkingDirectory $SdkRoot -Wait -PassThru -NoNewWindow
+        (Join-Path $compileRoot 'game\citadel') + '" -i ' + ($soundWavs -join ' ')
+    $soundProcess = Start-Process -FilePath $compiler -ArgumentList $soundArgs -WorkingDirectory $compileRoot -Wait -PassThru -NoNewWindow
     if ($soundProcess.ExitCode -ne 0) {
         throw "resourcecompiler failed on the shell WAVs with exit code $($soundProcess.ExitCode)."
     }
 
     $manifestArgs = '-f -nop4 -DANGER_MODE_ignore_schema_mismatches -game "' +
-        (Join-Path $SdkRoot 'game\citadel') + '" -i ' + $soundManifest
-    $manifestProcess = Start-Process -FilePath $compiler -ArgumentList $manifestArgs -WorkingDirectory $SdkRoot -Wait -PassThru -NoNewWindow
+        (Join-Path $compileRoot 'game\citadel') + '" -i ' + $soundManifest
+    $manifestProcess = Start-Process -FilePath $compiler -ArgumentList $manifestArgs -WorkingDirectory $compileRoot -Wait -PassThru -NoNewWindow
     if ($manifestProcess.ExitCode -ne 0) {
         throw "resourcecompiler failed on the shell soundevent manifest with exit code $($manifestProcess.ExitCode)."
     }
 
-    $compiled = Get-ChildItem $sdkBuilt -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c, *.vsnd_c, *.vsndevts_c
-    if (-not $compiled) { throw "resourcecompiler reported success but wrote no compiled resource under '$sdkBuilt'." }
-    $compiledCount = @($compiled).Count
-    foreach ($file in $compiled) {
-        $relative = $file.FullName.Substring($sdkBuilt.Length + 1)
-        Copy-Item $file.FullName (Join-Path $build $relative) -Force
+    if ($toolsTarget) {
+        # Inputs compile to `_c` artifacts with a different name, so counting the input list is the
+        # honest measure here; the required-artifact check below proves each one was written.
+        $compiled = @($inputRelatives)
+        $compiledCount = @($compiled).Count
+        # The layout manager opens the source XML beside the compiled resource. Keep both in the
+        # addon's game tree so a reload does not depend on the content tree being searched.
+        $liveLayouts = Join-Path $sdkBuilt 'panorama\layout'
+        New-Item -ItemType Directory -Force -Path $liveLayouts | Out-Null
+        foreach ($xml in @(Get-ChildItem (Join-Path $build 'panorama\layout') -File -Filter *.xml)) {
+            Copy-Item -LiteralPath $xml.FullName -Destination (Join-Path $liveLayouts $xml.Name) -Force
+        }
+    } else {
+        $compiled = Get-ChildItem $sdkBuilt -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c, *.vsnd_c, *.vsndevts_c
+        if (-not $compiled) { throw "resourcecompiler reported success but wrote no compiled resource under '$sdkBuilt'." }
+        $compiledCount = @($compiled).Count
+        foreach ($file in $compiled) {
+            $relative = $file.FullName.Substring($sdkBuilt.Length + 1)
+            Copy-Item $file.FullName (Join-Path $build $relative) -Force
+        }
     }
 
     # The boot script is included by base_hud. A missing .vjs_c there aborts the layout load,
@@ -946,6 +1099,7 @@ if (Test-Path $compiler) {
         'panorama\layout\openlock_shell.vxml_c',
         'panorama\layout\openlock_shell_server.vxml_c',
         'panorama\scripts\openlock_server_mount.vjs_c',
+        'panorama\scripts\openlock_layout.vjs_c',
         'panorama\scripts\openlock_audio.vjs_c',
         'panorama\scripts\openlock_delivery.vjs_c',
         'panorama\scripts\openlock_popit.vjs_c',
@@ -965,7 +1119,8 @@ if (Test-Path $compiler) {
             'panorama\styles\openlock_shell_legacy.vcss_c'
         )
     }
-    $absent = @($required | Where-Object { -not (Test-Path (Join-Path $build $_)) })
+    $compiledRoot = if ($toolsTarget) { $sdkBuilt } else { $build }
+    $absent = @($required | Where-Object { -not (Test-Path (Join-Path $compiledRoot $_)) })
     if ($absent.Count -gt 0) {
         throw "resourcecompiler wrote no $($absent -join ', '); base_hud would abort at load."
     }
@@ -974,54 +1129,78 @@ if (Test-Path $compiler) {
     Write-BuildRecord -Stage 'compile' -State 'ok' -Resources $compiledCount -Message "compiled $compiledCount Panorama resources"
 }
 
-# 3b. Live tools update. The mounted VPK resolves before the loose tree on the CSDK10 client:
-#     leaving a stale archive beside fresh `_c` files is a split authority, and the client keeps
-#     reading the archive. Copy the loose resources for inspection, then pack and replace the
-#     archive below. The fallback in step 5 can replace a held archive in place; the client still
-#     needs a map reload, never a restart.
-if ($Live) {
-    # The CSDK10 tools client mounts `AddonRoot citadel_addons`, so its live slot is
-    # game/citadel_addons/openlock_ui, not the shipping game's citadel/addons/mods archive. The
-    # server tools slot reads the loose compiled resources and the layout XML beside them; a VPK
-    # written into the game addon directory is not this slot's authority.
-    $toolsAddon = Join-Path $game 'citadel_addons\openlock_ui'
-    $liveRoot = Join-Path $toolsAddon 'panorama'
-    $compiledRoot = Join-Path $build 'panorama'
-    if (Test-Path -LiteralPath $liveRoot) { Remove-Item -LiteralPath $liveRoot -Recurse -Force }
+# 3b. A CSDK10 tools install is an addon install, not an archive install. The tools client
+#     reloads compiled XML from the addon named by `-addon`; it does not reload a VPK. A VPK in
+#     citadel/addons/mods wins the search path, then the layout manager cannot open the stock
+#     base_hud.xml and asserts before any shell can mount. The compile above wrote the shell into
+#     the addon the client mounts, so this branch records that install and leaves archives alone.
+if ($toolsTarget) {
+    $toolsAddon = $sdkBuilt
     $liveCount = 0
-    foreach ($file in @(Get-ChildItem $compiledRoot -Recurse -File -Include *.vxml_c, *.vjs_c, *.vcss_c, *.xml)) {
-        $relative = $file.FullName.Substring($compiledRoot.Length + 1)
-        $target = Join-Path $liveRoot $relative
-        New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
-        Copy-Item -LiteralPath $file.FullName -Destination $target -Force
-        $liveCount++
+    foreach ($sub in @('panorama', 'sounds', 'soundevents')) {
+        $from = Join-Path $toolsAddon $sub
+        if (Test-Path -LiteralPath $from) { $liveCount += @(Get-ChildItem $from -Recurse -File).Count }
     }
-    foreach ($sub in @('sounds', 'soundevents')) {
-        $from = Join-Path $build $sub
-        $to = Join-Path $toolsAddon $sub
-        if (-not (Test-Path $from)) { continue }
-        if (Test-Path $to) { Remove-Item $to -Recurse -Force }
-        Copy-Item $from $to -Recurse -Force
-        $liveCount += @(Get-ChildItem $to -Recurse -File).Count
-    }
-    if ($liveCount -lt 1) { throw 'Live install compiled no resources to copy.' }
-    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
-        -Message "live tools slot $liveCount resources for the next map reload"
-    Write-Host "Live install: $liveCount resource(s) in $liveRoot (server tools slot)."
-    Write-Host 'The shipping game archive and gameinfo.gi were not touched.'
+    if ($liveCount -lt 1) { throw 'The tools addon install wrote no resources.' }
 
-    # A CSDK10 change is not complete until the live Steam client also carries it. Refuse the
-    # tools install explicitly instead of reporting a successful development mount.
+    # A stale Openlock archive in the game addon directory is a second, shadowing answer for
+    # base_hud: it wins the search path, and the old layout manager then fails to open the source
+    # XML before the addon tree is considered. The tools surface is the addon, so remove the
+    # Openlock archive. A `.pre-openlock` backup is deliberately not restored here: in a tools
+    # tree it is itself a previous Openlock build, and restoring it re-shadows the addon.
+    $installedArchive = Join-Path $addonRoot 'pak01_dir.vpk'
+    if (Test-Path -LiteralPath $installedArchive) {
+        $bytes = [System.IO.File]::ReadAllBytes($installedArchive)
+        $text = [System.Text.Encoding]::ASCII.GetString($bytes)
+        if ($text.Contains('openlock_shell')) {
+            Remove-Item -LiteralPath $installedArchive -Force
+            Write-Host 'Removed the Openlock archive that would shadow the server addon.'
+        } else {
+            Write-Warning "An archive at '$installedArchive' does not carry Openlock but may shadow the server addon; remove it only if it owns panorama/layout/base_hud.xml."
+        }
+    }
+    # A previous non-Live tools install also left the source layouts loose beside the archive.
+    # That tree has no compiled resources and would shadow the server addon just like the VPK.
+    $looseTree = Join-Path $addonRoot 'panorama'
+    if (Test-Path -LiteralPath (Join-Path $looseTree 'layout\openlock_shell.xml')) {
+        Remove-Item -LiteralPath $looseTree -Recurse -Force
+        Write-Host 'Removed the loose Openlock layouts that would shadow the server addon.'
+    }
+
+    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
+        -Message "$compileAddon addon $liveCount resources; reload the map to read them"
+    $script:treeInstalled = $true
+    Write-Host "Tools install: $liveCount resource(s) in $toolsAddon ($compileAddon addon)."
+    Write-Host 'The client reloads this addon tree; no VPK was packed for the tools surface.'
+
+    Invoke-FleetRefresh
+    # A nested install writes the repository build record too, so the outer tree's record is
+    # rewritten last: the shared record describes the tree this run was asked to install.
+    Write-BuildRecord -Stage 'installed' -State 'ok' -Resources $liveCount `
+        -Message "$compileAddon addon $liveCount resources; reload the map to read them"
+
+    # A tools install is complete once its own addon slot holds this source. The live Steam client
+    # and the other tools trees are reported as parity readings, not prerequisites: an old player
+    # VPK must not turn a successful tools addon write into a failed install record. A parity FAIL
+    # (exit 1) still aborts because it names a broken repo or installed cell; a BLOCKED run
+    # (exit 2) is shown and kept in the build record as a warning.
     $parityTool = Join-Path $PSScriptRoot 'tools\parity_check.py'
-    if (Test-Path -LiteralPath $parityTool) {
-        $parityOut = & $Python $parityTool --install $DeadlockRoot --require-live 2>&1
+    if ((Test-Path -LiteralPath $parityTool) -and -not $NoParity) {
+        $parityOut = & $Python $parityTool --install $DeadlockRoot 2>&1
         $parityCode = $LASTEXITCODE
         $parityOut | ForEach-Object { Write-Host $_ }
-        if ($parityCode -ne 0) {
-            throw "Live tools install refused: the CSDK10 slot was written, but the live Steam client did not receive this build. Deliver the signed shell package to the player client before continuing (exit $parityCode)."
+        if ($parityCode -eq 1) {
+            throw "Tools addon written to the CSDK10 server slot, but the parity gate failed (exit 1)."
+        }
+        if ($parityCode -eq 2) {
+            Write-Warning 'Tools addon written; parity is BLOCKED by another tree or by the live Steam client. See the readings above.'
         }
     }
     return
+}
+
+if ($Live) {
+    throw '-Live is only valid for the CSDK10 tools tree; a game install is a packed archive.'
 }
 
 # 4. Pack it. CSDKCfgVPK takes a content directory and the archive to write. On this SDK the
@@ -1420,6 +1599,11 @@ if ($hadBom) { Write-Host 'Removed the UTF-8 BOM the previous install left on ga
 #    record is also useful on its own when an install is inspected without launching the client.
 Write-BuildRecord -Stage 'installed' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount `
     -Packages $installedPackages -Message "installed $archiveBytes bytes"
+$script:treeInstalled = $true
+Invoke-FleetRefresh
+Write-BuildRecord -Stage 'installed' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount `
+    -Packages $installedPackages -Message "installed $archiveBytes bytes"
+
 Write-Host "Wrote build record $buildRecordPath and $liveBuildPath"
 Write-Host "Start the game. The shell boots from pak01_dir.vpk; the server is optional."
 Complete-InstallUi -Ok $true -Message "Installed $([Math]::Round($archiveBytes / 1MB, 2)) MB to addons/mods/pak01_dir.vpk · grade $script:installGrade."

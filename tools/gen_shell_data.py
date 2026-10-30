@@ -26,7 +26,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import game_tree  # noqa: E402  (the general game-folder parser, shared with the installer window)
 import gen_shell_theme  # noqa: E402  (the theme generator is a sibling tool, not a package)
+import package_envelope  # noqa: E402  (the optional envelope is checked before any record is used)
+from game_tree import steam_libraries  # noqa: E402  (re-exported: discovery already reads it here)
 
 ROOT = Path(__file__).resolve().parent.parent
 # Defaults live at import time. The CLI paths are applied in main(), so another tool can import
@@ -55,10 +58,21 @@ SOURCE_DIGEST_EXCLUDES = {
 }
 SOURCE_DIGEST_FILES = (
     "install.ps1",
+    # The player-facing installer downloads and verifies what the shell runs; a change there is a
+    # change to the delivery, so it moves the digest like any other shipped file.
+    "release/install.ps1",
     "openlock.manifest.json",
     "shell/alpha-shell/package.shspec",
     "shell/alpha-shell/deadlock.windows",
     "shell/alpha-shell/package.cells",
+    "tools/package_envelope.py",
+    # The install path itself ships the shell: the fleet refresh is what makes a change reach every
+    # tree that carries it, so a change there is a change to what the player runs.
+    "tools/refresh_installs.py",
+    "tools/installer_pair.py",
+    # The game-folder parser decides which trees the window offers and which game each wish
+    # names; a change there changes what an install plans to load.
+    "tools/game_tree.py",
     "tools/gen_legacy_shell.py",
     "tools/gen_shell_data.py",
     "tools/gen_shell_theme.py",
@@ -74,8 +88,14 @@ DELIVERY_FEATURES = {
     "performance": ("renderPerf", "PerfGraph"),
     "observer": ("showObserver", "ObserverXmlHost"),
     "live-packages": ("OpenlockDelivery", "offerAddons", "renderTree"),
+    # The running client's own window/cell packages go through the same streamer surface as an
+    # addon package: a delivered shell without these markers cannot frame the game's windows.
+    "game-stream": ("OpenlockStream", "OpenlockStreamPackage", "openlock.game/1", "StreamedXml"),
     "palette": ("renderPalette", "PaletteRow", "cyclePalette"),
     "popit-renderer": ("rendererFor", "RendererPopit", "applyPalettePaint"),
+    # Wishes are the plan beside the refusals: a delivered shell that lost the wish surface would
+    # still draw every window, so the capability is named here rather than inferred.
+    "wishes": ("wishCounts", "reportWishes", "Wishes"),
 }
 
 
@@ -132,6 +152,7 @@ def read_recipe(path: Path):
         "pins": [],
         "layers": [],
         "refusals": [],
+        "wishes": [],
     }
     if not path.exists():
         data["refusals"].append({"file": path.name, "line": 1, "subject": "package.shspec", "why": "file is missing"})
@@ -322,7 +343,7 @@ LAYOUT_PANELS = {
 OWN_VIEWS = {
     "mods", "ledger", "docs", "settings", "log", "readout", "table", "notifications", "api-viewer",
     "world-view", "console", "tools", "ui-tree", "performance", "picker", "palette",
-    "updates", "repo", "landing",
+    "updates", "repo", "landing", "wishes",
 }
 
 NO_SOURCE = {
@@ -419,6 +440,75 @@ def read_cells(path: Path):
             )
             return header, int(parts[1]), refusals
     return header, -1, refusals
+
+
+def read_envelopes(package_dir: Path, key: bytes | None = None):
+    """The envelope on each package surface, read before any record from it is used.
+
+    An envelope is optional. ``unsigned`` loads unchanged; a surface whose envelope is declared
+    and fails is ``refused`` here, with the surface and line named, so the client never receives
+    a window from a package that did not hold. The baselines file has no window record of its
+    own, but it is one of the package surfaces and is measured rather than assumed.
+    """
+    surfaces = (
+        (package_dir / "package.shspec", "package.shspec"),
+        (package_dir / "deadlock.windows", "deadlock.windows"),
+        (package_dir / "package.cells", "package.cells"),
+        (ROOT / "patches" / "openlock.baselines.shspec", "patches/openlock.baselines.shspec"),
+    )
+    rows = []
+    refusals = []
+    for path, name in surfaces:
+        if not path.is_file():
+            rows.append(
+                {
+                    "file": name,
+                    "state": "absent",
+                    "authority": "",
+                    "key": "",
+                    "work": 0,
+                    "digest": "",
+                    "line": 1,
+                    "refusals": [],
+                }
+            )
+            continue
+        reading = package_envelope.verify_file(path, key)
+        reading["file"] = name
+        rows.append(reading)
+        for refusal in reading.get("refusals", []):
+            refusals.append(
+                {
+                    "file": name,
+                    "line": int(refusal.get("line") or reading.get("line") or 1),
+                    "subject": "envelope",
+                    "why": refusal["kind"] + ": " + refusal["detail"],
+                }
+            )
+    return rows, refusals
+
+
+def read_shell_package(package_dir: Path, key: bytes | None = None):
+    """Read the package with its envelope verdicts applied before any record is used."""
+    envelopes, envelope_refusals = read_envelopes(package_dir, key)
+    blocked = {row["file"] for row in envelopes if row["state"] == "refused"}
+
+    recipe = read_recipe(package_dir / "package.shspec")
+    if "package.shspec" in blocked:
+        recipe["windows"] = []
+        recipe["tabs"] = []
+        recipe["bar"] = None
+        recipe["filed"] = []
+        recipe["pins"] = []
+        recipe["layers"] = []
+    if "deadlock.windows" not in blocked:
+        recipe["windows"].extend(read_deadlock_windows(package_dir / "deadlock.windows"))
+
+    cells_format, cells_version, cells_refusals = read_cells(package_dir / "package.cells")
+    if "package.cells" in blocked:
+        cells_format, cells_version, cells_refusals = "", -1, []
+
+    return recipe, envelopes, envelope_refusals, (cells_format, cells_version, cells_refusals)
 
 
 def read_frames(directory: Path):
@@ -727,6 +817,62 @@ def _install_state(root: Path):
     }
 
 
+def read_game_installs(installs: list[dict]) -> list[dict]:
+    """Every compatible game tree on this machine, read by the general parser.
+
+    The rows are the parser's reading, not a list retyped here: this checkout's known installs
+    first (they carry the shell grade), then every Steam library title that declares a Source 2
+    gameinfo. Each row names the game it carries and the Panorama root the shell would load into.
+    """
+    rows: list[dict] = []
+    seen: set[str] = set()
+
+    def add(root: Path, grade: str = "", shell: str = "") -> None:
+        try:
+            key = str(root.resolve()).lower()
+        except OSError:
+            key = str(root).lower()
+        if key in seen:
+            return
+        seen.add(key)
+        game = game_tree.game_of(root)
+        ok, why = game_tree.compatible(root)
+        if not shell:
+            overlay = (root / "content" / "citadel_addons" / "openlock_ui").exists() or \
+                      (root / "game" / "citadel_addons" / "openlock_ui").exists()
+            shell = "installed" if overlay else "not installed"
+        rows.append({
+            "path": str(root).replace("\\", "/"),
+            "game": game,
+            "role": game_tree.role(root),
+            "compatible": ok,
+            "why": why,
+            "shell": shell,
+            "panorama": game_tree.panorama(root, game) if game else "",
+            "shape": game_tree.shape(root, grade),
+        })
+
+    for row in installs:
+        path = str(row.get("path") or "")
+        if path:
+            add(Path(path), str((row.get("build") or {}).get("grade") or ""),
+                str(row.get("shell") or ""))
+    for root in game_tree.steam_common():
+        add(root)
+    # The installer window also offers the tools hosts a CSDK drops in place. A wish list that
+    # named fewer trees than the window would be a second inventory, so both read the same one.
+    try:
+        from list_installs import read_hosts
+
+        for row in read_hosts():
+            path = str(row.get("path") or "")
+            if path:
+                add(Path(path))
+    except (OSError, ValueError, ImportError):
+        pass
+    return rows
+
+
 def read_installs(gameinfo: Path | None = None, extra_roots: list[Path] | None = None) -> list[dict]:
     """Game and tools trees on this machine that carry a Deadlock gameinfo.
 
@@ -773,6 +919,8 @@ def read_installs(gameinfo: Path | None = None, extra_roots: list[Path] | None =
         "Documents/*/Project8Staging/*",
     )
 
+    libraries = steam_libraries()
+
     for letter in letters:
         drive = Path(f"{letter}:/")
         try:
@@ -791,6 +939,15 @@ def read_installs(gameinfo: Path | None = None, extra_roots: list[Path] | None =
                         remember(candidate)
             except OSError:
                 continue
+
+    # A library named anything, on any drive, is only visible through Steam's own record.
+    for library in libraries:
+        candidate = library / "steamapps" / "common" / "Deadlock"
+        try:
+            if (candidate / "game" / "citadel" / "gameinfo.gi").exists():
+                remember(candidate)
+        except OSError:
+            continue
 
     rows = []
     for root in roots:
@@ -882,6 +1039,127 @@ def read_build(gameinfo: Path) -> dict:
     return build
 
 
+# The GitHub addon store is a published manifest, not a list retyped in the shell. Every row is a
+# wish: the shell may plan to install it, or it is already the built-in package.
+STORE = ROOT / "landing" / "tools" / "addons.json"
+WISH_STATES = ("loaded", "planned", "missing", "differs", "refused")
+
+
+def build_wishes(package_dir: Path, recipe: dict, envelopes: list[dict],
+                 game_installs: list[dict] | None = None) -> list[dict]:
+    """The loads this package is asking the host to perform, one wish per item.
+
+    A refusal is a verdict the host already made; a wish is the intent that verdict is about. The
+    shell notifies from this list, so what is planned, what is missing, where the shell renderer
+    and the game's panel renderer would draw different surfaces, and which GitHub addon store rows
+    exist are one reading — the Refusals window shows the verdicts against the same plan.
+    """
+    wishes: list[dict] = []
+
+    def add(ident: str, kind: str, surface: str, line: int, plan: str, state: str,
+            why: str = "", detail: str = "") -> None:
+        if state not in WISH_STATES:
+            state, why = "missing", f"unknown wish state '{state}'"
+        wishes.append({
+            "id": ident, "kind": kind, "surface": str(surface), "line": int(line or 1),
+            "plan": plan, "state": state, "why": why, "detail": detail,
+        })
+
+    for row in envelopes:
+        reasons = row.get("refusals") or []
+        add(
+            "package:" + str(row["file"]), "package", row["file"], row.get("line", 1),
+            "load " + str(row["file"]),
+            "refused" if reasons else "loaded",
+            (reasons[0]["kind"] + ": " + reasons[0]["detail"]) if reasons else "",
+            str(row.get("state") or ""),
+        )
+
+    # A renderer difference is one reading per content, not one per window: the same panel id is
+    # carried by hundreds of generated windows, and a row each would bury the eight contents that
+    # actually resolve through more than one live panel.
+    differences: dict[str, tuple[str, tuple[str, ...]]] = {}
+    for window in recipe["windows"]:
+        if window.get("refused"):
+            add(
+                "content:" + str(window["id"]), "content", "package.shspec",
+                window.get("contentLine", window.get("line", 1)),
+                "open " + str(window["title"]), "missing",
+                f"content '{window['content']}': {window['refused']}",
+            )
+            continue
+        content = str(window.get("content") or "")
+        if not content.startswith("file://"):
+            candidates = window.get("panelCandidates") or []
+            labels = [str(row.get("name") or row.get("kind") or "") if isinstance(row, dict)
+                      else str(row) for row in candidates]
+            labels = sorted({label for label in labels if label})
+            if len(labels) > 1 and content not in differences:
+                differences[content] = (str(window["id"]), tuple(labels))
+
+    for content, (window_id, labels) in differences.items():
+        add(
+            "renderer:" + content, "renderer", "package.shspec", 1,
+            f"frame content '{content}'", "differs",
+            "renderers differ: " + ", ".join(labels),
+            "the game answers this content with more than one live panel; the first is the window "
+            + window_id + "",
+        )
+
+    # Another game's install is a wish, never a refusal: a compatible tree that carries a
+    # Panorama UI is something the shell plans to load there, and a tree that does not is
+    # missing one surface, not a verdict against the tree. Only a folder with no readable
+    # gameinfo is refused, and it says which file is absent.
+    for row in game_installs or []:
+        game = str(row.get("game") or "")
+        path = str(row.get("path") or "")
+        if not game:
+            add("game:" + path, "game", "game/", 1, "read the game folder", "refused",
+                str(row.get("why") or "no game/<name>/gameinfo.gi"), path)
+            continue
+        panorama = str(row.get("panorama") or "")
+        installed = str(row.get("shell") or "") not in ("", "not installed")
+        tools = str(row.get("role") or "game") == "tools"
+        if not row.get("compatible"):
+            state, why = "refused", str(row.get("why") or "not a complete game tree")
+        elif tools:
+            # A CSwin64 build is a reduced-CSDK host: the same surface as Reduced_CSDK_*. It
+            # carries no Panorama UI of its own and needs none, so its absence is not a gap.
+            state = "loaded" if installed else "planned"
+            why = "" if installed else "the installer host is not installed in this tree"
+        elif not panorama:
+            state, why = "missing", "the game carries no Panorama UI"
+        elif installed:
+            state, why = "loaded", ""
+        else:
+            state, why = "planned", "the shell is not installed in this tree"
+        what = "load the installer host into " if tools else "load the shell UI into "
+        add("game:" + game + "@" + path, "game", game + "/gameinfo.gi", 1,
+            what + game + " \u00b7 " + str(row.get("role") or "game") + " \u00b7 "
+            + str(row.get("shape") or "release") + " shape \u00b7 " + path, state, why,
+            "renderer panorama at " + (panorama or "none (tools host)") + " \u00b7 "
+            + str(row.get("shape") or "release") + " shape \u00b7 " + path)
+
+    try:
+        store = json.loads(STORE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        add("store:manifest", "store", STORE.name, 1, "read the addon store", "missing", str(error))
+        store = {}
+    for addon in store.get("addons", []):
+        name = str(addon.get("name") or "unnamed addon")
+        built_in = bool(addon.get("builtIn"))
+        add(
+            "store:" + name, "store", "landing/tools/addons.json", 1, "install " + name,
+            "loaded" if built_in else "planned",
+            "" if built_in else "available from the GitHub addon store",
+            " \u00b7 ".join(part for part in (
+                str(addon.get("format") or ""), str(addon.get("target") or ""),
+                str(addon.get("source") or ""),
+            ) if part),
+        )
+    return wishes
+
+
 def main():
     global PACKAGE_DIR, OUTPUT, SCHEMES_OUTPUT
     if len(sys.argv) > 1:
@@ -891,14 +1169,15 @@ def main():
     if len(sys.argv) > 4:
         SCHEMES_OUTPUT = Path(sys.argv[4])
 
-    recipe = read_recipe(PACKAGE_DIR / "package.shspec")
-    recipe["windows"].extend(read_deadlock_windows(PACKAGE_DIR / "deadlock.windows"))
+    recipe, envelopes, envelope_refusals, cells = read_shell_package(PACKAGE_DIR)
+    cells_format, cells_version, cells_refusals = cells
     content_refusals = resolve_content(recipe["windows"])
-    cells_format, cells_version, cells_refusals = read_cells(PACKAGE_DIR / "package.cells")
     frame_refusals = read_frames(PACKAGE_DIR / "frames")
-    recipe["refusals"] = content_refusals + cells_refusals + frame_refusals + recipe["refusals"]
+    recipe["refusals"] = (envelope_refusals + content_refusals + cells_refusals +
+                          frame_refusals + recipe["refusals"])
     recipe["cellsFormat"] = cells_format
     recipe["cellsVersion"] = cells_version
+    recipe["envelopes"] = envelopes
 
     gameinfo = Path(sys.argv[3]) if len(sys.argv) > 3 else Path(
         r"D:/SteamLibrary/steamapps/common/Deadlock/game/citadel/gameinfo.gi"
@@ -910,9 +1189,14 @@ def main():
     recipe["searchPathsSource"] = gameinfo.name
     recipe["tools"] = read_tools(gameinfo)
     recipe["installs"] = read_installs(gameinfo)
+    recipe["gameInstalls"] = read_game_installs(recipe["installs"])
     recipe["layouts"] = read_layouts(gameinfo)
     recipe["steamName"] = read_steam_persona()
     recipe["build"] = read_build(gameinfo)
+
+    # The plan, beside the verdicts: every surface, content, renderer difference and store row the
+    # shell intends to load. The shell notifies from this list; nothing about it is retyped in JS.
+    recipe["wishes"] = build_wishes(PACKAGE_DIR, recipe, envelopes, recipe["gameInstalls"])
 
     # The colour schemes are generated from the package's theme declarations and the game's own
     # @define table. The generator writes the stylesheet as a side effect; the data here is what
@@ -966,7 +1250,8 @@ def main():
         f"var SHELL = {payload};\n",
         encoding="utf-8",
     )
-    print(f"wrote {OUTPUT} ({len(recipe['windows'])} windows, {len(recipe['refusals'])} refusals)")
+    print(f"wrote {OUTPUT} ({len(recipe['windows'])} windows, {len(recipe['refusals'])} refusals, "
+          f"{len(recipe['wishes'])} wishes)")
 
 
 if __name__ == "__main__":

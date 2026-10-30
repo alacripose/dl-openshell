@@ -90,7 +90,7 @@
     position: absolute;
     horizontal-align: left;
     vertical-align: top;
-    margin-left: 12px;
+    padding-left: 12px;
     margin-top: 10px;
     width: 100%;
     height: 30px;
@@ -129,10 +129,13 @@
 }
 
 /* One row, always.  A HUD sweep can add dozens of frames; wrapping the strip grew the bar to
-   two rows and covered the top-row HUD.  Extra tabs stay reachable in the Windows window. */
+   two rows and covered the top-row HUD.  Extra tabs stay reachable in the Windows window.
+   The strip is the flexible item in the taskbar row: it ends where the right cluster begins,
+   instead of running underneath Dashboard/Windows/build/clock at 4:3. */
 .TabStrip {
     margin-left: 96px;
-    width: 78%;
+    width: fill-parent-flow(1);
+    min-width: 0px;
     height: 30px;
     flow-children: right;
     overflow: clip;
@@ -214,14 +217,16 @@
 
 /* The taskbar's right cluster flows as one row. Absolute right margins let the Windows button
    and the build label paint over each other when the label is wide; flow makes the label take
-   the space beside the button instead of the button's pixels. */
+   the space beside the button instead of the button's pixels. It stays in the taskbar row so
+   the flexible tab strip has to end before it rather than underneath it. */
 .TaskbarRight {
-    position: absolute;
-    horizontal-align: right;
-    vertical-align: top;
+    position: relative;
+    horizontal-align: left;
+    vertical-align: center;
     width: fit-children;
     height: 30px;
     flow-children: right;
+    margin-left: 6px;
     margin-right: 10px;
     z-index: 501;
 }
@@ -236,9 +241,10 @@
 }
 
 /* A pathological build string must not consume the taskbar. The label is a readout; the full
-   value stays in the shell's build record. */
+   value stays in the shell's build record. At 4:3 the right cluster still has to leave the
+   tab strip room, so the readout is the first thing that narrows. */
 .TaskbarRight .VersionLabel {
-    max-width: 220px;
+    max-width: 180px;
     text-overflow: ellipsis;
 }
 
@@ -406,12 +412,25 @@
     border: 0px;
 }
 
-.WindowFrame.CompactHud .WindowButton Label,
-.WindowFrame.CompactHud .WindowGlyph {
+.WindowFrame.CompactHud .WindowButton Label {
     color: #ffffff;
     font-size: 11px;
     line-height: 12px;
     font-family: "Radiance";
+}
+
+.WindowFrame.CompactHud .WindowButton .IconStroke,
+.WindowFrame.CompactHud .WindowButton .IconMin,
+.WindowFrame.CompactHud .WindowButton .IconPinHead,
+.WindowFrame.CompactHud .WindowButton .IconPinStem,
+.WindowFrame.CompactHud .WindowButton .IconMoveBarH,
+.WindowFrame.CompactHud .WindowButton .IconMoveBarV,
+.WindowFrame.CompactHud .WindowButton .IconMoveTip {
+    background-color: #ffffff;
+}
+
+.WindowFrame.CompactHud .WindowButton .IconFrame {
+    border-color: #ffffff;
 }
 
 .WindowFrame.CompactHud .WindowMeta {
@@ -460,10 +479,18 @@
     font-size: 14px;
 }
 
-.WindowFrame.CompactHud.Focused .WindowGlyph {
-    color: #e0b56a;
-    font-size: 16px;
-    line-height: 15px;
+.WindowFrame.CompactHud.Focused .WindowButton .IconStroke,
+.WindowFrame.CompactHud.Focused .WindowButton .IconMin,
+.WindowFrame.CompactHud.Focused .WindowButton .IconPinHead,
+.WindowFrame.CompactHud.Focused .WindowButton .IconPinStem,
+.WindowFrame.CompactHud.Focused .WindowButton .IconMoveBarH,
+.WindowFrame.CompactHud.Focused .WindowButton .IconMoveBarV,
+.WindowFrame.CompactHud.Focused .WindowButton .IconMoveTip {
+    background-color: #e0b56a;
+}
+
+.WindowFrame.CompactHud.Focused .WindowButton .IconFrame {
+    border-color: #e0b56a;
 }
 
 .WindowFrame.CompactHud.Focused .WindowButton.PinOn {
@@ -515,18 +542,68 @@
     border-bottom: 1px solid #8a6f42;
 }
 
-/* A narrow HUD region has no room for five separate 26 dp controls beside its title. Keep the
-   title legible and leave actions on the title's context menu instead of drawing them on top of
-   the neighbouring frame. */
-.WindowFrame.Narrow .WindowButton,
+/* A narrow HUD region has no room for five 26 dp controls beside its title, but it still needs
+   its controls. Keep them in the title strip at the top-right, using the same compact pixel
+   language as an automatic HUD frame: eight-pixel buttons with one-pixel gaps. The label takes
+   the remaining flow width, so the controls stay on the frame at every narrow size instead of
+   disappearing into the context menu. The close margin reserves the northeast grip. */
 .WindowFrame.Narrow .WindowCost,
 .WindowFrame.Narrow .WindowSpacer {
     visibility: collapse;
 }
 
-.WindowFrame.Narrow .WindowTitleLabel {
-    margin-left: 8px;
-    margin-right: 6px;
+.WindowFrame.Narrow .WindowButton,
+.WindowFrame.Narrow.CompactHud.Focused .WindowButton {
+    visibility: visible;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    min-height: 8px;
+    margin-right: 1px;
+    padding: 0px;
+    background-color: #000000;
+    border: 0px;
+    border-radius: 0px;
+}
+
+.WindowFrame.Narrow .WindowButton:hover,
+.WindowFrame.Narrow.CompactHud.Focused .WindowButton:hover {
+    background-color: #ffffff22;
+    border: 0px;
+}
+
+.WindowFrame.Narrow .WindowButton Label,
+.WindowFrame.Narrow.CompactHud.Focused .WindowButton Label {
+    color: #ffffff;
+    font-size: 8px;
+    line-height: 8px;
+}
+
+.WindowFrame.Narrow .WindowButton .IconStroke,
+.WindowFrame.Narrow .WindowButton .IconMin,
+.WindowFrame.Narrow .WindowButton .IconPinHead,
+.WindowFrame.Narrow .WindowButton .IconPinStem,
+.WindowFrame.Narrow .WindowButton .IconMoveBarH,
+.WindowFrame.Narrow .WindowButton .IconMoveBarV,
+.WindowFrame.Narrow .WindowButton .IconMoveTip {
+    background-color: #ffffff;
+}
+
+.WindowFrame.Narrow .WindowButton .IconFrame {
+    border-color: #ffffff;
+}
+
+.WindowFrame.Narrow .WindowClose,
+.WindowFrame.Narrow.CompactHud.Focused .WindowClose {
+    margin-right: 14px;
+}
+
+.WindowFrame.Narrow .WindowTitleLabel,
+.WindowFrame.Narrow.CompactHud.Focused .WindowTitleLabel {
+    width: fill-parent-flow(1);
+    margin-left: 4px;
+    margin-right: 2px;
+    font-size: 11px;
     text-overflow: ellipsis;
 }
 
@@ -596,13 +673,54 @@
     vertical-align: center;
 }
 
-/* Window controls are drawn, not typed: the client font has no coverage for the geometric
-   window glyphs, so a label made of codepoints renders as tofu. Each icon is a 12 dp box. */
+/* Window controls are drawn, not typed. The client font decides whether a Unicode glyph is
+   crisp, tofu or a different width, so each icon is a panel inside an 8 dp box. The button is
+   still the pointer target; every child is hit-test disabled in the script. */
 .WindowIcon {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     horizontal-align: center;
     vertical-align: center;
+}
+
+.IconStroke {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 3px;
+    height: 1px;
+    background-color: #e0b56a;
+}
+
+.IconMin {
+    width: 6px;
+    height: 1px;
+}
+
+.IconFrame {
+    position: absolute;
+    horizontal-align: left;
+    vertical-align: top;
+    border: 1px solid #e0b56a;
+}
+
+.IconMax {
+    width: 5px;
+    height: 5px;
+}
+
+.IconRestore {
+    width: 3px;
+    height: 3px;
+    visibility: collapse;
+}
+
+.WindowButton.Maximized .IconMax {
+    visibility: collapse;
+}
+
+.WindowButton.Maximized .IconRestore {
+    visibility: visible;
 }
 
 .IconBar {
@@ -620,31 +738,6 @@
 .BarV {
     width: 2px;
     height: 12px;
-}
-
-.BarTiltA {
-    width: 12px;
-    height: 2px;
-    transform: rotate(45deg);
-}
-
-.BarTiltB {
-    width: 12px;
-    height: 2px;
-    transform: rotate(-45deg);
-}
-
-/* The client ships Arial Unicode MS; these are the actual Unicode window controls, not
-   codepoints from a fallback font that renders as tofu. */
-.WindowGlyph {
-    font-family: "Radiance";
-    font-size: 16px;
-    font-weight: bold;
-    line-height: 15px;
-    color: #e0b56a;
-    horizontal-align: center;
-    vertical-align: center;
-    text-align: center;
 }
 
 .IconLeft,
@@ -675,11 +768,11 @@
     position: absolute;
     horizontal-align: center;
     vertical-align: top;
-    width: 8px;
-    height: 5px;
-    margin-top: 0px;
+    width: 6px;
+    height: 3px;
+    margin-top: 1px;
     background-color: #e0b56a;
-    border-radius: 2px;
+    border-radius: 1px;
 }
 
 .IconPinStem {
@@ -687,8 +780,8 @@
     horizontal-align: center;
     vertical-align: top;
     width: 2px;
-    height: 6px;
-    margin-top: 5px;
+    height: 3px;
+    margin-top: 4px;
     background-color: #e0b56a;
 }
 
@@ -698,8 +791,8 @@
     position: absolute;
     horizontal-align: center;
     vertical-align: center;
-    width: 12px;
-    height: 2px;
+    width: 8px;
+    height: 1px;
     background-color: #e0b56a;
 }
 
@@ -707,15 +800,15 @@
     position: absolute;
     horizontal-align: center;
     vertical-align: center;
-    width: 2px;
-    height: 12px;
+    width: 1px;
+    height: 8px;
     background-color: #e0b56a;
 }
 
 .IconMoveTip {
     position: absolute;
-    width: 3px;
-    height: 3px;
+    width: 2px;
+    height: 2px;
     background-color: #e0b56a;
 }
 

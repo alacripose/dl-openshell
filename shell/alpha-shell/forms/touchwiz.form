@@ -37,7 +37,6 @@ form	touchwiz
 	rule	.ViewAction	border-radius	4px
 	rule	.ViewAction	padding	6px 12px
 	rule	.ContextMenu	border-radius	4px
-	rule	.Toast	border-radius	4px
 	rule	.Toast	border-left-width	3px
 	rule	.DwellInfo	border-radius	4px
 	rule	.UpdateModal	border-radius	4px
