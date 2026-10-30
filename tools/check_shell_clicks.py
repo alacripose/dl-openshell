@@ -165,6 +165,17 @@ def main() -> int:
         if required not in script:
             errors.append(f"addTab: missing taskbar context action '{required}'")
 
+    # The CSDK10 renderer asserts (source2surface DrawBorder) when a border with a non-zero
+    # radius varies by side. The shell then never mounts, so refuse the package at build time.
+    for block in re.finditer(r"([^{}]+)\{([^}]*)\}", style):
+        selector = block.group(1).strip().splitlines()[-1].strip()
+        body = block.group(2)
+        radius = re.search(r"border-radius:\s*([0-9.]+)px", body)
+        if not radius or float(radius.group(1)) == 0:
+            continue
+        if re.search(r"border-(top|right|bottom|left)(-color)?:", body):
+            errors.append(f"{selector}: rounded border varies by side and asserts on CSDK10")
+
     # The context menu must paint above every window layer, not inside one of them.
     for selector in (".ContextDismiss", ".ContextMenu"):
         match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", style)
