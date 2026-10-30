@@ -37,9 +37,57 @@
     ];
     var COLUMNS = 4;
     var WIDTH = 356;
+    var MIN_WIDTH = 240;
+    var MAX_WIDTH = 900;
+    var MAX_ROWS = 4;
     // These are the same fixed frame heights as forms/popit.form's PopitRows* classes. They
     // are used only for the overlap/screen test; the actual height comes from the form.
     var FRAME_HEIGHTS = [0, 260, 380, 480, 580];
+    // The surface's arrangement. The shell's dashboard edits this and saves it with the layout;
+    // the module owns only the legal range, so a hand-edited profile cannot draw a 40-column
+    // surface in a frame that has no height class for it.
+    var currentLayout = { columns: COLUMNS, width: WIDTH, frame: "lbp3", mode: "create", order: [] };
+
+    function clampInt(value, low, high, fallback) {
+        var n = Math.round(Number(value));
+        if (!isFinite(n)) return fallback;
+        return Math.max(low, Math.min(high, n));
+    }
+
+    function normalizeLayout(input) {
+        var src = input || {};
+        var columns = clampInt(src.columns, 1, 4, COLUMNS);
+        var width = clampInt(src.width, MIN_WIDTH, MAX_WIDTH, WIDTH);
+        var frame = "lbp3";
+        if (src.frame) frame = frameById(src.frame).id;
+        var mode = src.mode === "play" ? "play" : "create";
+        var order = [];
+        var raw = src.order instanceof Array ? src.order : [];
+        for (var i = 0; i < raw.length && order.length < 32; i++) {
+            var id = String(raw[i] || "");
+            if (id && order.indexOf(id) < 0) order.push(id);
+        }
+        return { columns: columns, width: width, frame: frame, mode: mode, order: order };
+    }
+
+    // The edited order leads; any action the surface also carries follows in declaration order,
+    // so a tile added to the package appears without the player having to reset their layout.
+    function orderActions(actions, order) {
+        if (!order || !order.length) return actions.slice(0);
+        var out = [];
+        var used = {};
+        for (var i = 0; i < order.length; i++) {
+            for (var j = 0; j < actions.length; j++) {
+                if (used[j]) continue;
+                if (String(actions[j].id) !== order[i]) continue;
+                out.push(actions[j]);
+                used[j] = true;
+                break;
+            }
+        }
+        for (var k = 0; k < actions.length; k++) if (!used[k]) out.push(actions[k]);
+        return out;
+    }
 
     var root = null;
     var dismiss = null;
@@ -115,13 +163,13 @@
     // A Popit that would cover another floating window is refused instead of drawn over it.
     // Candidate 0 is inside the owner's own frame; the others sit around it. Every candidate is
     // clamped to the safe screen box before the overlap test.
-    function place(req, height) {
+    function place(req, height, width) {
         var g = req.geometry || { x: 16, y: 64, w: 480, h: 440 };
         var s = req.screen || screen;
         var sw = Number(s.w) || 1600;
         var sh = Number(s.h) || 900;
         var top = Number(s.top) || 46;
-        var w = WIDTH;
+        var w = width || WIDTH;
         var open = req.openRects || [];
         var candidates = [
             { x: Math.round(g.x + g.w - w - 8), y: Math.round(g.y + 30) },
@@ -217,6 +265,7 @@
                 else panel.RemoveClass("Active");
             } catch (e) {}
         }
+        currentLayout.mode = mode;
         status.mode = mode;
         updateDetail();
         note("mode " + mode);
@@ -238,6 +287,7 @@
             try { tailPanel.AddClass(target.cls); } catch (e) {}
         }
         if (badgeLabel) badgeLabel.text = target.label;
+        currentLayout.frame = frame;
         status.frame = frame;
         note("frame " + frame);
     }
@@ -320,11 +370,30 @@
             return { ok: false, why: "no actions" };
         }
 
-        frame = frameById(req.frame || frame).id;
-        mode = req.mode === "play" ? "play" : "create";
-        var rows = Math.ceil(actions.length / COLUMNS);
-        var height = FRAME_HEIGHTS[Math.min(FRAME_HEIGHTS.length - 1, rows)];
-        var at = place(req, height);
+        var layout = normalizeLayout(req.layout || {
+            columns: COLUMNS, width: WIDTH, frame: req.frame || frame, mode: req.mode || mode,
+            order: []
+        });
+        currentLayout = layout;
+        actions = orderActions(actions, layout.order);
+        frame = layout.frame;
+        mode = layout.mode;
+        var rows = Math.min(MAX_ROWS, Math.ceil(actions.length / layout.columns));
+        var capacity = rows * layout.columns;
+        if (capacity < actions.length) {
+            // The form has four row heights. A one-column surface with more tiles than that fits
+            // is refused rather than drawn clipped, because a clipped tile is a tile the player
+            // cannot see or press.
+            if (req.onRefusal) {
+                req.onRefusal("Popit refused",
+                    layout.columns + " column(s) show " + capacity + " of " + actions.length +
+                    " tiles; widen the surface or use more columns");
+            }
+            current = null;
+            return { ok: false, why: "too many tiles for the frame", capacity: capacity, tiles: actions.length };
+        }
+        var height = FRAME_HEIGHTS[Math.min(FRAME_HEIGHTS.length - 1, Math.max(1, rows))];
+        var at = place(req, height, layout.width);
         if (!at.ok) {
             current = null;
             note("REFUSED " + at.why);
@@ -345,6 +414,7 @@
         surface.hittest = true;
         surface.style.marginLeft = at.x + "px";
         surface.style.marginTop = at.y + "px";
+        surface.style.width = layout.width + "px";
 
         // Tail first, frame second: the opaque plate covers the upper half of the rotated tail,
         // leaving the lower half as a speech-bubble point.
@@ -357,6 +427,7 @@
         framePanel.AddClass("PopitFrame");
         framePanel.AddClass(frameClass(frame));
         framePanel.AddClass("PopitRows" + rows);
+        framePanel.style.width = layout.width + "px";
         framePanel.hittest = true;
 
         var hex = $.CreatePanel("Panel", framePanel, "");
@@ -413,8 +484,8 @@
         for (var r = 0; r < rows; r++) {
             var row = $.CreatePanel("Panel", grid, "");
             row.AddClass("PopitRow");
-            for (var c = 0; c < COLUMNS; c++) {
-                var index = r * COLUMNS + c;
+            for (var c = 0; c < layout.columns; c++) {
+                var index = r * layout.columns + c;
                 if (index >= actions.length) break;
                 makeTile(row, actions[index], index);
             }
@@ -436,6 +507,8 @@
         status.mode = mode;
         status.actions = actions.length;
         status.rows = rows;
+        status.columns = layout.columns;
+        status.width = layout.width;
         status.placed = { x: at.x, y: at.y };
         refreshSelection();
         note("open " + frame + " " + actions.length + " tile(s) at " + at.x + "," + at.y +
@@ -456,18 +529,38 @@
             }
         });
 
-        return { ok: true, frame: frame, placed: at, rows: rows };
+        return {
+            ok: true, frame: frame, placed: at, rows: rows, tiles: actions.length,
+            layout: { columns: layout.columns, width: layout.width, frame: frame, mode: mode, order: layout.order }
+        };
     }
 
     globalThis.OpenlockPopit = {
         show: show,
         close: close,
         setFrame: setFrame,
+        // The dashboard editor reads the legal range from the module instead of duplicating it.
+        layout: function () {
+            return {
+                columns: currentLayout.columns, width: currentLayout.width, frame: currentLayout.frame,
+                mode: currentLayout.mode, order: currentLayout.order.slice(0),
+                columnsMin: 1, columnsMax: 4, widthMin: MIN_WIDTH, widthMax: MAX_WIDTH,
+                maxRows: MAX_ROWS, maxOrder: 32
+            };
+        },
+        normalizeLayout: normalizeLayout,
         status: function () { return status; },
         frames: function () {
             var ids = [];
             for (var i = 0; i < FRAMES.length; i++) ids.push(FRAMES[i].id);
             return ids;
+        },
+        // The dashboard's frame control reads the same list the badge cycles, so a form added
+        // here appears in the editor without a second copy of the family.
+        frameList: function () {
+            var out = [];
+            for (var i = 0; i < FRAMES.length; i++) out.push({ id: FRAMES[i].id, label: FRAMES[i].label });
+            return out;
         }
     };
 })();

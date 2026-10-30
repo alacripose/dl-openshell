@@ -38,6 +38,11 @@
             <!-- One flow row, not three absolute margins: a wide build label must take the space
                  beside the Windows button, never the button's pixels. -->
             <Panel id="TaskbarRight" class="TaskbarRight">
+                <!-- The shell's own dashboard: the menu surface it ships, because the game's
+                     dashboard is reachable only through the pause menu in the release build. -->
+                <Panel id="DashboardButton" class="WindowsButton" onmouseactivate="OpenlockDashboard()">
+                    <Label class="WindowsButtonLabel" text="Dashboard" />
+                </Panel>
                 <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
                     <Label class="WindowsButtonLabel" text="Windows" />
                 </Panel>
