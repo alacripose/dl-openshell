@@ -16,7 +16,7 @@
 (function () {
     var root = $.GetContextPanel();
     var data = SHELL || {
-        windows: [], tabs: [], filed: [], pins: [], refusals: [], layouts: [],
+        windows: [], tabs: [], filed: [], pins: [], refusals: [], wishes: [], layouts: [],
         build: {}, update: { available: false }
     };
 
@@ -51,6 +51,10 @@
     var preloadSeq = 0;
     var preloadStartedAt = 0;
     var preloadCompleted = 0;
+    // The final tabs inherit the preloader's entrance instead of cutting in when the schema
+    // arrives. A tab is marked seen after its first entrance, so a later bar rebuild for an
+    // unrelated window does not replay the motion across the whole strip.
+    var tabEntranceSeen = {};
 
     var REPO_URL = "https://github.com/alacripose/dl-openshell";
     var LANDING_URL = "https://alacripose.github.io/dl-openshell/";
@@ -101,6 +105,13 @@
     var screenW = 1600;
     var screenH = 900;
 
+    // The layout pass is the one owner of the space the shell takes from the game. Configure it
+    // before any frame is applied, and let it see the real viewport as soon as the mount answers.
+    if (globalThis.OpenlockLayoutPass) {
+        globalThis.OpenlockLayoutPass.configure({ top: SHELL_TOP_DP });
+        globalThis.OpenlockLayoutPass.setViewport(screenW, screenH);
+    }
+
     var expanded = false;
     var activeTab = "";
     var activeId = "";
@@ -147,6 +158,32 @@
             $.Msg("[Openlock] perf ", line.kind, ": ", line.text);
         }
         return line;
+    }
+
+    // A wish is a load the package planned; a refusal is the host's verdict on one. The shell
+    // says what it plans to load, what is missing, and where the shell and the game would draw a
+    // different surface, from the generated list — the same list the Wishes window renders.
+    function wishCounts() {
+        var counts = { loaded: 0, planned: 0, missing: 0, differs: 0, refused: 0 };
+        var wishes = data.wishes || [];
+        for (var i = 0; i < wishes.length; i++) {
+            var state = String(wishes[i].state || "planned");
+            if (counts[state] === undefined) counts[state] = 0;
+            counts[state]++;
+        }
+        return counts;
+    }
+
+    function reportWishes() {
+        var wishes = data.wishes || [];
+        if (!wishes.length) return "";
+        var counts = wishCounts();
+        var summary = counts.planned + " planned \u00b7 " + counts.loaded + " loaded \u00b7 " +
+            counts.missing + " missing" +
+            (counts.differs ? " \u00b7 " + counts.differs + " renderer difference(s)" : "");
+        logPerf("wish", summary);
+        globalThis.OpenlockToast("Wishes", summary, "wishes", counts.missing > 0);
+        return summary;
     }
 
     // The audio module is loaded before this script. A missing module or a client build without
@@ -215,6 +252,7 @@
     // drawables to the player. A split records the component windows so each cell can be framed,
     // moved, themed and saved on its own. The parent keeps its package row and tab.
     var splitCells = {};        // parent id -> [{ id, key, panel, label }]
+    var splitKeys = {};         // durable split key -> { id, name, cls, kind, title }
     var themedPanels = [];      // { panel, writes, label, cellId } inline scheme paint on a cell
     var layoutProfiles = {};    // scheme -> { window id: { x, y, w, h } }
     var layoutNotices = [];
@@ -257,6 +295,7 @@
             if (w > 200) screenW = w;
             if (h > 200) screenH = h;
         } catch (e) {}
+        if (globalThis.OpenlockLayoutPass) globalThis.OpenlockLayoutPass.setViewport(screenW, screenH);
     }
 
     function windowById(id) {
@@ -958,10 +997,19 @@
             if (payload.tree && payload.tree.length && globalThis.OpenlockDelivery) {
                 globalThis.OpenlockDelivery.renderTree(surface, payload.tree, "observer:" + Date.now());
             } else if (payload.layout) {
-                try {
-                    surface.BLoadLayout(String(payload.layout), false, false);
-                } catch (e) {
-                    refuseFeature("Observer XML refused", String(e));
+                // The observer attribute is server-authored, so its `layout` path is too. A node
+                // tree goes through the delivery allowlist; a layout path must stay inside the
+                // game's own layout resources, or a server could point BLoadLayout at any file
+                // the client can read. Refuse by name instead of loading it.
+                var layoutWhy = observerLayoutPath(payload.layout);
+                if (layoutWhy) {
+                    refuseFeature("Observer XML refused", layoutWhy + ": " + String(payload.layout).substring(0, 120));
+                } else {
+                    try {
+                        surface.BLoadLayout(String(payload.layout), false, false);
+                    } catch (e) {
+                        refuseFeature("Observer XML refused", String(e));
+                    }
                 }
             }
             var close = $.CreatePanel("Panel", t, "");
@@ -1065,13 +1113,19 @@
         return p;
     }
 
-    function addTab(windowId, label, extraClass) {
+    function addTab(windowId, label, extraClass, entranceIndex) {
         var win = windowById(windowId);
         var text = label || (win && win.title) || windowId;
         var tab = addControl(strip, "ShellTab", text, function () { choose(windowId); });
         if (extraClass) tab.AddClass(extraClass);
         if (windowId === activeTab) tab.AddClass("Active");
         if (pinned[windowId]) tab.AddClass("Pinned");
+        // Same short opacity/offset curve as the preload chip. The property is set before the
+        // first paint, so the tab never flashes at full size before easing in. It is still
+        // clickable throughout: only opacity and margin move.
+        if (!tabEntranceSeen[windowId]) {
+            animateTabEntrance(tab, windowId, entranceIndex || 0);
+        }
         if (win) {
             bindDwell(tab, (win.title || windowId),
                 "Taskbar entry. Left-click opens it; right-click for window actions.", windowId);
@@ -1090,22 +1144,77 @@
         return tab;
     }
 
+    // The bar's curve, applied to a window the host streams in while the client is running.
+    // Only opacity moves: the declared rect is already applied, so the frame is at its predicted
+    // place from the first paint. A frame's geometry changes only when the player changes it.
+    function animateFrameEntrance(record) {
+        if (!record || record.entranceActive || record.entranceSeen) return;
+        record.entranceSeen = true;
+        record.entranceActive = true;
+        var target = typeof record.baseOpacity === "number" ? record.baseOpacity : 1;
+        var step = 0;
+        var steps = 7;
+        try { record.frame.style.opacity = "0"; } catch (e) {}
+        function easeIn() {
+            step++;
+            try { record.frame.style.opacity = (target * step / steps).toFixed(2); } catch (e) {}
+            if (step < steps) {
+                $.Schedule(0.018, easeIn);
+            } else {
+                record.entranceActive = false;
+                try { record.frame.style.opacity = String(target); } catch (e) {}
+            }
+        }
+        $.Schedule(0.01, easeIn);
+    }
+
+    function animateTabEntrance(tab, windowId, index) {
+        var step = 0;
+        var steps = 7;
+        var delay = 0.01 + Math.min(index, 12) * 0.018;
+        // Do not mark the tab seen until the curve finishes. `finishPreload()` calls renderBar()
+        // and then render(), and render() rebuilds the bar once more in the same frame; marking
+        // at the start would make that instant second build suppress the motion entirely.
+        try {
+            tab.style.opacity = "0";
+            tab.style.marginLeft = "-6px";
+        } catch (e) {}
+        function easeIn() {
+            var alive = false;
+            try { alive = tab.GetParent() === strip; } catch (e) { alive = false; }
+            if (!alive) return;
+            step++;
+            try {
+                tab.style.opacity = (step / steps).toFixed(2);
+                tab.style.marginLeft = Math.round(-6 + (6 * step) / steps) + "px";
+            } catch (e) {}
+            if (step < steps) {
+                $.Schedule(0.018, easeIn);
+            } else {
+                tabEntranceSeen[windowId] = true;
+                try { tab.style.opacity = ""; tab.style.marginLeft = ""; } catch (e) {}
+            }
+        }
+        $.Schedule(delay, easeIn);
+    }
+
     function renderBar() {
         if (!strip) return;
         if (preloadActive) return;
         strip.RemoveAndDeleteChildren();
         var listed = {};
+        var entranceIndex = 0;
 
         var tabs = data.tabs || [];
-        for (var i = 0; i < tabs.length; i++) { addTab(tabs[i]); listed[tabs[i]] = true; }
+        for (var i = 0; i < tabs.length; i++) { addTab(tabs[i], null, null, entranceIndex++); listed[tabs[i]] = true; }
 
-        if (data.bar) { addTab(data.bar); listed[data.bar] = true; }
+        if (data.bar) { addTab(data.bar, null, null, entranceIndex++); listed[data.bar] = true; }
 
         var filed = data.filed || [];
         for (var f = 0; f < filed.length; f++) {
             if (filed[f].tab !== activeTab) continue;
             var fw = windowById(filed[f].window);
-            addTab(filed[f].window, "› " + ((fw && fw.title) || filed[f].window));
+            addTab(filed[f].window, "› " + ((fw && fw.title) || filed[f].window), null, entranceIndex++);
             listed[filed[f].window] = true;
         }
 
@@ -1113,7 +1222,7 @@
         for (var p = 0; p < pins.length; p++) {
             if (pins[p] === activeTab) continue;
             var pw = windowById(pins[p]);
-            addTab(pins[p], (pinned[pins[p]] ? "• " : "") + ((pw && pw.title) || pins[p]));
+            addTab(pins[p], (pinned[pins[p]] ? "• " : "") + ((pw && pw.title) || pins[p]), null, entranceIndex++);
             listed[pins[p]] = true;
         }
 
@@ -1123,7 +1232,7 @@
         for (var splitId in splitCells) {
             if (!splitCells.hasOwnProperty(splitId) || !open[splitId] || listed[splitId]) continue;
             var splitWin = windowById(splitId);
-            addTab(splitId, "[" + splitCells[splitId].length + "] " + ((splitWin && splitWin.title) || splitId));
+            addTab(splitId, "[" + splitCells[splitId].length + "] " + ((splitWin && splitWin.title) || splitId), null, entranceIndex++);
             listed[splitId] = true;
         }
 
@@ -1135,8 +1244,14 @@
             // A discovered HUD control still owns a frame and a Windows row, but forty of them
             // must not turn the bar into a second row. Minimized and focused ones stay in reach.
             if (win && (win.live || win.cellWindow) && !minimized[id] && focused !== id && !pinned[id]) continue;
-            addTab(id, (minimized[id] ? "_ " : "") + ((win && win.title) || id));
+            addTab(id, (minimized[id] ? "_ " : "") + ((win && win.title) || id), null, entranceIndex++);
             listed[id] = true;
+        }
+
+        // A tab that leaves the strip may animate again when it comes back; one that is still
+        // listed keeps its seen mark and does not restart on the next rebuild.
+        for (var seenId in tabEntranceSeen) {
+            if (tabEntranceSeen.hasOwnProperty(seenId) && !listed[seenId]) delete tabEntranceSeen[seenId];
         }
 
         if (versionLabel) {
@@ -1401,36 +1516,24 @@
     }
 
     // A top-row HUD element (the game's own top bar is the common one) must not have its chrome
-    // clipped by the shell bar. Rather than jumping the panel down by the missing pixels, keep
-    // the player's geometry and ease a display offset onto the panel and its frame. The offset is
-    // zero again as soon as the window is dragged clear, so a layout save still stores the point
-    // the player chose.
-    function startShiftAnimation(id) {
-        var record = frames[id];
-        if (!record || record.shiftAnim) return;
-        record.shiftAnim = true;
-        var last = Date.now();
-
-        function tick() {
-            var f = frames[id];
-            var win = windowById(id);
-            if (!f || !win || !expanded) {
-                if (f) f.shiftAnim = false;
-                return;
-            }
-            var now = Date.now();
-            var dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
-            last = now;
-            var target = num(f.targetShiftY) || 0;
-            var current = num(f.shiftY) || 0;
-            var next = current + (target - current) * Math.min(1, dt * 14);
-            if (Math.abs(target - next) < 0.5) next = target;
-            f.shiftY = next;
-            applyWindow(win);
-            if (Math.abs(target - next) >= 0.5) $.Schedule(0.016, tick);
-            else f.shiftAnim = false;
+    // clipped by the shell bar. The layout pass returns the only derived position: the panel
+    // transform and the frame both read that answer. A user-placed window keeps its frame while
+    // the game reflows underneath it, so a layout save still stores the point the player chose.
+    function layoutPlace(id, rect, extraTop, shellSpace) {
+        if (!globalThis.OpenlockLayoutPass) {
+            return {
+                x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                dx: 0, dy: 0, refused: false, reason: ""
+            };
         }
-        $.Schedule(0.016, tick);
+        var pass = globalThis.OpenlockLayoutPass;
+        var placed = shellSpace && pass.placeShell
+            ? pass.placeShell(id, rect)
+            : pass.place(id, rect, extraTop);
+        // A refused participant keeps its own rect. Name it once through the same refusal path
+        // the rest of the shell uses, so the editor and the toast stack cannot disagree.
+        if (placed.refused) refuseFeature("Layout refused", id + ": " + placed.reason);
+        return placed;
     }
 
     // A game panel is not reparented. `natural` is its own rect before the shell touches it; the
@@ -1448,8 +1551,10 @@
         // opens, the ability panel appears, the health bar rebuilds). A rect sampled once at bind
         // is how chrome ended up around empty space. Re-sample twice a second; the frame follows
         // the pixels the player sees, not the layout from the moment the window was framed.
+        // A user-placed window is not a sample. Re-measuring its panel would change the frame
+        // origin under the player even though they did not touch it.
         var sampled = Date.now();
-        if (!b.sampledAt || sampled - b.sampledAt > 500) {
+        if (!g.userSet && (!b.sampledAt || sampled - b.sampledAt > 500)) {
             var previous = b.sampledRect || b.natural;
             var fresh = naturalOf(b.panel);
             if (fresh) b.natural = fresh;
@@ -1517,32 +1622,28 @@
         // The clamp is the shell's own adjustment, not a placement: a window that followed the
         // game into the edge keeps following it.
 
-        // The title bar is drawn above the content. A compact HUD title is 16 dp; a shell window
-        // carries the full title and meta. If the content is in the shell bar's row, ease the
-        // whole window down until the chrome fits; the panel follows the frame, so its own
-        // controls remain where the player can see them.
+        // The layout pass owns the space, including the bar and this window's chrome. The panel
+        // and its frame are shifted by the returned delta; the panel's own layout is untouched,
+        // so the game keeps its rect and only the composited transform moves.
         var chrome = (win.autoFrame || win.discovered) ? 16 : CHROME_DP;
-        var dockTop = SHELL_TOP_DP + chrome;
-        // A live HUD panel is never shifted for chrome. Moving the game's own abilities/top-bar
-        // container made the game re-layout it on the next frame, which is the flicker between
-        // two positions; the chrome now yields to the panel instead.
-        // This path only draws chrome around a live game panel. It is never shifted for the
-        // shell's title row: the panel belongs to the game and the chrome yields to it.
-        var needShift = 0;
-        if (record.shiftY === undefined) record.shiftY = 0;
-        record.targetShiftY = needShift;
-        if (Math.abs(record.shiftY - needShift) > 0.5) startShiftAnimation(win.id);
+        record.chrome = chrome;
+        var placed = layoutPlace(win.id, { x: g.x, y: g.y, w: g.w, h: g.h }, chrome);
+        // The placement result is the only position. A top-row shift is part of `placed.y`,
+        // never a second offset applied to the frame alone.
+        var dispX = placed.x;
+        var dispY = placed.y;
 
-        var scale = clamp(g.w / nat.w, 0.08, 4);
-        var dispX = g.x;
-        var dispY = g.y + (num(record.shiftY) || 0);
-        var dispW = nat.w * scale;
-        var dispH = nat.h * scale;
-        var tx = dispX - nat.x - (nat.w - nat.w * scale) / 2;
-        var ty = dispY - nat.y - (nat.h - nat.h * scale) / 2;
+        // Width and height are independent axes. A corner grip can change either without
+        // changing the other, and the panel transform fills the requested rect on both axes.
+        var scaleX = clamp(g.w / nat.w, 0.08, 4);
+        var scaleY = clamp(g.h / nat.h, 0.08, 4);
+        var dispW = nat.w * scaleX;
+        var dispH = nat.h * scaleY;
+        var tx = dispX - nat.x - (nat.w - dispW) / 2;
+        var ty = dispY - nat.y - (nat.h - dispH) / 2;
 
         var transform = "translate3d(" + tx + "px," + ty + "px,0px) scale3d(" +
-            scale + "," + scale + ",1)";
+            scaleX + "," + scaleY + ",1)";
         if (b.lastTransform === transform) {
             perf.skips++;
         } else {
@@ -1558,11 +1659,20 @@
         // The chrome is drawn around the content the player can actually see, then clipped
         // against the screen. The panel's transparent reserve stays untouched; only the frame
         // and title follow the visible rectangle.
-        var content = b.content || { x: nat.x, y: nat.y, w: nat.w, h: nat.h };
-        var contentLeft = dispX + (content.x - nat.x) * scale;
-        var contentTop = dispY + (content.y - nat.y) * scale;
-        var contentW = content.w * scale;
-        var contentH = content.h * scale;
+        // A frame the player placed is the placed rect itself: the chrome is the title above the
+        // content and the content is exactly what the player sized. A frame the player has not
+        // placed still hugs the visible content the game is drawing.
+        var contentLeft = dispX;
+        var contentTop = dispY;
+        var contentW = placed.w;
+        var contentH = placed.h;
+        if (!g.userSet) {
+            var content = b.content || { x: nat.x, y: nat.y, w: nat.w, h: nat.h };
+            contentLeft = dispX + (content.x - nat.x) * scaleX;
+            contentTop = dispY + (content.y - nat.y) * scaleY;
+            contentW = content.w * scaleX;
+            contentH = content.h * scaleY;
+        }
         var left = Math.max(0, contentLeft);
         var top = Math.max(0, contentTop);
         var right = Math.min(screenW, contentLeft + contentW);
@@ -2062,7 +2172,14 @@
                 return;
             }
             if (!resolved) {
-                setRect(f, g.x, g.y, 360, CHROME_DP + 34);
+                // A refusal card is still a window. On a narrow viewport its default 360 dp and
+                // stored x can put the close control outside the screen; clamp the card itself,
+                // not only the game panel it failed to find.
+                var refusalW = Math.min(360, screenW);
+                var refusalH = Math.min(CHROME_DP + 34, Math.max(TITLE_DP, screenH - SHELL_TOP_DP));
+                var refusalX = clamp(g.x, 0, Math.max(0, screenW - refusalW));
+                var refusalY = clamp(g.y, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - refusalH));
+                setRect(f, refusalX, refusalY, refusalW, refusalH);
                 setMetaText(f, (win.panelCandidates[0].name || win.panelCandidates[0].kind) + "  ·  not on screen");
                 f.refusal.text = "This game panel is not on screen right now. Open it in the game and the window will frame it.";
                 setChildVisibility(f, "refusal", f.refusal, true);
@@ -2095,14 +2212,23 @@
         g.h = clamp(g.h, num(win.minHeight) || 160, screenH);
         g.x = clamp(g.x, 0, Math.max(0, screenW - 160));
         g.y = clamp(g.y, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
-        setRect(f, g.x, g.y, g.w, g.h);
+        // A maximized shell window fills the screen on purpose; the bar paints above it. Every
+        // other shell window goes through the same arbitration as a game panel or cell.
+        var placed = maximized[win.id]
+            ? { x: g.x, y: g.y, w: g.w, h: g.h }
+            : layoutPlace(win.id, { x: g.x, y: g.y, w: g.w, h: g.h }, 0, true);
+        setRect(f, placed.x, placed.y, placed.w, placed.h);
 
         var opacity = String(clamp((num(win.opacity) || 930) / 1000, 0.2, 1));
         if (f.lastOpacity !== opacity) {
             f.lastOpacity = opacity;
             f.baseOpacity = Number(opacity);
-            f.frame.style.opacity = opacity;
-            perf.writes++;
+            // An entrance owns the inline opacity until its last step; writing the settled
+            // value here would cut the curve mid-gesture.
+            if (!f.entranceActive) {
+                f.frame.style.opacity = opacity;
+                perf.writes++;
+            }
         } else {
             perf.skips++;
         }
@@ -2110,8 +2236,8 @@
         setChildVisibility(f, "body", f.body, true);
         setChildVisibility(f, "refusal", f.refusal, false);
         noteWindowCost(win.id, started);
-        setMetaText(f, win.content + "  ·  " + Math.round(g.x) + " " + Math.round(g.y) + "  " +
-            Math.round(g.w) + "×" + Math.round(g.h) + "  ·  " + (win.lane || "shell"));
+        setMetaText(f, win.content + "  ·  " + Math.round(placed.x) + " " + Math.round(placed.y) + "  " +
+            Math.round(placed.w) + "×" + Math.round(placed.h) + "  ·  " + (win.lane || "shell"));
         updateCost(f, win.id);
     }
 
@@ -2554,12 +2680,6 @@
 
     function releasePanel(id) {
         clearLiveSkin(id);
-        var record = frames[id];
-        if (record) {
-            record.shiftY = undefined;
-            record.targetShiftY = 0;
-            record.shiftAnim = false;
-        }
         var b = bound[id];
         if (!b) return;
         // Put the game's panel back where it belongs. The player's placement is geometry and is
@@ -2677,7 +2797,9 @@
 
     function frameLive(entry) {
         var base = entry.id || entry.cls || "panel";
-        var id = (entry.inPopup ? "popup:" : "live:") + base.replace(/[^A-Za-z0-9_]/g, "_") + ":" +
+        var baseName = String(base).replace(/[^A-Za-z0-9_]/g, "_");
+        var baseClass = String(classesOf(entry.panel) || "").split(" ")[0] || "";
+        var id = (entry.inPopup ? "popup:" : "live:") + baseName + ":" +
             Math.round(entry.w) + "x" + Math.round(entry.h);
         var win = index[id];
         if (!win) {
@@ -2696,11 +2818,15 @@
                 opacity: 930,
                 "theme-role": "hud",
                 pinnable: true,
+                discoveredBase: baseName,
+                discoveredClass: baseClass,
                 panelCandidates: [{ kind: "ref", panel: entry.panel }]
             };
             data.windows.push(win);
             index[id] = win;
         } else {
+            win.discoveredBase = baseName;
+            win.discoveredClass = baseClass;
             win.panelCandidates = [{ kind: "ref", panel: entry.panel }];
         }
 
@@ -2786,17 +2912,45 @@
         return key;
     }
 
+    // A discovered window is named by the game's HUD, not by the package: its id carries the
+    // measured size and can be rewritten when the mod renames a panel. The split is keyed to what
+    // the window is (kind, name, class family) through OpenlockSplit, so the cells keep their ids
+    // across that churn. Only a window with no name and no class family is refused, and the
+    // refusal says which marker is missing.
+    function splitIdentity(win) {
+        var module = globalThis.OpenlockSplit;
+        if (!module || !module.stableKey) {
+            return { key: "", why: "the split identity module is not loaded" };
+        }
+        return module.stableKey(win);
+    }
+
+    function pinSplit(win, key) {
+        splitKeys[key] = {
+            id: String(win.id || ""),
+            name: win.discoveredBase || "",
+            cls: win.discoveredClass || "",
+            kind: String(win.id || "").split(":")[0],
+            title: win.title || ""
+        };
+        win.splitKey = key;
+    }
+
     function splitWindow(win) {
         if (!win || !isPanelWindow(win)) return false;
         if (splitCells[win.id] && splitCells[win.id].length) return true;
-        // A cell can be split again. Its children stay under the declared root and carry the
-        // parent path, so the id survives a reload and the saved profile can rebuild the tree.
-        // Colon ids on a non-cell (discovered `live:` / `popup:` windows) encode their measured
-        // size and are not stable across a HUD rebuild; only a declared window is nameable.
-        if (!win.cellWindow && String(win.id).indexOf(":") >= 0) {
-            globalThis.OpenlockToast("Split refused",
-                "Only a declared window can be split; this one is discovered and its id changes with the HUD.", "", true);
-            return false;
+        var splitKey = "";
+        if (win.cellWindow) {
+            splitKey = cellRootAndPath(win).root;
+        } else {
+            var identity = splitIdentity(win);
+            if (!identity.key) {
+                globalThis.OpenlockToast("Split refused",
+                    "This window cannot be pinned: " + identity.why + ".", "", true);
+                return false;
+            }
+            splitKey = identity.key;
+            pinSplit(win, splitKey);
         }
         var b = bound[win.id] || ensureBound(win);
         if (!b || !b.panel) {
@@ -2810,7 +2964,7 @@
             return false;
         }
 
-        var coords = win.cellWindow ? cellRootAndPath(win) : { root: win.id, path: "" };
+        var coords = win.cellWindow ? cellRootAndPath(win) : { root: splitKey, path: "" };
         var rootId = coords.root;
         var basePath = coords.path;
         var used = {};
@@ -2839,6 +2993,11 @@
                     cellPath: path,
                     cellParent: win.id,
                     cellKey: key,
+                    cellSourceId: String(win.id || ""),
+                    cellSourceName: win.discoveredBase || "",
+                    cellSourceClass: win.discoveredClass || "",
+                    cellSourceKind: String(win.id || "").split(":")[0],
+                    cellSourceTitle: win.title || "",
                     panelCandidates: [{ kind: "ref", panel: part.panel }],
                     x: part.rect.x,
                     y: part.rect.y,
@@ -2858,6 +3017,11 @@
                 cell.cellPath = path;
                 cell.cellParent = win.id;
                 cell.cellKey = key;
+                cell.cellSourceId = String(win.id || "");
+                cell.cellSourceName = win.discoveredBase || "";
+                cell.cellSourceClass = win.discoveredClass || "";
+                cell.cellSourceKind = String(win.id || "").split(":")[0];
+                cell.cellSourceTitle = win.title || "";
                 cell.title = (win.title || win.id) + " · " + label;
             }
             cells.push({ id: cellId, key: key, panel: part.panel, label: label });
@@ -2874,6 +3038,80 @@
             (win.title || win.id) + " → " + cells.length + " component(s). Each cell can be moved, themed and saved.",
             "", false);
         return true;
+    }
+
+    // After a reload the HUD names its windows again, often differently. A pinned split keeps its
+    // cells' ids (they are keyed to the durable split key); this pass finds the window that now
+    // carries that identity, hands the cells back to it, and relinks each component so the saved
+    // rect and theme still apply. A split whose window does not come back stays saved and unframed.
+    function reconcileSplits() {
+        var module = globalThis.OpenlockSplit;
+        if (!module || !module.resolve) return 0;
+        var pinned = {};
+        for (var i = 0; i < data.windows.length; i++) {
+            var cell = data.windows[i];
+            var root = String((cell && cell.cellRoot) || "");
+            if (!root || root.indexOf("split:") !== 0) continue;
+            var group = pinned[root];
+            if (!group) {
+                group = pinned[root] = {
+                    cells: [],
+                    source: {
+                        key: root, id: cell.cellSourceId || "",
+                        kind: cell.cellSourceKind || "", name: cell.cellSourceName || "",
+                        cls: cell.cellSourceClass || "", title: cell.cellSourceTitle || ""
+                    }
+                };
+            }
+            group.cells.push(cell);
+        }
+        var keys = [];
+        for (var key in pinned) if (pinned.hasOwnProperty(key)) keys.push(key);
+        if (!keys.length) return 0;
+
+        var discovered = [];
+        for (var d = 0; d < data.windows.length; d++) {
+            var win = data.windows[d];
+            if (win && !win.cellWindow && module.isDiscovered(win)) discovered.push(win);
+        }
+        var resolved = module.resolve(keys.map(function (name) { return pinned[name].source; }), discovered);
+        var rebound = 0;
+        for (var r = 0; r < resolved.length; r++) {
+            var hit = resolved[r];
+            var group = pinned[hit.key];
+            if (!group || !hit.id) continue;
+            var owner = index[hit.id];
+            if (!owner) continue;
+            owner.split = true;
+            owner.splitKey = hit.key;
+            splitKeys[hit.key] = { id: hit.id, name: group.source.name, cls: group.source.cls,
+                kind: group.source.kind, title: group.source.title };
+            var rows = [];
+            for (var c = 0; c < group.cells.length; c++) {
+                group.cells[c].cellParent = hit.id;
+                rows.push({ id: group.cells[c].id, key: group.cells[c].cellKey || "",
+                    label: group.cells[c].cellKey || "" });
+            }
+            splitCells[hit.id] = rows;
+            if (frames[owner.id]) setFrameVisible(frames[owner.id], false);
+
+            var b = bound[hit.id];
+            if (!b || !b.panel) continue;
+            var parts = componentParts(b.panel);
+            var used = {};
+            for (var p = 0; p < parts.length; p++) {
+                var partName = partKey(parts[p].panel, p, used);
+                for (var n = 0; n < group.cells.length; n++) {
+                    if (String(group.cells[n].cellKey || "") !== partName) continue;
+                    group.cells[n].panelCandidates = [{ kind: "ref", panel: parts[p].panel }];
+                    rows[n].panel = parts[p].panel;
+                    rebound++;
+                }
+            }
+            renderBar();
+        }
+        if (rebound) logPerf("info", "reconciled " + rebound + " split cell(s) after a reload");
+        return rebound;
     }
 
     function openSplitCells(id) {
@@ -3361,6 +3599,8 @@
                         pinnable: true,
                         autoFrame: true,
                         discovered: true,
+                        discoveredBase: hudPanelName(panel, ordinal).replace(/[^A-Za-z0-9_]/g, "_"),
+                        discoveredClass: String(classesOf(panel) || "").split(" ")[0] || "",
                         panelCandidates: [{ kind: "ref", panel: panel }]
                     };
 
@@ -3401,10 +3641,22 @@
     var contextDismiss = null;
     var contextRect = null;
     var contextWatch = 0;
+    var contextHover = false;
+    var contextOpenedAt = 0;
+    var contextLeft = 0;
+    var contextTop = 0;
+    // A menu is a surface the user is reading, not a cursor sample. These are the two clocks:
+    // the menu cannot be dismissed before it has existed long enough to be seen, and a leave
+    // must persist for the dwell before the next probe is allowed to close it.
+    var CONTEXT_MIN_OPEN_MS = 350;
+    var CONTEXT_LEAVE_DWELL_MS = 450;
+    var CONTEXT_EDGE_SLOP = 4;
 
     function closeContextMenu() {
         contextWatch++;
         contextRect = null;
+        contextHover = false;
+        contextOpenedAt = 0;
         if (contextMenu) { try { contextMenu.DeleteAsync(0); } catch (e) {} }
         if (contextDismiss) { try { contextDismiss.DeleteAsync(0); } catch (e) {} }
         contextMenu = null;
@@ -3412,19 +3664,71 @@
         hideDwell();
     }
 
-    function watchContextMenu() {
-        if (!contextMenu || !contextRect) return;
+    // Measure the menu itself once it has a layout. The old 180 x 280 guess was both too small
+    // for a full action list and unrelated to the menu's actual placement.
+    function measureContextMenu() {
+        if (!contextMenu) return null;
+        var x = contextLeft;
+        var y = contextTop;
+        var w = num(contextMenu.actuallayoutwidth);
+        var h = num(contextMenu.actuallayoutheight);
+        try {
+            var pos = contextMenu.GetPositionWithinWindow();
+            if (pos) {
+                x = num(pos.x !== undefined ? pos.x : pos[0]);
+                y = num(pos.y !== undefined ? pos.y : pos[1]);
+            }
+        } catch (e) {}
+        if (w < 1) w = 170;
+        if (h < 1) h = 60;
+        return { x: x, y: y, w: w, h: h };
+    }
+
+    function insideContext(at, rect) {
+        return !!at && !!rect &&
+            at.x >= rect.x - CONTEXT_EDGE_SLOP &&
+            at.x <= rect.x + rect.w + CONTEXT_EDGE_SLOP &&
+            at.y >= rect.y - CONTEXT_EDGE_SLOP &&
+            at.y <= rect.y + rect.h + CONTEXT_EDGE_SLOP;
+    }
+
+    // Hover on the menu and each row is the primary contract. A mouseover cancels a pending
+    // leave; a mouseout arms a check, but the check still requires the dwell and an actual
+    // outside probe. A stale or offset probe cannot close a menu whose hover is still held.
+    function scheduleContextLeaveCheck() {
+        if (!contextMenu) return;
         var token = contextWatch;
-        $.Schedule(0.15, function () {
-            if (token !== contextWatch || !contextMenu || !contextRect) return;
+        var openFor = Math.max(0, Date.now() - (contextOpenedAt || Date.now()));
+        var wait = Math.max(CONTEXT_LEAVE_DWELL_MS, CONTEXT_MIN_OPEN_MS - openFor);
+        $.Schedule(wait / 1000, function () {
+            if (token !== contextWatch || !contextMenu) return;
+            if (contextHover) return;
             var at = cursorPoint();
-            var r = contextRect;
-            if (at && (at.x < r.x - 24 || at.x > r.x + r.w + 24 ||
-                at.y < r.y - 24 || at.y > r.y + r.h + 24)) {
-                closeContextMenu();
+            if (!at) {
+                // No probe is not evidence of a leave. Leave the menu for the dismiss surface or
+                // a row action; a broken cursor API must not eat a menu the user is reading.
                 return;
             }
-            watchContextMenu();
+            contextRect = measureContextMenu();
+            if (insideContext(at, contextRect)) {
+                // The out was spurious (or the probe was offset); the pointer is still on the
+                // menu, so keep the hover contract armed instead of closing.
+                contextHover = true;
+                return;
+            }
+            closeContextMenu();
+        });
+    }
+
+    function bindContextHover(panel) {
+        if (!panel) return;
+        panel.SetPanelEvent("onmouseover", function () {
+            if (contextMenu) contextHover = true;
+        });
+        panel.SetPanelEvent("onmouseout", function () {
+            if (!contextMenu) return;
+            contextHover = false;
+            scheduleContextLeaveCheck();
         });
     }
 
@@ -3433,6 +3737,9 @@
             closeContextMenu();
             fn();
         });
+        // Rows are hover targets too: moving from the menu plate onto a row must count as still
+        // being on the menu, not as a leave followed by a race.
+        bindContextHover(item);
         return item;
     }
 
@@ -3535,10 +3842,15 @@
         // Open below the title bar, not on top of it. The menu is its own layer above every
         // window; the title stays visible and the menu cannot sit under a frame's own chrome.
         var top = Math.max(SHELL_TOP_DP, Math.min(screenH - 280, y));
+        contextLeft = left;
+        contextTop = top;
+        contextOpenedAt = Date.now();
+        contextHover = false;
         contextMenu = $.CreatePanel("Panel", root, "OpenlockContextMenu");
         contextMenu.AddClass("ContextMenu");
         contextMenu.style.marginLeft = left + "px";
         contextMenu.style.marginTop = top + "px";
+        bindContextHover(contextMenu);
 
         var title = $.CreatePanel("Label", contextMenu, "");
         title.AddClass("ContextTitle");
@@ -3576,11 +3888,12 @@
         });
         contextAction(contextMenu, "Close", function () { closeWindow(win.id); });
 
-        // The layout is not measured until the next frame; use a conservative record now and let
-        // the watch retire the menu as soon as the pointer leaves that box.
-        contextRect = { x: left, y: top, w: 180, h: 280 };
-        contextWatch++;
-        watchContextMenu();
+        // The layout is not measured until the next frame. Keep a fallback for the first tick,
+        // then replace it with the menu's real rect; every later leave check re-measures again.
+        contextRect = measureContextMenu();
+        $.Schedule(0, function () {
+            if (contextMenu) contextRect = measureContextMenu();
+        });
     }
 
     var dwellPanel = null;
@@ -3668,6 +3981,29 @@
         globalThis.OpenlockToast(title, why, "", true);
     }
 
+    // Window controls are shapes, not codepoints. The client font decides whether a Unicode
+    // glyph is crisp, tofu or a different width, so every icon below is a panel with a known
+    // position inside its button. Sizes live in CSS so the narrow schema can shrink them.
+    function iconStroke(parent, cls, x, y) {
+        var bar = $.CreatePanel("Panel", parent, "");
+        bar.AddClass("IconStroke");
+        bar.AddClass(cls);
+        bar.style.marginLeft = x + "px";
+        bar.style.marginTop = y + "px";
+        bar.hittest = false;
+        return bar;
+    }
+
+    function iconFrame(parent, cls, x, y) {
+        var box = $.CreatePanel("Panel", parent, "");
+        box.AddClass("IconFrame");
+        box.AddClass(cls);
+        box.style.marginLeft = x + "px";
+        box.style.marginTop = y + "px";
+        box.hittest = false;
+        return box;
+    }
+
     function titleButton(parent, icon, onClick, winId) {
         // Move is a drag handle; the rest act on press. A press is also what the pointer probe
         // records, so a refused control is visible in the log instead of silently doing nothing.
@@ -3701,19 +4037,22 @@
         i.hittest = false;
         i.hittestchildren = false;
 
-        // Real Unicode controls from Arial Unicode MS, which the client already ships as
-        // vgui/fonts/arialuni.ttf. These are not drawn codepoints guessed from a system font.
-        var glyph = "";
-        if (icon === "Minimize") glyph = "−";
-        else if (icon === "Maximize") glyph = "□";
-        else if (icon === "Close") glyph = "×";
-
-        if (glyph) {
-            var label = $.CreatePanel("Label", i, "");
-            label.AddClass("WindowGlyph");
-            label.text = glyph;
-            label.hittest = false;
-            b.glyph = label;
+        if (icon === "Minimize") {
+            // One bar, the same gesture at every button size.
+            iconStroke(i, "IconMin", 1, 3);
+        } else if (icon === "Maximize") {
+            // One square when free; the restore class shows two offset squares when maximized.
+            iconFrame(i, "IconMax", 1, 1);
+            var back = iconFrame(i, "IconRestore", 1, 1);
+            back.AddClass("IconRestoreBack");
+            var front = iconFrame(i, "IconRestore", 4, 4);
+            front.AddClass("IconRestoreFront");
+        } else if (icon === "Close") {
+            // A staircase X: six short bars, no rotation transform and no font coverage needed.
+            var xBars = [[1, 1], [2, 3], [3, 5], [4, 1], [3, 3], [1, 5]];
+            for (var xb = 0; xb < xBars.length; xb++) {
+                iconStroke(i, "IconCloseBar", xBars[xb][0], xBars[xb][1]);
+            }
         } else if (icon === "Pin") {
             var head = $.CreatePanel("Panel", i, "");
             head.AddClass("IconPinHead");
@@ -3775,10 +4114,7 @@
         }
         g.init = true;
         g.userSet = true;
-        if (f.maxButton) {
-            f.maxButton.SetHasClass("Maximized", !!maximized[id]);
-            if (f.maxButton.glyph) f.maxButton.glyph.text = maximized[id] ? "▣" : "□";
-        }
+        if (f.maxButton) f.maxButton.SetHasClass("Maximized", !!maximized[id]);
         applyWindow(win);
         // Geometry is client state until the player presses Save layout. The old per-move send
         // used a format the host no longer accepts and was logged as a refused save.
@@ -3791,6 +4127,7 @@
         var frame = $.CreatePanel("Panel", isPanel ? panelLayer : windowLayer,
             "OpenlockFrame_" + safeId(win.id));
         frame.AddClass("WindowFrame");
+        if (win.streamed) frame.AddClass("StreamedXml");
         if (isPanel) frame.AddClass("PanelWindow");
         if (win["theme-role"] === "hud") frame.AddClass("HudRole");
         // Automatically drawn HUD windows get the compact schema: no frame outline, black square
@@ -3988,6 +4325,9 @@
 
         render();
         focusWindow(id);
+        // A window the host streamed in gets the same entrance the bar gives its tab. It is
+        // already at the rect the package declared, so the motion is opacity only.
+        if (win.streamed) animateFrameEntrance(f);
         send("view", id);
         if (!quiet) cue("select");
     }
@@ -4232,6 +4572,13 @@
     }
 
     function render() {
+        measureScreen();
+        if (globalThis.OpenlockLayoutPass) {
+            globalThis.OpenlockLayoutPass.setViewport(screenW, screenH);
+            // `setOpen` is idempotent; it clears the session's records only on a closed-to-open
+            // transition. Every apply below then asks the same pass for its rect.
+            globalThis.OpenlockLayoutPass.setOpen(!!expanded);
+        }
         if (launcherBar) launcherBar.style.visibility = "visible";
         if (taskbar) taskbar.style.visibility = (expanded || preloadActive) ? "visible" : "collapse";
 
@@ -4254,6 +4601,7 @@
             if (!discoveredHud) {
                 discoveredHud = true;
                 $.Schedule(0.1, discoverHudWindows);
+                $.Schedule(0.5, reconcileSplits);
                 // The 8000-node HUD sweep is opt-in now: it reads layout size on every node and
                 // that forced layout is what froze the client on the first open. Discovery and
                 // the popup scan still frame the visible surfaces; the full sweep is the
@@ -4471,11 +4819,21 @@
         }
 
         var win = windowById(pointerDrag.id);
-        var at = cursorPoint();
-        if (!win || !at) {
+        if (!win) {
             endPointerDrag(false);
             return;
         }
+        var at = cursorPoint();
+        // A missed probe is not a release. The cursor API can drop a sample while the button is
+        // still held; ending here committed the drag at the previous sample. Keep the gesture,
+        // keep the last good geometry and ask again on the next tick.
+        if (!at) {
+            pointerDrag.misses = (pointerDrag.misses || 0) + 1;
+            lastPointerEvent = "probe miss " + pointerDrag.misses;
+            $.Schedule(0.016, pollPointerDrag);
+            return;
+        }
+        pointerDrag.misses = 0;
 
         var g = ensureGeometry(win);
         var dx = at.x - pointerDrag.startX;
@@ -4484,13 +4842,14 @@
         if (pointerDrag.mode.indexOf("resize") === 0) {
             var west = pointerDrag.mode.indexOf("w") >= 0;
             var north = pointerDrag.mode.indexOf("n") >= 0;
-            var panelWindow = isPanelWindow(win);
             var width = clamp(pointerDrag.w + (west ? -dx : dx), num(win.minWidth) || 160, screenW);
             var height = clamp(pointerDrag.h + (north ? -dy : dy), num(win.minHeight) || 120, screenH);
             if (west) g.x = clamp(pointerDrag.x + (pointerDrag.w - width), 0, Math.max(0, screenW - 160));
-            if (north && !panelWindow) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
+            if (north) g.y = clamp(pointerDrag.y + (pointerDrag.h - height), SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
+            // Both axes are always written. A live panel is scaled on x and y independently by
+            // applyPanelRect; it is no longer a width-only resize.
             g.w = width;
-            if (!panelWindow) g.h = height;
+            g.h = height;
         } else {
             g.x = clamp(pointerDrag.x + dx, 4, Math.max(4, screenW - 160));
             g.y = clamp(pointerDrag.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
@@ -4504,9 +4863,7 @@
                 Math.max(SHELL_TOP_DP, screenH - 80));
             if (pointerDrag.mode.indexOf("resize") === 0) {
                 g.w = Math.max(num(win.minWidth) || 160, Math.round(g.w / dashGrid) * dashGrid);
-                if (!isPanelWindow(win)) {
-                    g.h = Math.max(num(win.minHeight) || 120, Math.round(g.h / dashGrid) * dashGrid);
-                }
+                g.h = Math.max(num(win.minHeight) || 120, Math.round(g.h / dashGrid) * dashGrid);
             }
         }
         g.init = true;
@@ -4577,17 +4934,36 @@
             return;
         }
         var g = ensureGeometry(win);
+        // Start from the rect the player sees, not the unshifted request. For a panel window the
+        // frame's chrome is above that rect; normalising `g` to the visible frame here means the
+        // first pointer delta moves both axes one-to-one instead of being eaten by the top inset.
+        var frameRecord = frames[id];
+        var frameRect = frameRecord && frameRecord.rect;
+        var chrome = frameRecord && num(frameRecord.chrome) || 0;
+        var startX = frameRect ? frameRect.x : g.x;
+        var startY = frameRect ? frameRect.y + chrome : g.y;
+        var startW = frameRect ? frameRect.w : g.w;
+        var startH = frameRect ? Math.max(1, frameRect.h - chrome) : g.h;
+        if (frameRect) {
+            g.x = startX;
+            g.y = startY;
+            g.w = startW;
+            g.h = startH;
+            g.init = true;
+            g.userSet = true;
+        }
         pointerDrag = {
             id: id,
             mode: mode,
             startX: at.x,
             startY: at.y,
-            x: g.x,
-            y: g.y,
-            w: g.w,
-            h: g.h,
+            x: startX,
+            y: startY,
+            w: startW,
+            h: startH,
             at: Date.now(),
-            heldSeen: false
+            heldSeen: false,
+            misses: 0
         };
         hideGrid();
         var startedFrame = frames[id];
@@ -4690,7 +5066,7 @@
             g.y = top + (isPanelWindow(win) ? CHROME_DP : 0);
         } else {
             g.w = Math.max(num(win.minWidth) || 160, (col + 1) * CELL_DP - g.x);
-            if (!isPanelWindow(win)) g.h = Math.max(num(win.minHeight) || 120, (row + 1) * CELL_DP - g.y);
+            g.h = Math.max(num(win.minHeight) || 120, (row + 1) * CELL_DP - g.y);
         }
 
         g.init = true;
@@ -4714,6 +5090,23 @@
     function actionXd(body, text, fn) {
         var b = addControl(body, "ViewAction", text, fn);
         return b;
+    }
+
+    // A list row the player picks by name. Unlike a chrome glyph, the row's own Label is the
+    // control: it keeps its text (which is the name a reader and the game's UI both see), takes
+    // the pointer itself, and owns the activation handler. A row built as an unnamed Panel with a
+    // hit-test-disabled label is addressable only by position, which is the defect this replaces.
+    function actionRow(body, text, fn, id) {
+        var row = $.CreatePanel("Label", body, id || "");
+        row.AddClass("ViewAction");
+        row.AddClass("ViewRow");
+        row.text = text;
+        row.hittest = true;
+        row.SetPanelEvent("onmouseactivate", function () {
+            lastInteractionAt = Date.now();
+            fn();
+        });
+        return row;
     }
 
     function payloadLines() {
@@ -5055,10 +5448,16 @@
 
             var g = ensureGeometry(selected);
             headingXd(body, "schema geometry");
-            uiField(body, "x", Math.round(g.x), function (v) { g.x = parseInt(v, 10) || g.x; g.init = true; applyWindow(selected); });
-            uiField(body, "y", Math.round(g.y), function (v) { g.y = parseInt(v, 10) || g.y; g.init = true; applyWindow(selected); });
-            uiField(body, "width", Math.round(g.w), function (v) { g.w = Math.max(80, parseInt(v, 10) || g.w); applyWindow(selected); });
-            uiField(body, "height", Math.round(g.h), function (v) { g.h = Math.max(60, parseInt(v, 10) || g.h); applyWindow(selected); });
+            function editGeometry(change) {
+                change();
+                g.init = true;
+                g.userSet = true;
+                applyWindow(selected);
+            }
+            uiField(body, "x", Math.round(g.x), function (v) { editGeometry(function () { g.x = parseInt(v, 10) || g.x; }); });
+            uiField(body, "y", Math.round(g.y), function (v) { editGeometry(function () { g.y = parseInt(v, 10) || g.y; }); });
+            uiField(body, "width", Math.round(g.w), function (v) { editGeometry(function () { g.w = Math.max(80, parseInt(v, 10) || g.w); }); });
+            uiField(body, "height", Math.round(g.h), function (v) { editGeometry(function () { g.h = Math.max(60, parseInt(v, 10) || g.h); }); });
 
             headingXd(body, "css on live game elements");
             var candidate = selected.panelCandidates && selected.panelCandidates[0] ? selected.panelCandidates[0].name : selected.id;
@@ -5205,14 +5604,19 @@
     // node creation live in openlock_delivery.js. The poll only hands over the host attribute;
     // parsing and panel work happen on that module's scheduled ticks with a small budget, so a
     // large package or observer XML cannot stall the poll frame.
-    function renderAddonLayout(win, body) {
-        headingXd(body, "package layout  ·  " + (win.addonName || win.addon || "addon"));
+    // One XML surface for every window. A package, an arbitrary game layout opened from the
+    // console, and a game client window/cell delivered by the host all take this path: the
+    // streamed source tree is built with $.CreatePanel; a compiled-only source keeps the
+    // mounted BLoadLayout fallback. The window chrome is the same frame in both cases.
+    function renderXmlSurface(win, body, label) {
+        headingXd(body, label || "streamed XML");
         if (win.liveTree && win.liveTree.length) {
             rowXd(body, win.liveTree.length + " source node(s)  ·  built by the shell, not mounted", "ViewMuted");
             var surface = $.CreatePanel("Panel", body, "");
             surface.AddClass("AddonHost");
+            if (win.streamed) surface.AddClass("StreamedXmlHost");
             if (globalThis.OpenlockDelivery) {
-                globalThis.OpenlockDelivery.renderTree(surface, win.liveTree, "addon:" + win.id);
+                globalThis.OpenlockDelivery.renderTree(surface, win.liveTree, "xml:" + win.id);
             } else {
                 rowXd(body, "delivery module is not in this build", "ViewMuted");
             }
@@ -5224,17 +5628,149 @@
             layoutHost.AddClass("LayoutHost");
             var loaded = false;
             try { loaded = layoutHost.BLoadLayout(win.layoutPath, false, false); } catch (e) {
-                refuseFeature("Package layout refused", String(e));
+                refuseFeature("XML layout refused", String(e));
             }
             if (!loaded) {
                 layoutHost.RemoveAndDeleteChildren();
-                rowXd(body, "the mounted layout did not load; the package's live tree is the fallback", "ViewMuted");
-                refuseFeature("Package layout refused", win.id + " carries no readable source tree or mounted layout");
+                rowXd(body, "the mounted layout did not load; the streamed tree is the fallback", "ViewMuted");
+                refuseFeature("XML layout refused", win.id + " carries no readable source tree or mounted layout");
             }
             return;
         }
         rowXd(body, "this window has no source XML and no mounted layout", "ViewMuted");
     }
+
+    function renderAddonLayout(win, body) {
+        var label = win.streamed
+            ? (win.streamedCell ? "streamed cell" : "streamed XML")
+            : "package layout";
+        renderXmlSurface(win, body, label + "  ·  " +
+            (win.title || win.addonName || win.addon || "addon"));
+    }
+
+    // A rect the host declared for a window it discovered. The package geometry is the
+    // prediction; the layout pass still owns the edges, so the value is only a starting place.
+    function streamRect(value) {
+        if (!value) return null;
+        var x, y, w, h;
+        if (typeof value === "object" && value.length === undefined) {
+            x = num(value.x); y = num(value.y);
+            w = num(value.width !== undefined ? value.width : value.w);
+            h = num(value.height !== undefined ? value.height : value.h);
+        } else if (value.length !== undefined && value.length >= 4) {
+            x = num(value[0]); y = num(value[1]); w = num(value[2]); h = num(value[3]);
+        } else {
+            return null;
+        }
+        if (!w || !h) return null;
+        return { x: x || 0, y: y || 0, w: w, h: h };
+    }
+
+    // The streamer surface for a window or cell the host discovered while the game is running.
+    // The caller owns the XML source; the shell owns the frame, chrome, taskbar entry and layout
+    // prediction. A game window is opened exactly like a package window, rather than being
+    // reparented or loaded as an opaque compiled layout. `rect` is the geometry the package
+    // declared, applied before the first paint; `cell` marks a composed cell rather than a window.
+    globalThis.OpenlockStream = function (id, title, tree, layoutPath, rect, cell) {
+        if (!id) return "";
+        var nodes = tree && tree.length ? tree : null;
+        var path = layoutPath ? String(layoutPath) : "";
+        if (!nodes && !path) return "";
+        var win = index[id];
+        if (!win) {
+            win = {
+                id: id,
+                title: title || id,
+                content: "readout",
+                lane: "frame",
+                extent: "square-pixels",
+                x: 96, y: 96, width: 480, height: 440,
+                minWidth: 240, minHeight: 192,
+                opacity: 930,
+                elevation: 1,
+                "theme-role": "surface",
+                pinnable: true,
+                layout: "minimize,maximize,close,title-position",
+                behavior: "drag,resize,minimize,maximize,close",
+                controls: [
+                    { kind: "pin", label: "Pin" },
+                    { kind: "minimize", label: "Minimize" },
+                    { kind: "maximize", label: "Maximize" },
+                    { kind: "close", label: "Close" }
+                ]
+            };
+            var declared = streamRect(rect);
+            if (declared) {
+                win.x = declared.x; win.y = declared.y;
+                win.width = declared.w; win.height = declared.h;
+            }
+            data.windows.push(win);
+            index[id] = win;
+        }
+        win.streamed = true;
+        win.streamedCell = !!cell;
+        win.liveTree = nodes;
+        win.layoutPath = path;
+        win.view = "addon-layout";
+        win.addon = win.addon || "streamed";
+        win.addonName = win.addonName || "streamed";
+        openWindow(id);
+        return id;
+    };
+
+    // A running client's own package: the windows and cells the host discovered. The host owns
+    // the XML source; each row is opened on the same streamer surface a package window uses, at
+    // the rect the row declared, with the bar's entrance curve. A row with no readable source is
+    // refused by id and opens nothing, so a package is never half-drawn without a record.
+    var GAME_PACKAGE_FORMAT = "openlock.game/1";
+    globalThis.OpenlockStreamPackage = function (raw) {
+        var payload = raw;
+        if (typeof raw === "string") {
+            try { payload = JSON.parse(raw); } catch (e) { payload = null; }
+        }
+        if (!payload || payload.format !== GAME_PACKAGE_FORMAT) {
+            refuseFeature("game package refused",
+                "the payload format is not " + GAME_PACKAGE_FORMAT);
+            return { opened: [], refused: [] };
+        }
+        if (!payload.windows || !payload.windows.length) {
+            refuseFeature("game package refused", "the payload declares no windows or cells");
+            return { opened: [], refused: [] };
+        }
+        var opened = [];
+        var refused = [];
+        for (var i = 0; i < payload.windows.length; i++) {
+            var row = payload.windows[i] || {};
+            var id = String(row.id || "");
+            var tree = row.tree || row.liveTree || null;
+            var layoutPath = String(row.layoutPath || "");
+            var content = String(row.content || "");
+            if (!layoutPath && content.indexOf("file://") === 0) layoutPath = content;
+            if (!id || ((!tree || !tree.length) && !layoutPath)) {
+                refused.push({
+                    id: id,
+                    why: !id ? "the row has no window id" : "no readable source tree or mounted layout"
+                });
+                continue;
+            }
+            var streamedId = globalThis.OpenlockStream(id, row.title || id, tree, layoutPath,
+                row.geometry || row.rect, !!row.cell);
+            if (streamedId) opened.push(streamedId);
+            else refused.push({ id: id, why: "the streamer did not open the window" });
+        }
+        if (refused.length) {
+            var names = [];
+            for (var r = 0; r < refused.length; r++) {
+                names.push(refused[r].id + " (" + refused[r].why + ")");
+            }
+            refuseFeature("game package refused", names.join("; "));
+        }
+        return { opened: opened, refused: refused };
+    };
+    // The format name is part of the delivered surface: the parity gate reads it out of every
+    // installed shell, and the installer witness proves it knows the format while refusing game
+    // declarations.
+    globalThis.OpenlockStreamPackage.format = GAME_PACKAGE_FORMAT;
 
     function closeAddonWindow(id) {
         if (frames[id]) closeWindow(id);
@@ -6199,7 +6735,7 @@
         g.x = clamp(g.x + dx, 0, Math.max(0, screenW - 160));
         g.y = clamp(g.y + dy, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - 80));
         g.w = clamp(g.w + dw, num(win.minWidth) || 160, screenW);
-        if (!isPanelWindow(win)) g.h = clamp(g.h + dh, num(win.minHeight) || 120, screenH);
+        g.h = clamp(g.h + dh, num(win.minHeight) || 120, screenH);
         g.init = true;
         g.userSet = true;
         applyWindow(win);
@@ -6219,10 +6755,10 @@
         for (var i = 0; i < data.windows.length; i++) {
             (function (entry) {
                 var active = entry.id === win.id;
-                actionXd(body, (active ? "●  " : "○  ") + entry.title + "  ·  " + entry.id, function () {
+                actionRow(body, (active ? "●  " : "○  ") + entry.title + "  ·  " + entry.id, function () {
                     dashSelected = entry.id;
                     refreshDashboard();
-                });
+                }, "openlock-row-" + String(entry.id).replace(/[^A-Za-z0-9_-]/g, "_"));
             })(data.windows[i]);
         }
 
@@ -6597,14 +7133,26 @@
         }
 
         if (kind === "layout") {
-            headingXd(body, "panorama layout");
-            rowXd(body, win.layoutPath, "ViewMuted");
-            var layoutHost = $.CreatePanel("Panel", body, "");
-            layoutHost.AddClass("LayoutHost");
-            try {
-                layoutHost.BLoadLayout(win.layoutPath, false, false);
-            } catch (e) {
-                globalThis.OpenlockToast("Layout refused", String(e), "", true);
+            renderXmlSurface(win, body, "panorama layout  ·  " + layoutFont(win.layoutPath));
+            return;
+        }
+
+        if (String(kind || "").indexOf("file://") === 0) {
+            if (!win.layoutPath) win.layoutPath = kind;
+            renderXmlSurface(win, body, "game layout  ·  " + layoutFont(kind));
+            return;
+        }
+
+        if (kind === "wishes") {
+            var wishList = data.wishes || [];
+            var wishTally = wishCounts();
+            headingXd(body, wishList.length + " wish(es) \u00b7 " + wishTally.planned + " planned \u00b7 " +
+                wishTally.loaded + " loaded \u00b7 " + wishTally.missing + " missing \u00b7 " +
+                wishTally.differs + " differ \u00b7 " + wishTally.refused + " refused");
+            for (var wi = 0; wi < wishList.length; wi++) {
+                var wish = wishList[wi];
+                rowXd(body, wish.state + "  " + wish.surface + ":" + wish.line + "  " + wish.plan +
+                    (wish.why ? " \u2014 " + wish.why : ""), "ViewMuted");
             }
             return;
         }
@@ -7142,34 +7690,89 @@
         return applied + cells;
     }
 
+    // The layout attribute is host-supplied and, on a hosted server, authored by the server. It
+    // gets the same ceiling as an addon payload: a multi-megabyte JSON.parse runs synchronously
+    // in the poll tick and holds the frame. Over the ceiling the payload is refused by name and
+    // the profiles already applied stay mounted.
+    var MAX_LAYOUT_CHARS = 4 * 1024 * 1024;
+    var MAX_LAYOUT_RECT = 1000000;
+
+    // A saved rect must be four finite numbers inside the ceiling. The C# writer rounds real
+    // geometry, so only a hostile or corrupt payload fails this. `Number(rect.x) || 0` used to
+    // turn "Infinity" into Infinity (truthy) and a negative width into a window the layout pass
+    // would clamp into a hole; a profile that declares one is refused whole, not half-applied.
+    function savedRect(value) {
+        if (!value || typeof value !== "object") return { why: "the row is not a rectangle" };
+        var x = Number(value.x), y = Number(value.y);
+        var w = Number(value.w), h = Number(value.h);
+        if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h))
+            return { why: "the rectangle has no finite x, y, w or h" };
+        if (w < 1 || h < 1)
+            return { why: "the rectangle declares w=" + w + " h=" + h };
+        if (Math.abs(x) > MAX_LAYOUT_RECT || Math.abs(y) > MAX_LAYOUT_RECT ||
+            w > MAX_LAYOUT_RECT || h > MAX_LAYOUT_RECT)
+            return { why: "the rectangle is outside +/- " + MAX_LAYOUT_RECT + " px" };
+        return { rect: { x: x, y: y, w: w, h: h }, why: "" };
+    }
+
+    function observerLayoutPath(path) {
+        var text = String(path == null ? "" : path);
+        if (!text) return "the layout path is empty";
+        if (text.length > 512) return "the layout path is longer than 512 characters";
+        if (text.indexOf("\\") >= 0 || text.indexOf("..") >= 0)
+            return "the layout path leaves the resources layout directory";
+        if (text.indexOf("file://{resources}/layout/") !== 0)
+            return "the layout path is not file://{resources}/layout/";
+        return "";
+    }
+
     function parseLayoutPayload(raw) {
         if (!raw || raw === lastLayoutRaw) return;
         lastLayoutRaw = raw;
+        if (typeof raw !== "string" || raw.length > MAX_LAYOUT_CHARS) {
+            refuseFeature("Layout payload refused", "payload is larger than 4 MiB or is not text");
+            return;
+        }
         var parsed = null;
         try { parsed = JSON.parse(raw); } catch (e) {
             logPerf("warn", "layout payload is not JSON");
             return;
         }
         if (!parsed || typeof parsed !== "object") return;
-        layoutProfiles = {};
-        layoutRetries = {};
-        var profiles = parsed.profiles || {};
+        var nextProfiles = {};
+        var refused = [];
+        var profiles = parsed.profiles && typeof parsed.profiles === "object" ? parsed.profiles : {};
         for (var scheme in profiles) {
             if (!profiles.hasOwnProperty(scheme)) continue;
-            var entry = profiles[scheme] || {};
+            if (String(scheme) === "__proto__") {
+                refused.push("__proto__ — the scheme is not a profile name");
+                continue;
+            }
+            var entry = profiles[scheme];
+            if (!entry || typeof entry !== "object") {
+                refused.push(String(scheme) + " — the profile is not an object");
+                continue;
+            }
             // Current payloads wrap geometry and arrangement state; an older payload is the
             // geometry map itself. Reading both keeps a profile written by an older install
             // loadable instead of silently discarding its windows.
-            var rows = entry.windows || entry || {};
+            var rows = entry.windows || entry;
+            var wraps = !!entry.windows;
             var out = {};
+            var bad = "";
             for (var id in rows) {
                 if (!rows.hasOwnProperty(id)) continue;
-                var rect = rows[id] || {};
-                if (!rect || typeof rect !== "object") continue;
-                out[id] = { x: Number(rect.x) || 0, y: Number(rect.y) || 0,
-                    w: Number(rect.w) || 0, h: Number(rect.h) || 0 };
+                // An older payload is the geometry map itself; its sibling keys are arrangement
+                // state, not window rows, and must not be read as one.
+                if (!wraps && (id === "active" || id === "tab" || id === "pinned" ||
+                    id === "minimized" || id === "popit")) continue;
+                if (String(id) === "__proto__") { bad = "__proto__ — the id is not a window id"; break; }
+                var checked = savedRect(rows[id]);
+                if (!checked.rect) { bad = String(id) + " — " + checked.why; break; }
+                out[id] = checked.rect;
             }
-            layoutProfiles[scheme] = {
+            if (bad) { refused.push(String(scheme) + " (" + bad + ")"); continue; }
+            nextProfiles[scheme] = {
                 windows: out,
                 active: typeof entry.active === "string" ? entry.active : "",
                 tab: typeof entry.tab === "string" ? entry.tab : "",
@@ -7178,7 +7781,19 @@
                 popit: entry.popit && typeof entry.popit === "object" ? entry.popit : null
             };
         }
-        layoutNotices = parsed.notices || [];
+        layoutProfiles = nextProfiles;
+        layoutRetries = {};
+        var notices = parsed.notices instanceof Array ? parsed.notices : [];
+        layoutNotices = [];
+        for (var n = 0; n < notices.length && n < 32; n++) {
+            if (typeof notices[n] === "string") layoutNotices.push(notices[n]);
+        }
+        for (var r = 0; r < refused.length && r < 4; r++) {
+            layoutNotices.push("layout " + refused[r] + " refused");
+        }
+        if (refused.length) {
+            refuseFeature("Layout profile refused", refused.slice(0, 3).join("; "));
+        }
         var count = 0;
         for (var p in layoutProfiles) if (layoutProfiles.hasOwnProperty(p)) count++;
         $.Msg("[Openlock] layout profiles: ", count, " scheme=", (currentScheme || "none"),
@@ -7362,11 +7977,13 @@
             line.join("  ·  ") || "layout package loaded",
             "",
             false);
+        var wishSummary = reportWishes();
         $.Msg("[Openlock] shell ready: ", (data.name || "openlock"), " ", (data.version || ""),
             " commit=", (build.commit || "unknown"),
             " src=", String(build.sourceDigest || "unknown").substring(0, 12),
             " game=", (build.gameVersion || "unknown"),
             " windows=", data.windows.length, " refusals=", data.refusals.length,
+            " wishes=", (data.wishes || []).length, " (", wishSummary || "none", ")",
             " grade=", shellGrade, " chrome=idle3.2s");
     });
 

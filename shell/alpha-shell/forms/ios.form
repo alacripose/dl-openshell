@@ -37,7 +37,6 @@ form	ios
 	rule	.ViewAction	border-radius	10px
 	rule	.ViewAction	padding	6px 12px
 	rule	.ContextMenu	border-radius	8px
-	rule	.Toast	border-radius	8px
 	rule	.Toast	border-left-width	3px
 	rule	.DwellInfo	border-radius	6px
 	rule	.UpdateModal	border-radius	8px

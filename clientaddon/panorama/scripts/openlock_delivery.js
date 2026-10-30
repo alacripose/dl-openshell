@@ -448,6 +448,20 @@
     }
 
     function applyNode(panel, node, job) {
+        // The package XML contract: labels and images are decoration and must not swallow a
+        // control underneath them; panels and real controls own the pointer surface. Set this
+        // before children are created so the hit-test tree is correct from the first frame.
+        var tag = String(node.tag || "Panel");
+        try {
+            if (tag === "Label" || tag === "Image") {
+                panel.hittest = false;
+                panel.hittestchildren = false;
+            } else {
+                panel.hittest = true;
+                panel.hittestchildren = true;
+            }
+        } catch (e) {}
+
         if (node.class) {
             var classes = String(node.class).split(" ");
             for (var c = 0; c < classes.length; c++) {

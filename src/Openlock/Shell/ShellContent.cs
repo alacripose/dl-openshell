@@ -56,6 +56,9 @@ public static class ShellContent
         ["repo"] = new(ViewType.Own, "repo", ""),
         ["landing"] = new(ViewType.Own, "landing", ""),
         ["ui-tree"] = new(ViewType.Own, "ui-tree", ""),
+        // The plan beside the verdicts: every load the package asked for, its state, and the
+        // GitHub addon store rows that are available. Built from the generated wish list.
+        ["wishes"] = new(ViewType.Own, "wishes", ""),
 
         // Declared, but no mountable source exists on this build.
         ["streamer"] = new(

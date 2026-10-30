@@ -247,12 +247,11 @@ function Invoke-WitnessGate {
 function Invoke-ParityGate($Chosen) {
     # The installer checked the archive it copied against the archive it built. This is the second
     # reading: the installed VPK is hashed again and the commit baked into it is compared with the
-    # worktree, origin/main and the live Steam client. A stale or copied install refuses here.
+    # worktree, origin/main and the live Steam client. A broken or hand-copied install refuses here.
+    # The live Steam client and the other tools trees are readings, not mount prerequisites: a
+    # development tools shell must launch while the player VPK is on an older build.
     Write-Boot 'parity'
     $parityArgs = @($parity, '--install', $Chosen.path, '--json')
-    # The CSDK10 server slot is development; its gate refuses unless the live Steam player client
-    # already carries the same build. A change that only reached the tools shell is not delivered.
-    if ($Chosen.kind -eq 'tools') { $parityArgs += '--require-live' }
     $run = Invoke-Python $parityArgs
     $payload = $null
     try { $payload = $run.Text | ConvertFrom-Json } catch { }
@@ -274,6 +273,19 @@ function Invoke-ParityGate($Chosen) {
         Write-Boot ("  store {0}/{1}  read back {2} cell(s)" -f $payload.store.uri, $payload.store.database, $payload.verification.cells)
     }
     if ($payload.detail) { Write-Boot "  $($payload.detail)" }
+    if ($run.Code -eq 1 -or $payload.state -eq 'FAIL') {
+        throw "The installed shell did not pass the parity gate ($($payload.state)): $(@($payload.refusals | ForEach-Object { $_.cell + ': ' + $_.detail }) -join '; ') $($payload.detail)"
+    }
+    if ($payload.state -eq 'BLOCKED') {
+        # A GitHub mismatch (this worktree is ahead of or behind origin/main) is a reading for
+        # the dashboard, not a reason to refuse a local mount. A BLOCKED run for any other
+        # reason, including an unrecorded parity run, still refuses.
+        $blocking = @($payload.refusals | Where-Object { $_.cell -ne 'github' })
+        if ($blocking.Count -eq 0) {
+            Write-Boot '  parity BLOCKED: GitHub differs; reported, not a mount refusal'
+            return $payload
+        }
+    }
     if ($payload.state -ne 'PASS') {
         throw "The installed shell did not pass the parity gate ($($payload.state)): $(@($payload.refusals | ForEach-Object { $_.cell + ': ' + $_.detail }) -join '; ') $($payload.detail)"
     }
@@ -357,7 +369,12 @@ function Start-InstallerShell($Chosen) {
     # mounting from the packaged VPK.
     $arguments = ''
     if ($Chosen.kind -eq 'tools') {
-        $arguments = '-dev -condebug -allow_no_lobby_connect -insecure -game citadel +map start'
+        # -addon openlock_ui: the tools client only loads the AddonRoot tree named on the command
+        # line. Without it the packed game UI wins and the addon is visible to the asset tools but
+        # never mounted. -nohltv: the reduced tree has no HLTV camera targets, so the director
+        # asserts in StartRandomShot as soon as the start map reaches WaitingForPlayersToJoin; the
+        # assert window freezes the process and the console log with it.
+        $arguments = '-dev -condebug -allow_no_lobby_connect -insecure -nohltv -game citadel -addon openlock_ui +map start'
     }
 
     # console.log is append-only across sessions. Record where this session starts so the wait

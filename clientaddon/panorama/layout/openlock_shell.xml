@@ -9,6 +9,8 @@
         <include src="file://{resources}/scripts/openlock_audio.js" />
         <include src="file://{resources}/scripts/openlock_popit.js" />
         <include src="file://{resources}/scripts/openlock_delivery.js" />
+        <include src="file://{resources}/scripts/openlock_layout.js" />
+        <include src="file://{resources}/scripts/openlock_split.js" />
         <include src="file://{resources}/scripts/openlock_shell.js" />
     </scripts>
 

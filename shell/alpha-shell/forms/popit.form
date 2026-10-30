@@ -23,7 +23,6 @@ form	popit
 	rule	.SchemeButton	border-radius	10px
 	rule	.SchemeButton	border-width	2px
 	rule	.ContextMenu	border-radius	10px
-	rule	.Toast	border-radius	10px
 	rule	.Toast	border-left-width	4px
 	rule	.DwellInfo	border-radius	10px
 	rule	.UpdateModal	border-radius	10px

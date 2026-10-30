@@ -33,12 +33,15 @@ sys.path.insert(0, str(TOOLS))
 
 import vpk_read  # noqa: E402
 from axis_witness import DATABASE, git, open_store, utc_now  # noqa: E402
+from browser_shell_check import check as browser_shell_check  # noqa: E402
 from gen_shell_data import feature_gaps, read_installs, source_digest  # noqa: E402
 
 BUILT_VPK = ROOT / "dist" / "openlock_ui" / "pak01_dir.vpk"
 BUILD_RECORD = Path("game") / "bin" / "win64" / "openlock.build.json"
 INSTALLED_VPK = Path("game") / "citadel" / "addons" / "mods" / "pak01_dir.vpk"
 LOOSE_DATA = Path("game") / "citadel" / "addons" / "mods" / "panorama" / "scripts" / "openlock_shell_data.vjs_c"
+# The CSDK10 client mounts the addon named by `-addon` and reloads its compiled resources. That
+# addon, not a VPK, is the tools install authority.
 TOOLS_DATA = Path("game") / "citadel_addons" / "openlock_ui" / "panorama" / "scripts" / "openlock_shell_data.vjs_c"
 GAMEINFO = Path("game") / "citadel" / "gameinfo.gi"
 DATA_ENTRY = "openlock_shell_data.js"
@@ -239,6 +242,19 @@ def repo_cell(root: Path, head: str, dirty: bool) -> dict:
     return cell("repo", "held", "A", root, f"{head} {'dirty' if dirty else 'clean'}")
 
 
+def browser_cell() -> dict:
+    """The gameless browser surface must draw its windows before the install gate can pass.
+
+    The fake-tree suites assert calls; this reads real layout from Chromium. It is a worktree
+    surface, not an installed one, and it does not start the game.
+    """
+    reading = browser_shell_check()
+    state = str(reading.get("state") or "absent")
+    grade = "A" if state == "held" else "D"
+    return cell("browser", state, grade, Path(str(reading.get("witness") or "docs/shell-minimal.html")),
+                str(reading.get("detail") or "the browser surface did not report a reading"))
+
+
 def github_cell(root: Path, head: str, remote: str, error: str) -> dict:
     if error:
         return cell("github", "blocked", "D", "origin/main", f"origin/main could not be read: {error}")
@@ -406,9 +422,10 @@ def live_cell(root: Path | None, installed_hash: str, head: str, expected_digest
 def audit_cell(row: dict, install_root: Path, live_root: Path | None, head: str, expected_digest: str) -> dict | None:
     """One other client or tools shell, measured rather than assumed.
 
-    These are deliberately not gate refusals: a second tools tree or the shipping client may sit
-    on an older build and that is a fact to report. The CSDK10 server slot still needs the
-    comparison, because a shell update that only reached one tree is not a verified update.
+    A player-grade tree may sit on an older build and that is a fact to report. A dev-grade
+    install may not: it exists to carry the worktree into a test host, so a stale bundle there
+    is a refusal (AGENTS.md, "Dev-grade installs"), not a note. The CSDK10 server slot needs the
+    comparison in both cases, because a shell update that only reached one tree is not verified.
     """
     root = Path(str(row.get("path") or ""))
     if not row or not str(root):
@@ -510,18 +527,30 @@ def derive(install_root: Path, live_override: str, require_live: bool = False) -
     dirty = bool(git(ROOT, "status", "--porcelain"))
     remote, remote_error = remote_main(ROOT)
     expected_digest = source_digest()
-    cells = [
-        repo_cell(ROOT, head, dirty),
-        github_cell(ROOT, head, remote, remote_error),
-        install_cell(install_root, head, expected_digest),
-    ]
-    installed_hash = cells[2]["sha256"]
+    repo = repo_cell(ROOT, head, dirty)
+    github = github_cell(ROOT, head, remote, remote_error)
+    browser = browser_cell()
+    install = install_cell(install_root, head, expected_digest)
+    cells = [repo, github, browser, install]
+    installed_hash = install["sha256"]
     live_root = find_live(live_override)
     cells.append(live_cell(live_root, installed_hash, head, expected_digest))
     audits = audit_installs(install_root, live_root, head, expected_digest)
 
     by_name = {row["cell"]: row for row in cells}
     refusals = []
+    # A dev-grade install is the tree the next change is tested in. Letting it drift makes every
+    # later reading measure a build the worktree no longer describes.
+    for row in audits:
+        if str(row.get("grade") or "").lower() != "dev" or row["state"] == "held":
+            continue
+        refusals.append(
+            {
+                "kind": "drift",
+                "cell": row["cell"],
+                "detail": "dev-grade shell install is not the current source: " + row["detail"],
+            }
+        )
     if by_name["github"]["state"] == "blocked":
         refusals.append(
             {
@@ -530,7 +559,7 @@ def derive(install_root: Path, live_override: str, require_live: bool = False) -
                 "detail": by_name["github"]["detail"],
             }
         )
-    for name in ("repo", "github", "install"):
+    for name in ("repo", "github", "browser", "install"):
         if by_name[name]["state"] != "held":
             refusals.append(
                 {
@@ -550,7 +579,9 @@ def derive(install_root: Path, live_override: str, require_live: bool = False) -
             }
         )
 
-    if any(name in {r["cell"] for r in refusals} for name in ("repo", "install")):
+    if any(name in {r["cell"] for r in refusals} for name in ("repo", "install", "browser")):
+        state = "FAIL"
+    elif any(r["kind"] == "drift" for r in refusals):
         state = "FAIL"
     elif require_live and by_name["live"]["state"] != "held":
         state = "FAIL"
@@ -562,6 +593,13 @@ def derive(install_root: Path, live_override: str, require_live: bool = False) -
     detail = ""
     if by_name["live"]["state"] != "held":
         detail = "the live Steam client is not this build: " + by_name["live"]["detail"]
+    dev_drift = [row for row in audits if str(row.get("grade") or "").lower() == "dev"
+                 and row["state"] != "held"]
+    if dev_drift:
+        detail = (detail + "; " if detail else "") + (
+            f"{len(dev_drift)} dev-grade shell install(s) drift from the worktree: "
+            + ", ".join(row["cell"] for row in dev_drift)
+        )
     drift = [row for row in audits if row["state"] == "drift"]
     uninstalled = [row for row in audits if row["state"] == "absent"]
     if drift:
@@ -693,12 +731,15 @@ def main() -> int:
         try:
             payload = store_run(payload, args.mongo_uri)
         except Exception as error:  # noqa: BLE001 - an absent store is a named refusal
-            payload["state"] = "BLOCKED"
+            # An unrecorded run is blocked, but it must not mask a gate failure: a FAIL that
+            # cannot be stored is still a FAIL.
+            if payload.get("state") != "FAIL":
+                payload["state"] = "BLOCKED"
+                code = 2
             payload["detail"] = f"the parity run could not be recorded: {error}"
             payload["refusals"].append(
                 {"kind": "unverified", "cell": "store", "detail": str(error)}
             )
-            code = 2
 
     if args.json:
         print(json.dumps(payload, indent=2))

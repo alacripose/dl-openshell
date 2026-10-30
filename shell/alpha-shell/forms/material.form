@@ -34,7 +34,6 @@ form	material
 	rule	.ViewAction	border-radius	2px
 	rule	.ViewAction	padding	6px 12px
 	rule	.ContextMenu	border-radius	2px
-	rule	.Toast	border-radius	2px
 	rule	.Toast	border-left-width	2px
 	rule	.DwellInfo	border-radius	2px
 	rule	.UpdateModal	border-radius	2px

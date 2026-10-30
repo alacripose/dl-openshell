@@ -449,6 +449,23 @@ window	determinism
 	layout	minimize,close,title-position
 	behavior	drag,resize,maximize,minimize,close
 	record-id	window-determinism
+# The plan beside the verdicts: what this package asked the host to load, what is missing, where
+# the shell and the game would draw different surfaces, and which GitHub addon store rows exist.
+# The list is generated from the package and the store manifest, never retyped here.
+window	wishes
+	title	Wishes
+	content	wishes
+	lane	beacon
+	extent	square-pixels
+	geometry	928 96 336 260
+	min-size	240 192
+	opacity	930
+	elevation	1
+	theme-role	hud
+	pinnable	true
+	layout	minimize,close,title-position
+	behavior	drag,resize,maximize,minimize,close
+	record-id	window-wishes
 window	refusals
 	title	Refusals
 	content	table
@@ -520,6 +537,7 @@ bar	console
 # itself; these are the windows filed beside it.
 filed	tools	inventory
 filed	api-viewer	mods
+filed	wishes	docs
 filed	refusals	docs
 filed	notifications	settings
 filed	uitree	settings
