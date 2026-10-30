@@ -98,8 +98,11 @@ def main() -> int:
         if f"function {helper}" not in script and f"{helper} =" not in script:
             errors.append(f"{helper}: expected pointer helper is missing")
 
-    # A title glyph is a press target on the reduced client, not an activate target.
-    if 'press ? "onmousedown" : "onmouseactivate"' not in script:
+    # A title glyph is a press target on the reduced client, not only an activate target. The
+    # shipping client activates after a press and the tools client can drop the activate while a
+    # drag poll owns the pointer, so a press control must bind both and guard the duplicate.
+    if ('SetPanelEvent("onmousedown", fire)' not in script
+            or 'SetPanelEvent("onmouseactivate", fire)' not in script):
         errors.append("addControl: title glyphs would wait for an activate event the tools client drops")
     # All four corners must stay real resize drags, not decoration.
     for grip in ("resize-nw", "resize-ne", "resize-sw", "resize-se"):
@@ -154,6 +157,13 @@ def main() -> int:
     idle_cost = re.search(r"\.WindowFrame\.CompactHud\.IdleCompact \.WindowCost[^{]*\{([^}]*)\}", style)
     if idle_cost and "visibility: collapse" in idle_cost.group(1):
         errors.append(".IdleCompact .WindowCost: the performance metric is hidden at idle")
+
+    # Taskbar entries expose the same window actions as the title bar. The menu must include a
+    # maximize/restore toggle; a menu that can only open, minimize, pin and close strands a
+    # maximized window with no way back to its saved rectangle.
+    for required in ('tab.SetPanelEvent("oncontextmenu"', 'maximized[win.id] ? "Restore" : "Maximize"'):
+        if required not in script:
+            errors.append(f"addTab: missing taskbar context action '{required}'")
 
     # The context menu must paint above every window layer, not inside one of them.
     for selector in (".ContextDismiss", ".ContextMenu"):

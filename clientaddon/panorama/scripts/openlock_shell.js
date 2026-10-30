@@ -3438,6 +3438,7 @@
             contextAction(contextMenu, win.layers[0].title || "Tools", function () { showPopit(win); });
         }
         contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
+        contextAction(contextMenu, maximized[win.id] ? "Restore" : "Maximize", function () { toggleMaximize(win.id); });
         contextAction(contextMenu, pinned[win.id] ? "Unpin" : "Pin", function () { togglePin(win.id); });
         if (isPanelWindow(win)) contextAction(contextMenu, "Launch layout", function () {
             var path = layoutForWindow(win);
