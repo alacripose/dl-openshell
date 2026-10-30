@@ -1050,7 +1050,8 @@
     background-color: #100d09f2;
     border: 1px solid #8a6f42;
     border-top: 2px solid #e0b56a;
-    border-radius: 3px;
+    /* No radius: the CSDK10 renderer asserts when a rounded border has a different colour or
+       width per side. The accent top edge is the point; square corners are the honest shape. */
     z-index: 900;
     visibility: collapse;
 }
@@ -1085,7 +1086,7 @@
     background-color: #1a140df2;
     border: 1px solid #8a6f42;
     border-left: 3px solid #e0b56a;
-    border-radius: 3px;
+    /* Same renderer limit as BuildStrip: a rounded border may not vary by side. */
 }
 
 .Toast.Attention {
