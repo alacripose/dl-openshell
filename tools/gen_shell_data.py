@@ -959,6 +959,22 @@ def read_installs(gameinfo: Path | None = None, extra_roots: list[Path] | None =
     return rows[:40]
 
 
+def generated_at() -> str:
+    """The wall clock, or SOURCE_DATE_EPOCH when the caller pins one.
+
+    The stamp is part of the package bytes, so leaving it on the wall clock makes two runs a
+    minute apart two different packages. A pinned epoch is how a caller asks for reproducibility;
+    a value that is not an integer epoch is refused by name rather than rounded into one.
+    """
+    raw = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
+    if not raw:
+        return time.strftime("%Y-%m-%d %H:%M")
+    try:
+        return time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(raw)))
+    except ValueError:
+        raise SystemExit(f"refused: SOURCE_DATE_EPOCH: {raw!r} is not an integer epoch")
+
+
 def read_build(gameinfo: Path) -> dict:
     """The version the shell reports at boot: the package, the git build, and the game build.
 
@@ -972,7 +988,7 @@ def read_build(gameinfo: Path) -> dict:
         "dirty": False,
         "sourceDigest": "",
         "gameVersion": "",
-        "generatedAt": time.strftime("%Y-%m-%d %H:%M"),
+        "generatedAt": generated_at(),
     }
 
     # The installer selects the grade once and writes it into build.json before this generator
