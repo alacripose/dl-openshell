@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Popit browser probe</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; background: #12151a; color: #eceff2; font: 13px/1.5 sans-serif; }
+  #root { position: relative; width: 1600px; height: 900px; overflow: visible; }
+  .ppanel { box-sizing: border-box; position: relative; }
+  .plabel { display: block; }
+  .PopitSurface { overflow: visible; }
+  .PopitSurface > * { flex-shrink: 0; }
+  #probe-output { white-space: pre-wrap; padding: 8px; }
+</style>
+</head>
+<body>
+<div id="root" class="SchemeDeadlock"></div>
+<pre id="probe-output">running</pre>
+<script src="/tools/browser/panorama-dom-host.js"></script>
+<script src="/tools/browser/popit-probe.js"></script>
+</body>
+</html>

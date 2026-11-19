@@ -1,0 +1,516 @@
+{
+  "format": "openlock.browser-probe/1",
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+  "binary": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "probe": {
+    "report": {
+      "checks": [
+        {
+          "name": "the generated pair table loads in the browser",
+          "ok": true,
+          "detail": "37 pairs"
+        },
+        {
+          "name": "the stylesheet is applied",
+          "ok": true,
+          "detail": "rgb(18, 21, 26)"
+        },
+        {
+          "name": "the surface opens",
+          "ok": true,
+          "detail": "{\"ok\":true,\"frame\":\"lbp3\",\"placed\":{\"ok\":true,\"x\":1190,\"y\":300},\"page\":\"palette\",\"target\":{\"id\":\"cell:root:health\",\"title\":\"Health\",\"kind\":\"cell\",\"detail\":\"\",\"rect\":{\"x\":1000,\"y\":300,\"w\":180,\"h\":42}},\"targets\":2,\"tiles\":37,\"pair\":\"popit-blue\",\"classic\":false,\"child\":true,\"reducedMotion\":false,\"layout\":{\"frame\":\"lbp3\"}}"
+        },
+        {
+          "name": "the surface panel is in the DOM",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the root is mounted with six rows",
+          "ok": true,
+          "detail": "6 rows"
+        },
+        {
+          "name": "the root is visible with real height",
+          "ok": true,
+          "detail": "418px"
+        },
+        {
+          "name": "the header carries the wordmark and pair chip",
+          "ok": true,
+          "detail": "POPIT / Popit Blue"
+        },
+        {
+          "name": "the child reveals beside the root",
+          "ok": true,
+          "detail": "child 1498px, root right 1486px"
+        },
+        {
+          "name": "the open child does not overlap the root",
+          "ok": true,
+          "detail": "overlap"
+        },
+        {
+          "name": "the surface widens to hold both panes",
+          "ok": true,
+          "detail": "648px"
+        },
+        {
+          "name": "the root shifts aside while the child is open",
+          "ok": true,
+          "detail": "matrix(1, 0, 0, 1, -4, 0)"
+        },
+        {
+          "name": "the root exposes a Goodies row",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "a section change keeps the root node instances",
+          "ok": true,
+          "detail": "6 rows"
+        },
+        {
+          "name": "a section change keeps the same root element",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "a section change keeps the same dots",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the Goodies child lists seven materials",
+          "ok": true,
+          "detail": "7 tiles"
+        },
+        {
+          "name": "the child stays open on the section change",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Back closes the child",
+          "ok": true,
+          "detail": "hidden"
+        },
+        {
+          "name": "Back keeps the root mounted and visible",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Back restores the root-only width",
+          "ok": true,
+          "detail": "300px"
+        },
+        {
+          "name": "Back clears the child content",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the palette lists the pair lbp1-yellow-fuchsia",
+          "ok": true,
+          "detail": "37 tiles"
+        },
+        {
+          "name": "picking lbp1-yellow-fuchsia notifies the shell",
+          "ok": true,
+          "detail": "lbp1-yellow-fuchsia"
+        },
+        {
+          "name": "picking lbp1-yellow-fuchsia paints the pair class",
+          "ok": true,
+          "detail": "PairLbp1YellowFuchsia"
+        },
+        {
+          "name": "the snapshot row carries pair:lbp1-yellow-fuchsia",
+          "ok": true,
+          "detail": "columns:4;width:356;frame:lbp3;mode:create;order:;pair:lbp1-yellow-fuchsia"
+        },
+        {
+          "name": "decoding restores pair lbp1-yellow-fuchsia",
+          "ok": true,
+          "detail": "{\"columns\":4,\"width\":356,\"frame\":\"lbp3\",\"mode\":\"create\",\"order\":[],\"pair\":\"lbp1-yellow-fuchsia\"}"
+        },
+        {
+          "name": "a reload with the saved pair restores lbp1-yellow-fuchsia",
+          "ok": true,
+          "detail": "lbp1-yellow-fuchsia / PairLbp1YellowFuchsia"
+        },
+        {
+          "name": "the palette lists the pair lbp3-candy-jar",
+          "ok": true,
+          "detail": "37 tiles"
+        },
+        {
+          "name": "picking lbp3-candy-jar notifies the shell",
+          "ok": true,
+          "detail": "lbp3-candy-jar"
+        },
+        {
+          "name": "picking lbp3-candy-jar paints the pair class",
+          "ok": true,
+          "detail": "PairLbp3CandyJar"
+        },
+        {
+          "name": "the snapshot row carries pair:lbp3-candy-jar",
+          "ok": true,
+          "detail": "columns:4;width:356;frame:lbp3;mode:create;order:;pair:lbp3-candy-jar"
+        },
+        {
+          "name": "decoding restores pair lbp3-candy-jar",
+          "ok": true,
+          "detail": "{\"columns\":4,\"width\":356,\"frame\":\"lbp3\",\"mode\":\"create\",\"order\":[],\"pair\":\"lbp3-candy-jar\"}"
+        },
+        {
+          "name": "a reload with the saved pair restores lbp3-candy-jar",
+          "ok": true,
+          "detail": "lbp3-candy-jar / PairLbp3CandyJar"
+        },
+        {
+          "name": "secondary paints the slab background",
+          "ok": true,
+          "detail": "rgba(231, 15, 129, 0.9) vs #e70f81"
+        },
+        {
+          "name": "the slab keeps the shipped alpha",
+          "ok": true,
+          "detail": "0.9"
+        },
+        {
+          "name": "primary paints the slab border",
+          "ok": true,
+          "detail": "rgb(229, 229, 16) vs #e5e510"
+        },
+        {
+          "name": "tertiary paints the wordmark",
+          "ok": true,
+          "detail": "rgb(86, 86, 232) vs #5656e8"
+        },
+        {
+          "name": "emphasis paints the detail ink",
+          "ok": true,
+          "detail": "rgb(185, 217, 74) vs #b9d94a"
+        },
+        {
+          "name": "primary paints the active page dot",
+          "ok": true,
+          "detail": "rgb(229, 229, 16) vs #e5e510"
+        },
+        {
+          "name": "primary paints the active row",
+          "ok": true,
+          "detail": "rgba(229, 229, 16, 0.2)"
+        },
+        {
+          "name": "the surface and its accents are distinct, measured",
+          "ok": true,
+          "detail": "{\"wordmarkOnSlab\":1.05,\"emphasisOnSlab\":3.22,\"borderOnSlab\":3.82,\"pageDotOnSlab\":3.82}"
+        },
+        {
+          "name": "different pairs paint different slabs, measured",
+          "ok": true,
+          "detail": "rgba(214, 65, 214, 0.9) vs rgba(231, 15, 129, 0.9)"
+        },
+        {
+          "name": "Classic removes the pair class",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Classic returns the scheme slab paint",
+          "ok": true,
+          "detail": "rgb(16, 19, 13) vs pair #e70f81"
+        },
+        {
+          "name": "Classic returns the scheme's own ink",
+          "ok": true,
+          "detail": "rgb(255, 239, 215) vs pair rgb(86, 86, 232)"
+        },
+        {
+          "name": "Classic keeps the chosen pair for the saved row",
+          "ok": true,
+          "detail": "lbp1-yellow-fuchsia"
+        },
+        {
+          "name": "Classic is reported to the shell",
+          "ok": true,
+          "detail": "[true]"
+        },
+        {
+          "name": "leaving Classic restores the pair paint",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the non-reduced child declares a real transition",
+          "ok": true,
+          "detail": "0.22s, 0.28s"
+        },
+        {
+          "name": "the non-reduced root declares a real transition",
+          "ok": true,
+          "detail": "0.22s"
+        },
+        {
+          "name": "setReducedMotion suppresses the child transition",
+          "ok": true,
+          "detail": "0s"
+        },
+        {
+          "name": "setReducedMotion suppresses the root transition",
+          "ok": true,
+          "detail": "0s"
+        },
+        {
+          "name": "setReducedMotion suppresses the surface transition",
+          "ok": true,
+          "detail": "0s"
+        },
+        {
+          "name": "reduced motion keeps the child open and the root mounted",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "motion returns when reduced motion is cleared",
+          "ok": true,
+          "detail": "0.22s, 0.28s"
+        },
+        {
+          "name": "the shell snapshot uses the module's profile encoder",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the shell load path uses the module's profile decoder",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the shell still passes the saved pair to the surface",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the shell exposes a reduced-motion setter that reaches the module",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failures": [],
+      "details": {
+        "roles": {
+          "pair": "lbp1-yellow-fuchsia",
+          "secondary": "#e70f81",
+          "primary": "#e5e510",
+          "tertiary": "#5656e8",
+          "emphasis": "#b9d94a",
+          "slabBackground": "rgba(231, 15, 129, 0.9)",
+          "slabBorder": "rgb(229, 229, 16)",
+          "wordmark": "rgb(86, 86, 232)",
+          "detail": "rgb(185, 217, 74)",
+          "pageDot": "rgb(229, 229, 16)",
+          "activeRow": "rgba(229, 229, 16, 0.2)",
+          "contrast": {
+            "wordmarkOnSlab": 1.05,
+            "emphasisOnSlab": 3.22,
+            "borderOnSlab": 3.82,
+            "pageDotOnSlab": 3.82
+          }
+        },
+        "motion": {
+          "animatedChild": "0.22s, 0.28s",
+          "animatedRoot": "0.22s",
+          "reducedChild": "0s",
+          "reducedRoot": "0s",
+          "reducedSurface": "0s"
+        },
+        "roundTrips": [
+          {
+            "slug": "lbp1-yellow-fuchsia",
+            "row": "columns:4;width:356;frame:lbp3;mode:create;order:;pair:lbp1-yellow-fuchsia",
+            "decoded": "lbp1-yellow-fuchsia"
+          },
+          {
+            "slug": "lbp3-candy-jar",
+            "row": "columns:4;width:356;frame:lbp3;mode:create;order:;pair:lbp3-candy-jar",
+            "decoded": "lbp3-candy-jar"
+          }
+        ]
+      },
+      "ok": true
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "exceptions": [],
+      "logErrors": [],
+      "externalFailures": [],
+      "failedLocalRequests": []
+    }
+  },
+  "landing": [
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "ok": true,
+      "failures": [],
+      "measured": {
+        "viewport": {
+          "w": 1280,
+          "h": 900
+        },
+        "root": {
+          "x": 85,
+          "y": 4168,
+          "w": 272,
+          "h": 315,
+          "right": 357,
+          "bottom": 4482
+        },
+        "child": {
+          "x": 367,
+          "y": 4168,
+          "w": 314,
+          "h": 282,
+          "right": 681,
+          "bottom": 4449
+        },
+        "rows": 6,
+        "pairs": 8,
+        "bands": 8,
+        "bandHeights": [
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "bandColors": [
+          [
+            "rgb(229, 229, 16)",
+            "rgb(231, 15, 129)",
+            "rgb(86, 86, 232)"
+          ],
+          [
+            "rgb(57, 40, 83)",
+            "rgb(57, 115, 168)",
+            "rgb(168, 113, 57)"
+          ],
+          [
+            "rgb(154, 40, 83)",
+            "rgb(137, 153, 41)",
+            "rgb(92, 86, 153)"
+          ]
+        ],
+        "bandChildren": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "planes": 4,
+        "overlap": false,
+        "sectionHeight": 1124,
+        "overflowX": 0,
+        "rootVisible": true,
+        "childVisible": true,
+        "pairText": 2208
+      },
+      "auditLine": "audited 2026-11-12 against the tracked tree 11 behavioural suites 5 parity cells 11/11 family register checks refusals are named, not counted away",
+      "externalFailures": []
+    },
+    {
+      "viewport": {
+        "width": 420,
+        "height": 900
+      },
+      "ok": true,
+      "failures": [],
+      "measured": {
+        "viewport": {
+          "w": 420,
+          "h": 900
+        },
+        "root": {
+          "x": 34,
+          "y": 5762,
+          "w": 272,
+          "h": 315,
+          "right": 306,
+          "bottom": 6076
+        },
+        "child": {
+          "x": 34,
+          "y": 6086,
+          "w": 352,
+          "h": 271,
+          "right": 386,
+          "bottom": 6357
+        },
+        "rows": 6,
+        "pairs": 8,
+        "bands": 8,
+        "bandHeights": [
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "bandColors": [
+          [
+            "rgb(229, 229, 16)",
+            "rgb(231, 15, 129)",
+            "rgb(86, 86, 232)"
+          ],
+          [
+            "rgb(57, 40, 83)",
+            "rgb(57, 115, 168)",
+            "rgb(168, 113, 57)"
+          ],
+          [
+            "rgb(154, 40, 83)",
+            "rgb(137, 153, 41)",
+            "rgb(92, 86, 153)"
+          ]
+        ],
+        "bandChildren": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "planes": 4,
+        "overlap": false,
+        "sectionHeight": 1967,
+        "overflowX": 0,
+        "rootVisible": true,
+        "childVisible": true,
+        "pairText": 2208
+      },
+      "auditLine": "audited 2026-11-12 against the tracked tree 11 behavioural suites 5 parity cells 11/11 family register checks refusals are named, not counted away",
+      "externalFailures": []
+    }
+  ],
+  "ok": true
+}

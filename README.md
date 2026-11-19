@@ -23,6 +23,9 @@ server-side plugin or custom game mode.
   `material`, `ios` and `touchwiz` are palettes; `material` (MD1), `ios` (iOS 6 SpringBoard) and
   `touchwiz` (Nature UX) also ship form rules for radius, borders, controls and the tab strip.
 - Ships the **Popit as the in-game cell editor**, not a launcher, built to `POPIT-RE-AUDIT-v5`.
+  A headless browser probe (`node tools/browser_probe.js`) drives the shipped module and CSS to
+  record the root/child behaviour, the pair round-trip, the LBP3 role colours and the landing
+  layout; its limits are recorded in `docs/UI-PASS.md` and the receipt.
   The root stays mounted with six sections (Cursor, Palette, Goodies, Stickers, Tools, Color) and
   opening one reveals a contextual child that Back closes. The cursor lists only live windows and
   cells, outlines the selected target in the Player Colour, and the Goodies, Stickers, Tools and

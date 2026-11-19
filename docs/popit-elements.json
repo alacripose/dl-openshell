@@ -281,6 +281,13 @@
       "acceptance": "The host accepts a fifth comma field only when it matches the same alphabet and rejects an unknown material, colour, decoration or value."
     },
     {
+      "id": "popit.persistence.profile",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "encodeProfile",
+      "acceptance": "The popit= row grammar is owned by the module: the shell snapshot calls encodeProfile and the load path calls decodeProfile, so the arrangement and the pair slug cannot drift between writer and reader. An unknown pair is dropped rather than painted."
+    },
+    {
       "id": "popit.persistence.pair",
       "kind": "behavior",
       "file": "src/Openlock/Shell/LayoutProfiles.cs",

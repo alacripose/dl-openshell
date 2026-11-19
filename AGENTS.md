@@ -126,3 +126,30 @@ crown, child reveal and pair contrast in a built client, and a CSDK13 compile/pa
 has seen this surface in game.
 - The landing page names the pair axis and the control-plane distinction (OS taskbar, in-world
   cloud rail, Pod computer, Popit) without collapsing the OpenLock brand into LittleBigPlanet.
+
+### 2026-11-19 (continued) — the browser witness, and what it does not witness
+
+- `tools/browser_probe.js` is the browser surface for this rework. It serves the repository over
+  loopback, launches headless Chromium (Edge or Chrome) with CDP, drives
+  `tools/browser/popit-probe.html` and measures `landing/index.html` at 1280x900 and 420x900. It
+  writes `artifacts/receipts/browser-probe.json` and exits non-zero on a refusal.
+- `tools/browser/panorama-dom-host.js` is a **host adapter**, not a re-render: Panorama has no DOM,
+  so `$.CreatePanel` maps to DOM elements and the shipped stylesheets are translated
+  (`flow-children`, `horizontal-align`, `ignore-parent-flow`, `visibility: collapse`). The module,
+  the pair table, the stylesheets and their values are the shipped files. A result from this probe
+  is a Chromium DOM result, never a claim about the Deadlock client.
+- Observed in the browser: the root and its six rows keep the same node instances across a section
+  change, the child reveals beside the root, Back hides only the child, two pair slugs round-trip
+  through `encodeProfile`/`decodeProfile` into a reload, the LBP3 role order renders as shipped,
+  Classic returns the scheme slab, and `setReducedMotion` sets computed durations to `0s` while the
+  normal path reads `0.22s`/`0.28s`. Receipt: `artifacts/receipts/browser-probe.json`.
+- The parity count in the entry above (385 facts) is corrected here: `popit.persistence.profile`
+  was declared and the gate now holds **386**. The earlier line is kept as written, per the rule that
+  a stale claim is corrected beside it rather than edited away.
+- The `popit=` row grammar now lives in `clientaddon/panorama/scripts/openlock_popit.js`
+  (`encodeProfile`/`decodeProfile`); `openlock_shell.js` calls it in `layoutSnapshot` and
+  `normalizePopitLayout`, so the writer and reader cannot drift. The C# reader still validates.
+- **Not witnessed**: the in-game render, the crown contour (Panorama approximation, stated in
+  `shell/alpha-shell/forms/popit.form`), and any per-pair contrast beyond the measured values. The
+  browser probe measures `lbp1-yellow-fuchsia` at 1.05:1 wordmark-on-slab and does not retune the
+  pair table to make that number look better.
