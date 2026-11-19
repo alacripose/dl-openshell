@@ -1,0 +1,24 @@
+shploingus.theme/339926f6b1b54ebb89810d4c6238d523
+# The family register's web-dark roles, copied from landing/index.html. This is the shell's
+# default surface: charcoal ground, graphite windows, gold attention, cream ink. The Popit form
+# supplies the LBP3 silhouette separately; it does not bring a second palette with it.
+theme	family
+	label	Family register
+	source	landing/index.html web-dark roles
+	body	#12151AF2
+	panel	#171B21F2
+	title	#1C222BF2
+	meta	#0C0E11F2
+	border	#262C34
+	borderStrong	#F0C454
+	ink	#ECEFF2
+	muted	#AAB3BD
+	accent	#F0C454
+	alert	#E4786F
+	alertBody	#2A1114F2
+# The two game surfaces the shell sits over most take the same graphite surface instead of
+# Deadlock's parchment, matching the landing page's dark register.
+rule	.CitadelHudTopBar	background-color	#12151AE6
+rule	.CitadelHudTopBar	border-color	role:borderStrong
+rule	.CitadelHudHeroShop	background-color	#12151AE6
+rule	.CitadelHudHeroShop	border-color	role:borderStrong

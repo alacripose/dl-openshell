@@ -29,76 +29,68 @@ keep the 30 dp chrome height this shell already uses; the 48 dp MD1 row is a tou
 shell is pointer-driven. That translation is stated in the form block instead of being passed off
 as an MD1 example.
 
-## 2. Popit layers are schema, not a second UI
+## 2. Popit is the cell editor
 
-A window can carry one contextual tool layer. The layer is declared beside the window in
-`package.shspec`:
+The Popit is not a second shell and it is not a CREATE/PLAY menu. It is the editing layer for a
+window or a live HUD cell, modelled on the systems inside the games: the Popit Cursor selects and
+highlights an object in the player's colour, the Goodies Bag applies materials, Stickers &
+Decorations apply a decoration tinted by that colour, the Tools Bag carries the Tweak values and
+Player Color changes the surface's colour. The references used for this model are listed in
+`docs/popit-elements.json`; the old comparison PDF and its invented hexagon/tail/frame-badge
+inventory are not used.
 
-```text
-layer	inventory
-	title	Inventory tools
-	surface	ring
-	hint	Select a tool, then a slot.
-	action	trees	Crafting trees	trees
-	action	picker	Picker	picker
-	action	reconcile	Reconcile
-```
+The surface is `clientaddon/panorama/scripts/openlock_popit.js`. It follows the two design
+bibles, `POPIT-RE-AUDIT-v5` and `OPENLOCK-CONFLUENT-DREAMS-INTERLINE-REV06`:
 
-`surface` is `grid` (the renderer accepts the older `ring`/`bar` declarations but draws the same
-tool grid). `action` is `id`, `label` and an optional target window. Both the C# reader
-(`ShellPackage` / `ShpPackage`) and the generator validate that the window exists, the actions are
-unique, and an action's target is declared. The client routes the chosen action as
-`layer:<window>:<action>`; a server or tools instance can answer it through the same `dw_ui`
-channel.
+- **Root and child.** The root is one persistent instrument: wordmark, pair chip, Classic chip,
+  the selected target and six section rows (Cursor, Palette, Goodies, Stickers, Tools, Color).
+  Opening a section reveals a contextual child beside it; opening another section replaces the
+  child body only. Back closes the child and leaves the root mounted, so the surface never swaps
+  one page out for another.
+- **Cursor section.** Lists only targets the shell can bind to a live panel or cell. It does not
+  list package windows the game has not drawn. Choosing a row retargets the editor.
+- **Cursor halo.** A hit-test-free `.PopitCursorHalo` outlines the selected cell's measured
+  rectangle in the current Player Colour. This is the hover/selection state, not another window.
+- **Palette section.** All 37 player colours from the Popit Forge table, vendored as
+  `shell/alpha-shell/popit-pairs.json` under `openlock.popit-pairs/3080abf5e17bdee04de3bc0b0b5d43ab`
+  and generated into JS and CSS by `tools/gen_popit_pairs.py`. Tiles are grouped by the game each
+  pair shipped in and carry the three-colour band. The chosen pair is a class on the surface;
+  Classic removes it and the scheme's own roles return. The LBP3 role order is honoured:
+  `secondary` is the menu background, `primary` the highlight/selected accent, `tertiary` the menu
+  accent and `emphasis` the emphasised text.
+- **Goodies Bag.** Paper, Card, Glass, Tint, Ink, Accent and Bare become recorded inline writes on
+  the selected panel: background, border, radius and opacity. The theme's roles supply every
+  colour; the module has no hex literal.
+- **Stickers & Decorations.** Edge, Stitch, Tag and Corners write a border treatment in the
+  Player Colour. Stitch uses a dashed edge; Tag uses a left band; Corners sets the top-left
+  radius and two edges.
+- **Tools Bag.** Corners, border width and opacity are separate buttons; Restore this cell removes
+  every Popit write and returns the panel to the values captured before the first edit.
+- **Player Color.** The scheme's roles plus Default; the chosen role recolours the halo, the
+  decoration and the active tool accent.
+- **Persistence.** A cell's style travels in its own layout row as the fixed alphabet
+  `m[0-6]c[0-6]d[0-4]r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)`. The chosen pair travels in the
+  same `popit=` row as `pair:<slug>`. The C# `LayoutProfiles.PopitStylePattern` accepts only that
+  alphabet and `PopitPairPattern` validates the slug, so a profile can never inject CSS.
+- **Motion.** The child reveals over 220-280 ms with the root shifting aside. `setReducedMotion()`
+  in the module and `OpenlockSetPopitMotion()` in the shell are the real suppression path: the
+  same state and order remain and only the transitions stop.
 
-The surface itself is `clientaddon/panorama/scripts/openlock_popit.js`, included in
-`openlock_shell.xml` beside `openlock_audio.js`; `openlock_shell.js` only supplies geometry, the
-open-window rectangles and the action callback, so the surface can change without growing the
-shell. It is a real panel, not a ring of text rows:
+The old `.PopitFrame`, `.PopitTail`, `.PopitHexEdge`, `.PopitPlate`, `.PopitTile`, mode-pill,
+spine and tray selectors are gone from the module, the form and the theme generator. The form
+declares `.PopitRoot` and `.PopitChild` with a crowned per-corner approximation. Panorama cannot
+ draw the bibles' single Bezier contour, so that gap is named in `forms/popit.form` and in the
+parity gate's `not-implemented` line instead of being passed off as the contour.
 
-- **Frames are shape schemas.** `shell/alpha-shell/forms/popit.form` declares the LBP3 rounded
-  hexagon (six edge segments over a 53 px plate whose corner radius meets the 45-degree chamfers),
-  the LBP1 bubble, the LBP2 flat block, the PSP page, the Vita card and the Karting beam card.
-  Each version is a class on `.PopitFrame`/`.PopitTail`; the frame badge cycles them.
-- **Colour stays in palettes.** `tools/gen_shell_theme.py` emits only colour roles for
-  `.PopitPlate`, `.PopitTail`, `.PopitHexEdge`, `.PopitTile` and their states. No `.theme` and no
-  form other than `popit.form` declares a Popit radius, size or silhouette.
-- **Tiles are Deadlock art.** `iconFor` resolves `s2r://panorama/images/...` textures by action id
-  and then by label; the tile is an `Image` plus a label, with `Hover` and a single `Selected`
-  state. The CREATE/PLAY pill is local to the surface and never sends a game mode.
-- **Overlap is a refusal.** `place` clamps six candidates to the screen box and tests each against
-  every other open floating window; if all collide it calls the shell's refusal path instead of
-  drawing over the other window.
-
-`docs/popit-elements.json` (`openlock.popit-elements/1`) is the machine-readable inventory: every
-implemented element has a stable `popit.*` id, the file that supplies it, the selector or symbol,
-the source section of the Popit comparison document, and its acceptance line. The requirement
-ratchet can build on that list instead of re-deriving the surface.
-
-### Popit proof
-
-The surface was opened by a proof-only boot hook on the private desktop build, captured, and the
-hook removed before the final install (no synthetic mouse or keyboard input). Client log:
-
-```text
-[PanoramaScript] [Openlock] shell ready: alpha-shell v1-alpha commit=628d7b7 src=9767b33a278f game=6821 windows=348 refusals=9
-[PanoramaScript] [Openlock] popit: open lbp3 5 tile(s) at 904,150 form=popit
-[PanoramaScript] [Openlock] PROOF status {"visible":true,"frame":"lbp3","mode":"create","actions":5,"rows":2,"placed":{"x":904,"y":150}}
-```
-
-No `JS Exception`, `PanoramaScript` error or Popit warning followed the open. The capture,
-[`docs/popit-surface.png`](popit-surface.png), shows the LBP3 frame with its tail, the frame badge,
-the CREATE/PLAY pill, five Deadlock-art tiles, the selected first tile and the detail/hint lines.
-The final install removes the boot hook; `openlock_popit.js`, `popit.form` and the generated
-Popit palette rules are byte-identical between the proof build and the installed archive. The
-archive the surface was captured on was SHA-256
-`766B71C6EDFA413A5A2F7E2A071101005DDB0164CF1D3E7B000114ADD2D4D880`; the final campaign archive
-(`D:\SteamLibrary\steamapps\common\Deadlock\game\citadel\addons\mods\pak01_dir.vpk`) is
-`eb31e9c71cac75099f12d44bb085e11283ba309606535199855955c7180a3d52`, matching
-`dist/openlock_ui/pak01_dir.vpk`. It still contains `panorama/scripts/openlock_popit.js`
-(17,628 bytes, byte-identical to source) and the six `pre-transform-rotate2d` shape rules,
-declares all five Popit layers as `surface grid`, and contains no `PROOF` marker in
-`openlock_shell.js`.
+**Proof state.** The Node harness (`tools/tests/popit-test.js`, 60 checks) proves the persistent
+root, the child reveal and Back, the 37-pair Palette, Classic, reduced motion, target selection,
+material/decoration/tweak/colour edits and the profile alphabet. The dashboard harness (59 checks)
+proves the same surface opens from the dashboard, paints the live fake HUD panel and writes the
+style and pair into the saved row. `tools/popit_parity.py` holds 385 declared facts across the
+elements inventory, the pair roles and the persistence path, and `tools/ui_prose.py --check`
+reports no hits in the three scripts this rework owns. No person has witnessed this surface in
+the built client; the old CREATE/PLAY capture and its VPK hash describe a design that no longer
+exists and are not evidence for this one.
 
 ## 3. Picker
 
@@ -124,7 +116,7 @@ hash, is in [`docs/SHELL-IDLE-PERF.md`](SHELL-IDLE-PERF.md).
 
 The client consumes two host attributes every poll:
 
-- `addons` — `openlock.addons/2` JSON. New windows join the catalog, changed windows update in
+- `addons` — `openlock.addons/a5d7cf25e0a40c0a06b836992556491d` JSON. New windows join the catalog, changed windows update in
   place, removed package windows close. A window with a `liveTree` is built with `$.CreatePanel`;
   a compiled-only package keeps `BLoadLayout`. Neither path mounts a new resource.
 - `observer` — a notice (`title`, `body`, `window`, `layout`, `attention`). The toast stack is
@@ -159,10 +151,72 @@ the existing table.
 
 - **Keyboard reachability / gamepad focus** is still not implemented: the shell is pointer-only by
   design so it never inserts a second focus graph into Deadlock's control suite.
-- **Reduced motion** has no user-facing switch yet; the idle-chrome animation is unchanged.
-- **Live rendering**: the Popit surface was rendered and captured on the proof client (see §2),
-  including the LBP3 shape and the icon grid. The other five frame variants and the picker are not
-  captured yet; the C# build, generator, schema check and source-level click check cover them only
-  statically.
+- **Reduced motion** has a Popit suppression path (`OpenlockSetPopitMotion`), but no user-facing
+  switch and no profile row yet; the idle-chrome animation is unchanged.
+- **Live rendering**: the new Popit cell editor has not been seen in a built client. The Node
+  harnesses cover the root/child behaviour, the pair palette and the live-cell paint, and the C#
+  parser covers the saved alphabet and pair slug; the rendered crown, child reveal, halo and item
+  contrast remain unwitnessed.
 - **Audio mix** is not measured on a device. The samples are bounded and the compiled soundevents
   load, but perceived loudness against Deadlock's own UI remains a listening check.
+
+## 8. Family design adoption (2026-11-12)
+
+The visual authority is now the family register and synthesis in
+`<home>\Documents\openlock_modern\docs\design\`: `family-design-tokens.json`,
+`FAMILY-BRAND-SYNTHESIS.md` and `tools/family_design_audit.py`. The register holds the palette and
+mark values; this repository reads them from there. No person has looked at the built surface, so
+the audit's render row is `not-implemented`.
+
+**Landing (web dark).** `landing/index.html` names the roles `ground`, `surface`, `raised`, `line`,
+`line-strong`, `ink`, `muted`, `dim`, `faint`, `attention`, `verified`, `refused` and `telemetry`;
+gold is the landing's attention accent and the CUA interaction purple is not used here. The mark is
+the 20x20 square-in-square (1.5 px outer stroke, 8x8 filled centre, 2 px radii, 8 px clear space).
+The page uses Archivo / IBM Plex Mono, a 64 px app bar, the 8 dp structural grid, the 3/4 px web
+control/panel radii, the 8 px shell-window ceiling and the `app-bar` (0 2px 8px) and `menu`
+(0 8px 24px) elevation tiers. The page stays dark: the register declares a light set, but no one
+has rendered it.
+
+**Family package target.** The family section names the shell repos and the legacy-to-modern package
+pipeline. Every project's old carrier (`SHPKG002`, `SHPKG003`, `shploingus.recipe/30444cad3419800564faba6d4e252431`,
+`openlock.envelope/d593054cb466a871f47d4804b3e2f333`, `V4PKG001`, `V4PKG002`) is an import input behind a read-only decoder. The
+decoder writes an explicit compatibility record, `dle-migrate` records source and target identity,
+the old digest, the new `name@rev+blake3` identity, lost fields, actor and ticket, and only the modern
+carrier is emitted. The modern carrier is `dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71`; `goose.mod/0aae19884ea41415867d1385deea60e3`, `goose.vanilla/109e73f54aaaa7e072bbcb452569ebde` and
+`goose.client/d6f8a8b171f8c253b095d99f92e95b4a` are module schemas inside that one carrier. BLAKE3 covers canonical content only, with
+framing, encryption, the revision and the Debian signature outside the preimage. The migration is
+one-way. Legacy `shploingus.recipe/4`, `planet-*`, `planet-package-v1`, VPK and compiled assets are
+refused by name rather than converted. This is the target pipeline in `db-mc-indev/AGENTS.md` §11,
+`dl-enclave/docs/PACKAGE-FORMAT.md` §6, `secure_shell_v2/docs/SECURE-SHELL-RESTORE@1.ARCHITECTURE.md`
+§5–§7 and §12.8, and `SECURE-SHELL-RESTORE@1.FORMAT-IMPORT-AUDIT.md` §5; `dle-migrate` remains on the
+Phase 1 work list.
+
+**Panorama (game medium).** The scheme files remain the medium's role map. Measured against each
+scheme's body colour:
+
+| Scheme | Ink/body | Muted/body | Accent/body |
+|---|---:|---:|---:|
+| `alpha` | 15.33:1 | 6.66:1 | 9.91:1 |
+| `material` | 18.73:1 | 8.64:1 | 5.10:1 |
+
+All exceed the 4.5:1 floor. The base window radius is now 8 (the family ceiling); forms may declare
+a smaller corner (MD1 keeps 2, iOS 6 keeps 6). The four corner grips have a 24 dp pointer target and
+opt back into hit-testing because a live-panel frame is pointer-transparent. The 30 dp title strip
+translates the family app-bar grammar for a pointer-dense game surface; it does not use the web
+64 px bar or a fetched font.
+
+**What changed for the window manager.** A split clears the parent's composited transform before
+measuring components; a move anchors on the layout pass's placed content and writes only position;
+a resize writes both axes from the requested content rect; a player-placed window is arbitrated in
+shell space, so the layout adds the reserved bar once. `tools/check_shell_clicks.py` asserts that
+the old `frameRecord.rect` start path is gone. The browser witness also found
+that the four taskbar right-cluster controls still carried the retired absolute
+`ignore-parent-flow` / right-margin rules inside the new flow wrapper. Removing those rules makes
+the wrapper own real pixels: `tools/browser_shell_check.py` reaches Dashboard, Windows, the build
+label and the clock at 1280x900, 1024x768 and 900x1000, sees five frames with four 24 dp grips each,
+refuses a forced `game-*` frame by name, and reports the four unsigned envelopes.
+
+**Bars not claimed.** The family audit does not inspect the rendered page or the game. No person
+has witnessed this build's landing or shell render; the agent browser result above is a witness of
+the HTML shell, not a person's look at the installed client. The Popit tray uses the form's rounded
+slab geometry; the MD1/iOS/TouchWiz forms keep their own declared control geometry.

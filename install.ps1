@@ -629,7 +629,7 @@ function Write-BuildRecord {
     $finishedAt = ''
     if ($script:buildState -eq 'ok') { $finishedAt = $now.ToString('yyyy-MM-dd HH:mm:ss') }
     $record = [ordered]@{
-        format = 'openlock.build/1'
+        format = 'openlock.build/c0fe71e57305319a492946bbe18ea9dd'
         grade = $script:installGrade
         stage = $script:buildStage
         state = $script:buildState
@@ -876,7 +876,15 @@ if (-not $SdkRoot) {
 #    its own base_hud and base_dashboard, both built from the stock host roots, plus a legacy shell
 #    entry generated from the live shell at pack time. The workaround for the older parser therefore
 #    never exists inside the live layouts, sheet or script.
-$toolsTarget = Test-Path (Join-Path $DeadlockRoot 'game\citadel_addons')
+# A shipping game can carry an empty `game/citadel_addons` directory (Deadlock does).
+# That directory alone does not make the tree a tools host: using a game's shipping
+# compiler for its own addon fails when the game update does not ship the compiler's
+# modeldoc_utils module. A tools host has bin_tools, or project8 without the game client.
+$gameClient = Join-Path $DeadlockRoot 'game\bin\win64\deadlock.exe'
+$toolsClient = Join-Path $DeadlockRoot 'game\bin\win64\project8.exe'
+$toolsTarget = (Test-Path (Join-Path $DeadlockRoot 'game\bin_tools')) -or
+    ((Test-Path (Join-Path $DeadlockRoot 'game\citadel_addons')) -and
+     -not (Test-Path $gameClient) -and (Test-Path $toolsClient))
 if (Test-Path $build) { Remove-Item $build -Recurse -Force }
 $contentLayout = Join-Path $build 'panorama\layout'
 $contentScripts = Join-Path $build 'panorama\scripts'
@@ -1583,6 +1591,25 @@ $lines.Insert($insertAt, $entry)
 foreach ($mountRel in $packageMounts) {
     $insertAt++
     $lines.Insert($insertAt, "`t`t`tGame`t`t" + $mountRel)
+}
+
+# The addon is deliberately the first Game path so its base_hud overrides the stock one. When
+# SearchPaths has no explicit Mod/Write, the engine derives both from the first Game path. That
+# makes MOD point at citadel/addons/mods, so the client cannot find citadel/cfg/user_keys_default
+# and aborts with "Unable to read default keybinding configuration (user_keys_default)!". Keep
+# the game's own config roots declared, including on a previously stock file that had none.
+$configEntries = @(
+    @{ Key = 'Mod'; Path = 'citadel' },
+    @{ Key = 'Write'; Path = 'citadel' },
+    @{ Key = 'Mod'; Path = 'core' },
+    @{ Key = 'Write'; Path = 'core' }
+)
+foreach ($config in $configEntries) {
+    $pattern = '^\s*' + [regex]::Escape($config.Key) + '\s+' + [regex]::Escape($config.Path) + '\s*$'
+    if (-not ($lines -match $pattern)) {
+        $insertAt++
+        $lines.Insert($insertAt, "`t`t`t$($config.Key)`t`t$($config.Path)")
+    }
 }
 [System.IO.File]::WriteAllText($gameinfo, (($lines -join "`r`n").TrimEnd() + "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
 

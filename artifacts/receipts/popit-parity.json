@@ -1,0 +1,2328 @@
+{
+  "format": "openlock.popit-parity/1",
+  "subject": {
+    "docs/popit-elements.json": "e9956001e0203d745ef9566f28c3d9431828f3e9352fd5d76221ed034c43c143",
+    "clientaddon/panorama/scripts/openlock_popit.js": "a7e3761b028eae72923b0a21bbf52acc4109b811c62225a7bdc903f372216c64",
+    "clientaddon/panorama/scripts/openlock_shell.js": "77eaf935e1c60ffc4523c54f831ed80e786d0fc0f53822cdd07320a97286903b",
+    "clientaddon/panorama/scripts/openlock_pairs.js": "7c15c3730ce23f4f3b90113dc31123c6a6544b8c7b625cf993921c307f2b6152",
+    "clientaddon/panorama/styles/openlock_popit.css": "cc329a22d12cebf74594b00a2ac7c33d914dfc3e6fa13e21166f6ef1c0cbcb73",
+    "clientaddon/panorama/styles/openlock_pairs.css": "139ddfbac8b907c36d1d25210c329043222ecc1e0c5214c32762b5fe6bc960f2",
+    "shell/alpha-shell/forms/popit.form": "66fe081aa6e997c8b9c6e19bd2b82e77b5e6663f866ab812d19b816cd6ed24b3",
+    "shell/alpha-shell/popit-pairs.json": "f7e518cdecd13a6e506518714a3b512a9d253840f0391497e501c98e468c2362",
+    "src/Openlock/Shell/LayoutProfiles.cs": "90d05e5bc7187389de8c8dfe152138d561486fc588601c7ff61699d9c2521e4c"
+  },
+  "rows": [
+    {
+      "criterion": "E1",
+      "subject": "docs\\popit-elements.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "clientaddon\\panorama\\scripts\\openlock_popit.js",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "clientaddon\\panorama\\scripts\\openlock_shell.js",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "clientaddon\\panorama\\scripts\\openlock_pairs.js",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "clientaddon\\panorama\\styles\\openlock_popit.css",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "clientaddon\\panorama\\styles\\openlock_pairs.css",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "shell\\alpha-shell\\forms\\popit.form",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "shell\\alpha-shell\\popit-pairs.json",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E1",
+      "subject": "src\\Openlock\\Shell\\LayoutProfiles.cs",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.surface",
+      "ok": true,
+      "detail": "symbol 'show' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.surface",
+      "ok": true,
+      "detail": "selector '.PopitSurface' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.dismiss",
+      "ok": true,
+      "detail": "symbol 'dismiss' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.dismiss",
+      "ok": true,
+      "detail": "selector '.PopitDismiss' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.cursor.halo",
+      "ok": true,
+      "detail": "symbol 'paintHalo' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.cursor.halo",
+      "ok": true,
+      "detail": "selector '.PopitCursorHalo' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.root",
+      "ok": true,
+      "detail": "symbol 'PopitRoot' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.root",
+      "ok": true,
+      "detail": "selector '.PopitRoot' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.root.row",
+      "ok": true,
+      "detail": "symbol 'addRootRow' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.root.row",
+      "ok": true,
+      "detail": "selector '.PopitRootRow' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.root.dots",
+      "ok": true,
+      "detail": "symbol 'addDot' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.root.dots",
+      "ok": true,
+      "detail": "selector '.PopitPageDot' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.child",
+      "ok": true,
+      "detail": "symbol 'openSection' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.child",
+      "ok": true,
+      "detail": "selector '.PopitChild' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.child.head",
+      "ok": true,
+      "detail": "symbol 'closeSection' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.child.head",
+      "ok": true,
+      "detail": "selector '.PopitChildHead' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.child.back",
+      "ok": true,
+      "detail": "symbol 'closeSection' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.child.back",
+      "ok": true,
+      "detail": "selector '.PopitBack' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.child.title",
+      "ok": true,
+      "detail": "symbol 'renderHeader' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.child.title",
+      "ok": true,
+      "detail": "selector '.PopitChildTitle' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.section",
+      "ok": true,
+      "detail": "symbol 'function section' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.section",
+      "ok": true,
+      "detail": "selector '.PopitSectionHead' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.cursor",
+      "ok": true,
+      "detail": "symbol 'buildCursorPage' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.cursor",
+      "ok": true,
+      "detail": "selector '.PopitTargetList' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.palette",
+      "ok": true,
+      "detail": "symbol 'buildPairPage' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.palette",
+      "ok": true,
+      "detail": "selector '.PopitPairGrid' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.goodies",
+      "ok": true,
+      "detail": "symbol 'buildGrid' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.goodies",
+      "ok": true,
+      "detail": "selector '.PopitGrid' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.stickers",
+      "ok": true,
+      "detail": "symbol 'buildGrid' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.stickers",
+      "ok": true,
+      "detail": "selector '.PopitGrid' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.tools",
+      "ok": true,
+      "detail": "symbol 'buildToolsPage' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.tools",
+      "ok": true,
+      "detail": "selector '.PopitOptionRow' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.page.color",
+      "ok": true,
+      "detail": "symbol 'buildGrid' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.page.color",
+      "ok": true,
+      "detail": "selector '.PopitGrid' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.pair.chip",
+      "ok": true,
+      "detail": "symbol 'renderHeader' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.pair.chip",
+      "ok": true,
+      "detail": "selector '.PopitPairChip' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.pair.tile",
+      "ok": true,
+      "detail": "symbol 'addPairItem' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.pair.tile",
+      "ok": true,
+      "detail": "selector '.PopitItemPair' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.classic",
+      "ok": true,
+      "detail": "symbol 'renderHeader' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.classic",
+      "ok": true,
+      "detail": "selector '.PopitClassicChip' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.target",
+      "ok": true,
+      "detail": "symbol 'buildCursorPage' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.target",
+      "ok": true,
+      "detail": "selector '.PopitTarget' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.header",
+      "ok": true,
+      "detail": "symbol 'renderHeader' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.header",
+      "ok": true,
+      "detail": "selector '.PopitHeaderTitle' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.target-label",
+      "ok": true,
+      "detail": "symbol 'targetLabel' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.target-label",
+      "ok": true,
+      "detail": "selector '.PopitTargetLabel' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.item",
+      "ok": true,
+      "detail": "symbol 'addGridItem' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.item",
+      "ok": true,
+      "detail": "selector '.PopitItem' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.option",
+      "ok": true,
+      "detail": "symbol 'optionGroup' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.option",
+      "ok": true,
+      "detail": "selector '.PopitOption' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.reset",
+      "ok": true,
+      "detail": "symbol 'buildToolsPage' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.reset",
+      "ok": true,
+      "detail": "selector '.PopitReset' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.detail",
+      "ok": true,
+      "detail": "symbol 'detailLabel' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.detail",
+      "ok": true,
+      "detail": "selector '.PopitDetail' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.apply",
+      "ok": true,
+      "detail": "symbol 'applyPopitState' is not in clientaddon/panorama/scripts/openlock_shell.js"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.restore",
+      "ok": true,
+      "detail": "symbol 'resetPopitCell' is not in clientaddon/panorama/scripts/openlock_shell.js"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.persistence.encode",
+      "ok": true,
+      "detail": "symbol 'encodeState' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.persistence.style",
+      "ok": true,
+      "detail": "symbol 'PopitStylePattern' is not in src/Openlock/Shell/LayoutProfiles.cs"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.persistence.pair",
+      "ok": true,
+      "detail": "symbol 'PopitPairPattern' is not in src/Openlock/Shell/LayoutProfiles.cs"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.motion",
+      "ok": true,
+      "detail": "symbol 'setReducedMotion' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E3",
+      "subject": "popit.motion",
+      "ok": true,
+      "detail": "selector '.ReducedMotion' is not in openlock_popit.css"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.placement",
+      "ok": true,
+      "detail": "symbol 'place' is not in clientaddon/panorama/scripts/openlock_popit.js"
+    },
+    {
+      "criterion": "E4",
+      "subject": "format",
+      "ok": true,
+      "detail": "format is 'openlock.popit-pairs/3080abf5e17bdee04de3bc0b0b5d43ab'"
+    },
+    {
+      "criterion": "E4",
+      "subject": "count",
+      "ok": true,
+      "detail": "37 pairs; the forge table carries 37"
+    },
+    {
+      "criterion": "E4",
+      "subject": "unique",
+      "ok": true,
+      "detail": "a pair id appears twice"
+    },
+    {
+      "criterion": "E4",
+      "subject": "default",
+      "ok": true,
+      "detail": "default 'popit-blue' is not a pair"
+    },
+    {
+      "criterion": "E4",
+      "subject": "slugs",
+      "ok": true,
+      "detail": "a pair id is not a lowercase slug"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:popit-blue",
+      "ok": true,
+      "detail": "no .PairPopitBlue block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:popit-blue",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:popit-blue.primary",
+      "ok": true,
+      "detail": "primary '#3f8ad7' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:popit-blue.secondary",
+      "ok": true,
+      "detail": "secondary '#d641d6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:popit-blue.tertiary",
+      "ok": true,
+      "detail": "tertiary '#41d641' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:popit-blue.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "popit-blue",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "popit-blue",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-yellow-fuchsia",
+      "ok": true,
+      "detail": "no .PairLbp1YellowFuchsia block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-yellow-fuchsia",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-yellow-fuchsia.primary",
+      "ok": true,
+      "detail": "primary '#e5e510' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-yellow-fuchsia.secondary",
+      "ok": true,
+      "detail": "secondary '#e70f81' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-yellow-fuchsia.tertiary",
+      "ok": true,
+      "detail": "tertiary '#5656e8' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-yellow-fuchsia.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-yellow-fuchsia",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-yellow-fuchsia",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-navy-blue",
+      "ok": true,
+      "detail": "no .PairLbp1NavyBlue block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-navy-blue",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-navy-blue.primary",
+      "ok": true,
+      "detail": "primary '#392853' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-navy-blue.secondary",
+      "ok": true,
+      "detail": "secondary '#3973a8' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-navy-blue.tertiary",
+      "ok": true,
+      "detail": "tertiary '#a87139' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-navy-blue.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-navy-blue",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-navy-blue",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-deep-pink-green",
+      "ok": true,
+      "detail": "no .PairLbp1DeepPinkGreen block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-deep-pink-green",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-deep-pink-green.primary",
+      "ok": true,
+      "detail": "primary '#9a2853' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-deep-pink-green.secondary",
+      "ok": true,
+      "detail": "secondary '#899929' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-deep-pink-green.tertiary",
+      "ok": true,
+      "detail": "tertiary '#5c5699' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-deep-pink-green.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-deep-pink-green",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-deep-pink-green",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-blue-pink",
+      "ok": true,
+      "detail": "no .PairLbp1BluePink block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-blue-pink",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-blue-pink.primary",
+      "ok": true,
+      "detail": "primary '#3f8ad7' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-blue-pink.secondary",
+      "ok": true,
+      "detail": "secondary '#d641d6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-blue-pink.tertiary",
+      "ok": true,
+      "detail": "tertiary '#41d641' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-blue-pink.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-blue-pink",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-blue-pink",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-violet-deep-pink",
+      "ok": true,
+      "detail": "no .PairLbp1VioletDeepPink block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-violet-deep-pink",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-violet-deep-pink.primary",
+      "ok": true,
+      "detail": "primary '#6a39b5' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-violet-deep-pink.secondary",
+      "ok": true,
+      "detail": "secondary '#b23950' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-violet-deep-pink.tertiary",
+      "ok": true,
+      "detail": "tertiary '#3ab29e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-violet-deep-pink.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-violet-deep-pink",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-violet-deep-pink",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-coral-pale-green",
+      "ok": true,
+      "detail": "no .PairLbp1CoralPaleGreen block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-coral-pale-green",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-coral-pale-green.primary",
+      "ok": true,
+      "detail": "primary '#e76161' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-coral-pale-green.secondary",
+      "ok": true,
+      "detail": "secondary '#a5e563' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-coral-pale-green.tertiary",
+      "ok": true,
+      "detail": "tertiary '#a363e4' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-coral-pale-green.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-coral-pale-green",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-coral-pale-green",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-red-green",
+      "ok": true,
+      "detail": "no .PairLbp1RedGreen block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-red-green",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-red-green.primary",
+      "ok": true,
+      "detail": "primary '#ca0000' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-red-green.secondary",
+      "ok": true,
+      "detail": "secondary '#67c900' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-red-green.tertiary",
+      "ok": true,
+      "detail": "tertiary '#7d48c1' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-red-green.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-red-green",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-red-green",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-orange-green",
+      "ok": true,
+      "detail": "no .PairLbp1OrangeGreen block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-orange-green",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-orange-green.primary",
+      "ok": true,
+      "detail": "primary '#e44311' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-orange-green.secondary",
+      "ok": true,
+      "detail": "secondary '#46e213' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-orange-green.tertiary",
+      "ok": true,
+      "detail": "tertiary '#bf13e2' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-orange-green.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-orange-green",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-orange-green",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-flesh-pink-leaf-green",
+      "ok": true,
+      "detail": "no .PairLbp1FleshPinkLeafGreen block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-flesh-pink-leaf-green",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-flesh-pink-leaf-green.primary",
+      "ok": true,
+      "detail": "primary '#b59d81' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-flesh-pink-leaf-green.secondary",
+      "ok": true,
+      "detail": "secondary '#678c67' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-flesh-pink-leaf-green.tertiary",
+      "ok": true,
+      "detail": "tertiary '#ca9acc' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-flesh-pink-leaf-green.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-flesh-pink-leaf-green",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-flesh-pink-leaf-green",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-green-pale-blue",
+      "ok": true,
+      "detail": "no .PairLbp1GreenPaleBlue block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-green-pale-blue",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-green-pale-blue.primary",
+      "ok": true,
+      "detail": "primary '#8acb2e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-green-pale-blue.secondary",
+      "ok": true,
+      "detail": "secondary '#2fc9c9' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-green-pale-blue.tertiary",
+      "ok": true,
+      "detail": "tertiary '#c92f4c' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-green-pale-blue.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-green-pale-blue",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-green-pale-blue",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-aqua-blue",
+      "ok": true,
+      "detail": "no .PairLbp1AquaBlue block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-aqua-blue",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-aqua-blue.primary",
+      "ok": true,
+      "detail": "primary '#2ecba8' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-aqua-blue.secondary",
+      "ok": true,
+      "detail": "secondary '#655cbf' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-aqua-blue.tertiary",
+      "ok": true,
+      "detail": "tertiary '#b3c92f' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-aqua-blue.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-aqua-blue",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-aqua-blue",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp1-pale-blue-purple",
+      "ok": true,
+      "detail": "no .PairLbp1PaleBluePurple block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp1-pale-blue-purple",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-pale-blue-purple.primary",
+      "ok": true,
+      "detail": "primary '#2ea8cb' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-pale-blue-purple.secondary",
+      "ok": true,
+      "detail": "secondary '#932fc9' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-pale-blue-purple.tertiary",
+      "ok": true,
+      "detail": "tertiary '#64c92f' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp1-pale-blue-purple.emphasis",
+      "ok": true,
+      "detail": "emphasis '#b9d94a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-pale-blue-purple",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp1-pale-blue-purple",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-cool-island",
+      "ok": true,
+      "detail": "no .PairLbp3CoolIsland block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-cool-island",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-cool-island.primary",
+      "ok": true,
+      "detail": "primary '#92ba19' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-cool-island.secondary",
+      "ok": true,
+      "detail": "secondary '#2569cc' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-cool-island.tertiary",
+      "ok": true,
+      "detail": "tertiary '#1ddccd' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-cool-island.emphasis",
+      "ok": true,
+      "detail": "emphasis '#8800ff' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-cool-island",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-cool-island",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-ice-cream-sprinkles",
+      "ok": true,
+      "detail": "no .PairLbp3IceCreamSprinkles block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-ice-cream-sprinkles",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-ice-cream-sprinkles.primary",
+      "ok": true,
+      "detail": "primary '#ceb424' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-ice-cream-sprinkles.secondary",
+      "ok": true,
+      "detail": "secondary '#c331a0' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-ice-cream-sprinkles.tertiary",
+      "ok": true,
+      "detail": "tertiary '#3bcfc1' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-ice-cream-sprinkles.emphasis",
+      "ok": true,
+      "detail": "emphasis '#8800ff' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-ice-cream-sprinkles",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-ice-cream-sprinkles",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-candy-jar",
+      "ok": true,
+      "detail": "no .PairLbp3CandyJar block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-candy-jar",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-jar.primary",
+      "ok": true,
+      "detail": "primary '#cc0a1d' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-jar.secondary",
+      "ok": true,
+      "detail": "secondary '#2f0514' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-jar.tertiary",
+      "ok": true,
+      "detail": "tertiary '#fff600' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-jar.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-candy-jar",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-candy-jar",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-forest-surprise",
+      "ok": true,
+      "detail": "no .PairLbp3ForestSurprise block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-forest-surprise",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-forest-surprise.primary",
+      "ok": true,
+      "detail": "primary '#c800cc' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-forest-surprise.secondary",
+      "ok": true,
+      "detail": "secondary '#000000' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-forest-surprise.tertiary",
+      "ok": true,
+      "detail": "tertiary '#ffc600' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-forest-surprise.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d764' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-forest-surprise",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-forest-surprise",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-sliced-bread",
+      "ok": true,
+      "detail": "no .PairLbp3SlicedBread block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-sliced-bread",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-sliced-bread.primary",
+      "ok": true,
+      "detail": "primary '#f5d7d7' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-sliced-bread.secondary",
+      "ok": true,
+      "detail": "secondary '#aab95a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-sliced-bread.tertiary",
+      "ok": true,
+      "detail": "tertiary '#64c8e6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-sliced-bread.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-sliced-bread",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-sliced-bread",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-moonlight",
+      "ok": true,
+      "detail": "no .PairLbp3Moonlight block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-moonlight",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-moonlight.primary",
+      "ok": true,
+      "detail": "primary '#0b60ff' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-moonlight.secondary",
+      "ok": true,
+      "detail": "secondary '#a09687' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-moonlight.tertiary",
+      "ok": true,
+      "detail": "tertiary '#e1e1e6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-moonlight.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-moonlight",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-moonlight",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-meditation",
+      "ok": true,
+      "detail": "no .PairLbp3Meditation block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-meditation",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-meditation.primary",
+      "ok": true,
+      "detail": "primary '#755f1c' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-meditation.secondary",
+      "ok": true,
+      "detail": "secondary '#200202' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-meditation.tertiary",
+      "ok": true,
+      "detail": "tertiary '#ffb400' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-meditation.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-meditation",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-meditation",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-rack-attack",
+      "ok": true,
+      "detail": "no .PairLbp3RackAttack block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-rack-attack",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-rack-attack.primary",
+      "ok": true,
+      "detail": "primary '#ff871d' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-rack-attack.secondary",
+      "ok": true,
+      "detail": "secondary '#48b24f' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-rack-attack.tertiary",
+      "ok": true,
+      "detail": "tertiary '#fff000' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-rack-attack.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-rack-attack",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-rack-attack",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-tennis-elbow",
+      "ok": true,
+      "detail": "no .PairLbp3TennisElbow block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-tennis-elbow",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-tennis-elbow.primary",
+      "ok": true,
+      "detail": "primary '#9142b2' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-tennis-elbow.secondary",
+      "ok": true,
+      "detail": "secondary '#10cc75' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-tennis-elbow.tertiary",
+      "ok": true,
+      "detail": "tertiary '#ffea87' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-tennis-elbow.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-tennis-elbow",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-tennis-elbow",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-volcanic-glacier",
+      "ok": true,
+      "detail": "no .PairLbp3VolcanicGlacier block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-volcanic-glacier",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-volcanic-glacier.primary",
+      "ok": true,
+      "detail": "primary '#fa8228' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-volcanic-glacier.secondary",
+      "ok": true,
+      "detail": "secondary '#8291d7' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-volcanic-glacier.tertiary",
+      "ok": true,
+      "detail": "tertiary '#c8cde6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-volcanic-glacier.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-volcanic-glacier",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-volcanic-glacier",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-dylans-jalopy",
+      "ok": true,
+      "detail": "no .PairLbp3DylansJalopy block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-dylans-jalopy",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-dylans-jalopy.primary",
+      "ok": true,
+      "detail": "primary '#13f5ff' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-dylans-jalopy.secondary",
+      "ok": true,
+      "detail": "secondary '#ccb300' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-dylans-jalopy.tertiary",
+      "ok": true,
+      "detail": "tertiary '#ff1db1' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-dylans-jalopy.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-dylans-jalopy",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-dylans-jalopy",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-funkian",
+      "ok": true,
+      "detail": "no .PairLbp3Funkian block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-funkian",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-funkian.primary",
+      "ok": true,
+      "detail": "primary '#be3c96' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-funkian.secondary",
+      "ok": true,
+      "detail": "secondary '#000000' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-funkian.tertiary",
+      "ok": true,
+      "detail": "tertiary '#683dbf' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-funkian.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-funkian",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-funkian",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-night-time-coral",
+      "ok": true,
+      "detail": "no .PairLbp3NightTimeCoral block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-night-time-coral",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-night-time-coral.primary",
+      "ok": true,
+      "detail": "primary '#5fc4c9' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-night-time-coral.secondary",
+      "ok": true,
+      "detail": "secondary '#4379c9' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-night-time-coral.tertiary",
+      "ok": true,
+      "detail": "tertiary '#e63f52' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-night-time-coral.emphasis",
+      "ok": true,
+      "detail": "emphasis '#8800ff' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-night-time-coral",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-night-time-coral",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-twit-twoo",
+      "ok": true,
+      "detail": "no .PairLbp3TwitTwoo block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-twit-twoo",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-twit-twoo.primary",
+      "ok": true,
+      "detail": "primary '#424242' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-twit-twoo.secondary",
+      "ok": true,
+      "detail": "secondary '#000000' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-twit-twoo.tertiary",
+      "ok": true,
+      "detail": "tertiary '#0a0a0a' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-twit-twoo.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-twit-twoo",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-twit-twoo",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-candy-floss",
+      "ok": true,
+      "detail": "no .PairLbp3CandyFloss block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-candy-floss",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-floss.primary",
+      "ok": true,
+      "detail": "primary '#f190ac' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-floss.secondary",
+      "ok": true,
+      "detail": "secondary '#d61880' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-floss.tertiary",
+      "ok": true,
+      "detail": "tertiary '#e244c4' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-candy-floss.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-candy-floss",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-candy-floss",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-berry-fish-cake",
+      "ok": true,
+      "detail": "no .PairLbp3BerryFishCake block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-berry-fish-cake",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-berry-fish-cake.primary",
+      "ok": true,
+      "detail": "primary '#ef4d70' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-berry-fish-cake.secondary",
+      "ok": true,
+      "detail": "secondary '#3b3b3c' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-berry-fish-cake.tertiary",
+      "ok": true,
+      "detail": "tertiary '#231f20' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-berry-fish-cake.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d764' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-berry-fish-cake",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-berry-fish-cake",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-crispy-leaf",
+      "ok": true,
+      "detail": "no .PairLbp3CrispyLeaf block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-crispy-leaf",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-crispy-leaf.primary",
+      "ok": true,
+      "detail": "primary '#22b573' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-crispy-leaf.secondary",
+      "ok": true,
+      "detail": "secondary '#c5c5c5' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-crispy-leaf.tertiary",
+      "ok": true,
+      "detail": "tertiary '#e6e6e6' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-crispy-leaf.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-crispy-leaf",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-crispy-leaf",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-brittle-thistle",
+      "ok": true,
+      "detail": "no .PairLbp3BrittleThistle block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-brittle-thistle",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-brittle-thistle.primary",
+      "ok": true,
+      "detail": "primary '#00bbbb' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-brittle-thistle.secondary",
+      "ok": true,
+      "detail": "secondary '#bf1d4f' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-brittle-thistle.tertiary",
+      "ok": true,
+      "detail": "tertiary '#eb2c3b' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-brittle-thistle.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d764' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-brittle-thistle",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-brittle-thistle",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-mint-choc",
+      "ok": true,
+      "detail": "no .PairLbp3MintChoc block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-mint-choc",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-mint-choc.primary",
+      "ok": true,
+      "detail": "primary '#aed180' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-mint-choc.secondary",
+      "ok": true,
+      "detail": "secondary '#3a2228' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-mint-choc.tertiary",
+      "ok": true,
+      "detail": "tertiary '#684050' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-mint-choc.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-mint-choc",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-mint-choc",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-orchid-agent",
+      "ok": true,
+      "detail": "no .PairLbp3OrchidAgent block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-orchid-agent",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-orchid-agent.primary",
+      "ok": true,
+      "detail": "primary '#ff4399' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-orchid-agent.secondary",
+      "ok": true,
+      "detail": "secondary '#341e5f' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-orchid-agent.tertiary",
+      "ok": true,
+      "detail": "tertiary '#683dbf' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-orchid-agent.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-orchid-agent",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-orchid-agent",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-bons-bons",
+      "ok": true,
+      "detail": "no .PairLbp3BonsBons block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-bons-bons",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-bons-bons.primary",
+      "ok": true,
+      "detail": "primary '#ef8031' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-bons-bons.secondary",
+      "ok": true,
+      "detail": "secondary '#5fae4d' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-bons-bons.tertiary",
+      "ok": true,
+      "detail": "tertiary '#abc638' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-bons-bons.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-bons-bons",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-bons-bons",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-distant-light",
+      "ok": true,
+      "detail": "no .PairLbp3DistantLight block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-distant-light",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-distant-light.primary",
+      "ok": true,
+      "detail": "primary '#00a99d' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-distant-light.secondary",
+      "ok": true,
+      "detail": "secondary '#d31818' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-distant-light.tertiary",
+      "ok": true,
+      "detail": "tertiary '#2e3192' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-distant-light.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-distant-light",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-distant-light",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-gingery-ninja",
+      "ok": true,
+      "detail": "no .PairLbp3GingeryNinja block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-gingery-ninja",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-gingery-ninja.primary",
+      "ok": true,
+      "detail": "primary '#e2cc00' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-gingery-ninja.secondary",
+      "ok": true,
+      "detail": "secondary '#f15a23' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-gingery-ninja.tertiary",
+      "ok": true,
+      "detail": "tertiary '#f76c41' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-gingery-ninja.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e60f64' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-gingery-ninja",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-gingery-ninja",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E4",
+      "subject": "class:lbp3-precious-melody",
+      "ok": true,
+      "detail": "no .PairLbp3PreciousMelody block"
+    },
+    {
+      "criterion": "E4",
+      "subject": "table:lbp3-precious-melody",
+      "ok": true,
+      "detail": "pair is not in the generated JS table"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-precious-melody.primary",
+      "ok": true,
+      "detail": "primary '#91c1bb' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-precious-melody.secondary",
+      "ok": true,
+      "detail": "secondary '#009599' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-precious-melody.tertiary",
+      "ok": true,
+      "detail": "tertiary '#00b2a1' is not #RRGGBB"
+    },
+    {
+      "criterion": "E4",
+      "subject": "colour:lbp3-precious-melody.emphasis",
+      "ok": true,
+      "detail": "emphasis '#e6d71e' is not #RRGGBB"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-precious-melody",
+      "ok": true,
+      "detail": "the slab is not painted from the secondary/background role"
+    },
+    {
+      "criterion": "E5",
+      "subject": "lbp3-precious-melody",
+      "ok": true,
+      "detail": "the slab border is not painted from the primary/highlight role"
+    },
+    {
+      "criterion": "E6",
+      "subject": "spine",
+      "ok": true,
+      "detail": "retired spine geometry is still in the form"
+    },
+    {
+      "criterion": "E6",
+      "subject": "tray",
+      "ok": true,
+      "detail": "retired tray geometry is still in the form"
+    },
+    {
+      "criterion": "E6",
+      "subject": "root",
+      "ok": true,
+      "detail": "the root/child contour is not declared"
+    },
+    {
+      "criterion": "E6",
+      "subject": "contour",
+      "ok": true,
+      "detail": "the crowned per-corner approximation is missing"
+    },
+    {
+      "criterion": "E7",
+      "subject": "snapshot",
+      "ok": true,
+      "detail": "the snapshot does not emit a pair field"
+    },
+    {
+      "criterion": "E7",
+      "subject": "load",
+      "ok": true,
+      "detail": "a saved pair is not applied on load"
+    },
+    {
+      "criterion": "E7",
+      "subject": "host",
+      "ok": true,
+      "detail": "the host does not parse and validate pair:<slug>"
+    },
+    {
+      "criterion": "E7",
+      "subject": "save",
+      "ok": true,
+      "detail": "choosing a pair does not update the saved layout"
+    },
+    {
+      "criterion": "E8",
+      "subject": "css",
+      "ok": true,
+      "detail": "no reduced-motion rule"
+    },
+    {
+      "criterion": "E8",
+      "subject": "path",
+      "ok": true,
+      "detail": "no setReducedMotion path"
+    },
+    {
+      "criterion": "E9",
+      "subject": "root",
+      "ok": true,
+      "detail": "the stylesheet has no root"
+    },
+    {
+      "criterion": "E9",
+      "subject": "child",
+      "ok": true,
+      "detail": "the stylesheet has no child reveal state"
+    },
+    {
+      "criterion": "E9",
+      "subject": "back",
+      "ok": true,
+      "detail": "the stylesheet has no Back control"
+    }
+  ],
+  "refusals": [],
+  "ok": true
+}

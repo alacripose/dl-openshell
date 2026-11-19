@@ -1,0 +1,7 @@
+secure-shell.surface/7af4f34e745ebf547b3fc71146ef314c
+surface	motd-demo
+requires	observe
+window	motd-panel	Server MOTD	tab	right-dock	180	150	460	320	280	150	true	false	minimize,maximize,close	drag,resize	surface	readout
+node	motd-panel	motd-panel-root	-	pane	surface	-
+node	motd-panel	motd-title	motd-panel-root	label	title	Server MOTD
+node	motd-panel	motd-body	motd-panel-root	list	body	@motd-lines

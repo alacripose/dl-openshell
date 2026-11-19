@@ -9,12 +9,17 @@
     <LangVersion>latest</LangVersion>
     <Version>0.7.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- ModernPackage uses the managed Blake3 wrapper and its native win-x64 runtime;
+         both must travel with the plugin, not just with the test executable. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!-- Where the Deadworks runtime lives. Override on the command line when the
          game is not on D:, or when building against an unpacked release. -->
     <DeadworksDir Condition="'$(DeadworksDir)' == ''">D:\SteamLibrary\steamapps\common\Deadlock\game\bin\win64</DeadworksDir>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Modern package identity is BLAKE3 over canonical content (secure-shell.package/<32 hex>). -->
+    <PackageReference Include="Blake3" Version="2.0.0" />
     <Reference Include="DeadworksManaged.Api">
       <HintPath>$(DeadworksDir)\managed\DeadworksManaged.Api.dll</HintPath>
       <Private>false</Private>
@@ -36,9 +41,18 @@
       <_PluginDir>$(DeadworksDir)\managed\plugins</_PluginDir>
     </PropertyGroup>
     <MakeDir Directories="$(_PluginDir)" />
+    <ItemGroup>
+      <_ModernPackageAsset Include="$(TargetDir)Blake3.dll" Condition="Exists('$(TargetDir)Blake3.dll')" />
+      <_ModernPackageAsset Include="$(TargetDir)runtimes\win-x64\native\blake3_dotnet.dll"
+                           Condition="Exists('$(TargetDir)runtimes\win-x64\native\blake3_dotnet.dll')" />
+    </ItemGroup>
     <Copy SourceFiles="$(TargetPath);$(TargetDir)$(AssemblyName).pdb"
           DestinationFolder="$(_PluginDir)"
           SkipUnchangedFiles="false"
+          ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="@(_ModernPackageAsset)"
+          DestinationFolder="$(_PluginDir)"
+          SkipUnchangedFiles="true"
           ContinueOnError="WarnAndContinue" />
     <Message Importance="high" Text="dl-openshell: deployed $(AssemblyName).dll to $(_PluginDir)" />
   </Target>

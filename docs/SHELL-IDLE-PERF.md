@@ -3,8 +3,8 @@
 This is the checkable record for the "the game hangs every few seconds and when the shell is
 opened" defect. The numbers come from Deadlock's own console (`console.log`), the shell's
 Performance window (`frameTick` + 30 s `perf summary`), and the shell's own warn ring. No
-synthetic mouse or keyboard input was used: the proof client runs on its own desktop
-(`.scratch/launch-client-hidden.py`) and a proof-only build opened the shell after boot.
+synthetic mouse or keyboard input was used: the proof client ran on its own desktop from the
+earlier scratch harness, and a proof-only build opened the shell after boot.
 
 ## What was wrong
 
@@ -43,8 +43,8 @@ All three causes were in the shell's scanning/scheduling path, not in rendering.
 
 ## Before
 
-Pre-fix build, shell open. Sources: `.scratch/console.before.log` (07:10 session) and
-`.scratch/console.after4.log` (08:44 session), both from the same client and addon.
+Pre-fix build, shell open. The source readings were the earlier scratch console logs from the
+07:10 and 08:44 sessions, both from the same client and addon; those scratch logs were not kept.
 
 | Reading | Value | Log |
 |---|---:|---|
@@ -59,8 +59,8 @@ and 08:44 logs above are the same failure.
 
 ## After
 
-Fixed build, shell opened by the proof hook, 31 s of samples with the shell open and idle
-(`.scratch/proof-after.log`). Client boot `09:47:33`, shell open `09:48:31`.
+Fixed build, shell opened by the proof hook, 31 s of samples with the shell open and idle (from
+the earlier scratch proof log, not kept). Client boot `09:47:33`, shell open `09:48:31`.
 
 | Reading | Value | Log |
 |---|---:|---|

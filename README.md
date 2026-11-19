@@ -22,12 +22,19 @@ server-side plugin or custom game mode.
 - Separates the **colour scheme** from the **chrome form**. `deadlock`, `alpha`, `holo`,
   `material`, `ios` and `touchwiz` are palettes; `material` (MD1), `ios` (iOS 6 SpringBoard) and
   `touchwiz` (Nature UX) also ship form rules for radius, borders, controls and the tab strip.
-- Declares **Popit tool layers** beside a window (`layer` in the package). The shell draws the
-  versioned Popit grid (LBP3/LBP1/LBP2/PSP/Vita/Karting shape schemas, Deadlock-art icons, hover and
-  selection, and an overlap refusal) and routes each action back to the server as
-  `layer:<window>:<action>`; a layer action may open another declared window. The Picker layer
-  scrubs the live HUD and edits one panel's position, size, opacity and colours with a restore
-  path. `docs/popit-elements.json` inventories every implemented element by stable id and file.
+- Ships the **Popit as the in-game cell editor**, not a launcher, built to `POPIT-RE-AUDIT-v5`.
+  The root stays mounted with six sections (Cursor, Palette, Goodies, Stickers, Tools, Color) and
+  opening one reveals a contextual child that Back closes. The cursor lists only live windows and
+  cells, outlines the selected target in the Player Colour, and the Goodies, Stickers, Tools and
+  Color sections write materials, decorations, corners, borders, opacity and colour on that cell.
+  The Palette section carries all 37 Popit Forge player colours, grouped by game, with Classic as
+  the opt-out. A cell's style and the chosen pair both travel in the saved layout row as a fixed
+  alphabet the C# parser validates. The Picker remains the scrub-and-inspect tool for a live
+  panel. `docs/popit-elements.json` inventories every implemented element and cites the LBP
+  systems it follows.
+- Package `layer` declarations remain **tool actions** on a window's context menu and still route
+  as `layer:<window>:<action>`; a layer action may open another declared window. They are no
+  longer drawn as the Popit surface.
 - Ships a **Performance** window: measured UI-frame graph, apply/write counters, per-window apply
   cost and the bounded refusal/package/perf log. The same log records every client refusal.
 - Accepts **live package and observer payloads**: `addons` merges or removes package windows in
@@ -37,12 +44,14 @@ server-side plugin or custom game mode.
 - Exposes a Tools window fed by the install: live build stage and VPK size when the server bridge
   is connected, the last baked record otherwise, update state, tool presence and the mounted search
   paths, plus the generated refusals list. A small non-interactive strip shows the running stage.
-- Mounts windows declared by Deadworks addon packages. A package is a real shploingus
-  `SHPKG002`/`SHPKG003` frame (`.shpkg`), loose or inside a VPK; the frame's digest is checked
-  before its `shploingus.recipe/3` source is read. Each window's title-bar controls are the
-  package's own `layout`/`behavior` projection, including whether it may be pinned. Source XML is
-  rendered as a client-built DOM tree, so its controls stay clickable; compiled-only packages keep
-  the mounted `BLoadLayout` path.
+- Mounts windows declared by Deadworks addon packages. New packages are canonical
+  `secure-shell.package/<32 hex>` directories (`.pkg`) whose payload is a
+  `secure-shell.surface/<32 hex>` declaration; the BLAKE3 identity is checked before the
+  surface is read. A numeric legacy header is read and upgraded on emission, never emitted as
+  current. Each window's title-bar
+  controls come from the surface's `chrome`/`moves`, including whether it may be pinned. Surface
+  nodes are rendered as a client-built DOM tree, so controls stay clickable. Legacy
+  `SHPKG002`/`SHPKG003` frames remain readable as a read-only decoder, never as an emit target.
 - Delivers a package to already-connected players with `dl_openshell_deliver`, the live bridge:
   the XML and CSS travel in the addon payload and the shell builds the window without a new
   resource path, VPK mount or reconnect. `openlock_observer <window-id>` sends a package window as
@@ -53,6 +62,44 @@ server-side plugin or custom game mode.
 - Includes a console that opens any declared window or loads any Panorama layout present in the
   installed game, including layouts contributed by mounted addons.
 
+## Design
+
+The visual authority is the family register and synthesis in
+[`openlock_modern/docs/design/`](../openlock_modern/docs/design/): `family-design-tokens.json`,
+`FAMILY-BRAND-SYNTHESIS.md` and the `family_design_audit.py` receipt. The register holds the
+palette and the mark; this repository reads both from there.
+
+- **Landing (web dark).** The page names the family roles `ground`, `surface`, `raised`, `line`,
+  `line-strong`, `ink`, `muted`, `dim`, `faint`, `attention`, `verified`, `refused` and
+  `telemetry`. Gold is the landing accent; the agent interaction purple is reserved for the CUA
+  surface. The mark is the 20x20 square-in-square: 1.5 px outer stroke, 8x8 filled centre, 2 px
+  radii, 8 px clear space. The page uses Archivo and IBM Plex Mono, a 64 px app bar, the 8 dp
+  structural grid, the 3/4/8 px radius roles and the named elevation tiers. The page renders dark;
+  the declared light set has no rendered witness yet.
+- **Family package target.** The landing's family section names the shell repos and the one-way
+  legacy-to-modern package pipeline. Each project's old frame and magic is an import input behind a
+  read-only decoder; the explicit rewrite record carries source and target ids, the old digest, the
+  new `name@rev+blake3` identity, lost fields, actor and ticket; new emissions use the modern carrier
+  only. BLAKE3 covers canonical content, with framing, encryption, the revision and the signature
+  outside the preimage. `goose.mod/0aae19884ea41415867d1385deea60e3`, `goose.vanilla/109e73f54aaaa7e072bbcb452569ebde` and `goose.client/d6f8a8b171f8c253b095d99f92e95b4a` are current
+  hash-pinned module ids; each family also reads a numeric legacy id and re-emits its hashed id. Unknown inputs are refused by name. `dle-migrate` is on `dl-enclave`'s
+  Phase 1 list, so the page states the target, not a shipped migration.
+- **Panorama (game medium).** A scheme is the medium's role map, not a second family token file.
+  `alpha` and `material` fill `ground`, `surface`, `raised`, `line`, `line-strong`, `ink`, `muted`,
+  `attention`/`interaction` and `refused`; forms own geometry. Measured ink/body, muted/body and
+  accent/body are 15.33/6.66/9.91:1 for alpha and 18.73/8.64/5.10:1 for material. The shell window
+  radius ceiling is 8 px, a corner grip has a 24 dp pointer target, and the 30 dp title strip is
+  the shell's pointer-dense translation of the family app-bar grammar.
+- **Limits.** The family audit reads the register. It does not inspect a drawn surface. No person
+  has looked at the built client, so the render is `not-implemented`; see
+  [docs/UI-PASS.md](docs/UI-PASS.md) §8 for the adoption record and the remaining deviations.
+
+The family audit is run from the sibling tree:
+
+```powershell
+python <home>\Documents\openlock_modern\tools\family_design_audit.py
+```
+
 ## Install
 
 ### Release install
@@ -62,10 +109,12 @@ put both in `game/bin/win64` beside `deadlock.exe`, close Deadlock, and double-c
 Windows blocks a downloaded `.ps1` under the default execution policy, so the launcher starts it
 with a process-scoped bypass; `install.ps1` stays the installer. The release script asks for the
 shell grade, downloads `openshell-player.vpk`, verifies its published SHA-256, installs it under
-`game/citadel/addons/mods`, and adds that directory to `SearchPaths`. It does not require a
-checkout, Python, or the CSDK, and it never overwrites a `pak01_dir.vpk` owned by another mod
-manager. To run the script directly instead, right-click it → Properties → Unblock, then choose
-“Run with PowerShell”.
+`game/citadel/addons/mods`, and adds that directory to `SearchPaths`. It writes one archive at
+`game/citadel/addons/mods/pak01_dir.vpk`; if that filename already exists, the release replaces
+it, so move another manager's archive aside first. It does not install into
+`citadel/addons/openlock_ui` or touch another addon folder. It does not require a checkout,
+Python, or the CSDK. To run the script directly instead, right-click it → Properties → Unblock,
+then choose “Run with PowerShell”.
 
 The public landing page is [the Pages site](https://alacripose.github.io/dl-openshell/). Release
 assets are built locally because compiling Panorama needs the game's CSDK; see
@@ -167,11 +216,13 @@ package's scripts during install, and a package cannot write fonts or `gameinfo.
 
 ### Addon windows and controls
 
-A Deadworks addon ships windows as real shploingus packages: `SHPKG002` frames with a
-`shploingus.recipe/3` source, or `SHPKG003` frames with the package's own artifacts after it. Put
-the `.shpkg` under the addon's search path or inside its VPK; the server reads both. It checks the
-frame's payload digest, parses the recipe with the same 13-key window grammar the shell package
-uses, and sends only packages with no refusals to the client.
+A Deadworks addon ships windows as a modern `.pkg` directory: canonical `manifest.json` +
+`payload.bin`, with a `secure-shell.surface/<32 hex>` payload and a `secure-shell.package/<32 hex>`
+BLAKE3 identity. Any numeric legacy id is a migration input; a new package emits the hashed id.
+The manifest name must match the surface id. Put the directory under the addon's search path; the
+server verifies the package, parses the closed surface schema, and sends only packages with no
+refusals to the client. Legacy `.shpkg` frames are still read through the read-only `ShpPackage`
+decoder, but nothing in this tree emits a new one.
 
 A window's delivered XML layout is looked up as `panorama/layout/<window-id>.xml` (or
 `<record-id>.xml`) in the VPK that carries the package. The source XML is parsed into a
@@ -181,7 +232,7 @@ and buttons are hit-testable, so a control cannot be swallowed by a transparent 
 is the port of the original client-side DOM renderer, and it is the path a package uses whenever
 its source XML is present. The same streamed surface is used for an arbitrary game layout and for
 a game window or cell the host delivers while the client is running: `OpenlockStream` takes one
-window, and `OpenlockStreamPackage` takes an `openlock.game/1` payload of the game's own
+window, and `OpenlockStreamPackage` takes an `openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27` payload of the game's own
 `{id,title,tree,geometry,cell}` window and cell rows. Each row opens at the rect its package
 declared, before the first paint, and enters with
 the same short curve the taskbar tabs use (opacity only — the frame never eases through an
@@ -189,8 +240,26 @@ intermediate position). A row with no readable source is refused by id and opens
 `BLoadLayout` remains only the
 named fallback when a package or game source carries compiled resources and no source tree. A package carrying only compiled resources keeps the mounted path: the
 resource is looked up as `panorama/layout/<window-id>.vxml_c` and mounted with `BLoadLayout`.
-A loose `.shpkg` is read and its windows are listed; with XML artifacts it can be drawn without a
-VPK. A window with neither keeps its declared content kind.
+A modern surface's node rows become the window's `LiveTree`, so a `.pkg` draws without a VPK or
+an artifact table. A legacy `.shpkg` is still read and its windows are listed; with XML artifacts it
+can be drawn without a VPK. A legacy window with neither keeps its declared content kind.
+
+### The modern package carrier
+
+New packages are the Secure Shell canonical object, not another `SHPKG` version: a canonical
+`manifest.json` plus a separate `payload.bin`, with one BLAKE3 identity
+`name@<revision>+blake3:<64 hex>`. The digest domain is `secure-shell.package/ff53bde81a9e26562c739676fff7d28e`
+(the id pins the package contract); framing,
+signatures, timestamps and stream chunking are outside the preimage. `SHPKG002`/`SHPKG003` are
+read-only legacy decoders, never emit targets. `dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71` is the enclave family's current id;
+  openlock reads it as a migration input while the enclave owns that family's payload semantics.
+
+The carrier has no 32-bit payload length and no 16 MiB package cap. Pack with
+`python tools/modern_package.py --surface <file> --out <dir> --name <name>` for a window package,
+`--tree` for a file-index payload, or `--proof` for a streamed payload just over 4 GiB; read with
+`ModernPackage`/`AddonPackages`. The declared ceiling is 64 GiB. Legacy frames stay loadable through
+`ShpPackage`, and a VPK entry is still 32-bit, so a package above 4 GiB travels as a loose modern
+object.
 
 ### Optional package envelopes
 
@@ -223,17 +292,17 @@ them in the **Wishes** window (`content wishes`) filed under Docs. Nothing in th
 in JS: the window renders the generated rows.
 
 A package can also arrive after the client is already in the game, where Deadworks and Deadlock
-cannot add a resource path live. Run `dl_openshell_deliver <path-to.shpkg-or-addon.vpk>` on the
-server: the frame is verified, the XML/CSS become the same `liveTree`, and the updated addon
+cannot add a resource path live. Run `dl_openshell_deliver <path-to.pkg>` on the server: the
+canonical package is verified, the surface nodes become the same `liveTree`, and the updated addon
 payload is pushed to every connected shell without a reconnect or a file in the game tree.
 
-A copyable end-to-end example lives in [examples/motd-addon](examples/motd-addon/README.md): a real
-`SHPKG003` package that carries a compiled Server MOTD layout, packs it into a VPK, and installs
-where `AddonPackages` already scans. Build it with `examples\motd-addon\build.ps1`.
+A copyable end-to-end example lives in [examples/motd-addon](examples/motd-addon/README.md): a
+modern `secure-shell.surface/7af4f34e745ebf547b3fc71146ef314c` package that declares a Server MOTD window and installs where
+`AddonPackages` already scans. Build it with `examples\motd-addon\build.ps1`.
 
-A package's windows declare their own title-bar controls through `layout` and `behavior`: `pin` is
-offered only when `pinnable` is true; `minimize`, `maximize` and `close` are offered only when
-`layout` names them behind `title-position`. The shell renders that list instead of assuming every
+A package's windows declare their own title-bar controls through the surface's `chrome`/`moves`
+(legacy frames use `layout` and `behavior`): `pin` is offered only when `pinnable` is true;
+`minimize`, `maximize` and `close` are offered only when `chrome` names them. The shell renders that list instead of assuming every
 window has all four, and the context menu follows the same list. A package with a broken digest,
 unknown content or lane, missing key, duplicate id or unusable geometry is refused by archive,
 line and window; none of its windows are partially mounted.
@@ -242,15 +311,16 @@ line and window; none of its windows are partially mounted.
 
 The landing page renders addons from [landing/tools/addons.json](landing/tools/addons.json). Add one
 object to `addons` with `name`, `version`, `author`, `format`, `target`, `note`, and optionally
-`download` and `source`. `builtIn: true` adds the built-in tag. The page reads the catalog at load
-and falls back to its inline copy when the file is not reachable; no page edit is needed.
+`facts` (short chips such as window or layer counts), `download` and `source`. `builtIn: true` adds
+the built-in tag. The page reads the catalog at load and falls back to its inline copy when the file
+is not reachable; no page edit is needed.
 
 ### Observer XML surfaces
 
 In `observer` grade the shell's own chrome is hidden, but a package XML can still be sent as a
 toast. The server command `openlock_observer <window-id>` sends a loaded package window to every
 connected shell; the shell mounts its XML in the toast stack. The layout receives the live shell
-record on the `dw_observer_data` attribute of its host panel as `openlock.observer/1` JSON:
+record on the `dw_observer_data` attribute of its host panel as `openlock.observer/2a438fa886e575a6ae8b071e5c67616e` JSON:
 `build`, `update`, `packages`, `windows`, `connected` and `observedAt`. A layout can read that
 attribute from its parent and render live stats, or keep its own controls for external links. The
 shell's close affordance is outside the XML, so a delivered surface cannot trap the observer.
@@ -283,7 +353,7 @@ A mounted mod can extend any base scheme by adding `panorama/schemes/<name>.them
 search path. Loose directories and VPK archives are both scanned. Tabs are shown as `\t`:
 
 ```text
-shploingus.theme/1
+shploingus.theme/339926f6b1b54ebb89810d4c6238d523
 theme\tmy-shop-theme
 \tlabel\tMy shop
 \textends\tholo

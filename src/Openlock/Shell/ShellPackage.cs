@@ -1,7 +1,7 @@
 namespace Openlock.Shell;
 
 /// <summary>
-/// The single owner of reading a shploingus display package: the <c>shploingus.recipe/3</c>
+/// The single owner of reading a shploingus display package: the <c>shploingus.recipe/30444cad3419800564faba6d4e252431</c>
 /// <c>package.shspec</c>, its <c>package.cells</c> declaration, and the <c>frames/*.frame</c> records.
 ///
 /// <para>
@@ -93,13 +93,16 @@ public sealed class ShellPackage
     private void ReadRecipeText(string path, string text, bool resolveContent)
     {
         var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        if (lines.Length == 0 || !lines[0].StartsWith("shploingus.recipe/", StringComparison.Ordinal))
+        var recipeRefusal = "format-schema";
+        if (lines.Length == 0
+            || !FormatFamilies.Recipe.TryUpgrade(lines[0].TrimEnd(), out var recipeFormat, out recipeRefusal))
         {
-            Refusals.Add(new Refusal(path, 1, lines.FirstOrDefault() ?? "<empty>", "unknown recipe header"));
+            Refusals.Add(new Refusal(path, 1, lines.FirstOrDefault() ?? "<empty>",
+                "unknown recipe header (" + recipeRefusal + ")"));
             return;
         }
 
-        Format = lines[0];
+        Format = recipeFormat;
         Window? current = null;
         ShpPackage.Layer? currentLayer = null;
 
@@ -304,9 +307,11 @@ public sealed class ShellPackage
         }
 
         var lines = File.ReadAllLines(path);
-        if (lines.FirstOrDefault() != "shploingus.deadlock/1")
+        var deadlockRefusal = "format-schema";
+        if (lines.Length == 0 || !FormatFamilies.Deadlock.TryUpgrade(lines[0], out _, out deadlockRefusal))
         {
-            Refusals.Add(new Refusal(path, 1, lines.FirstOrDefault() ?? "<empty>", "unknown deadlock window header"));
+            Refusals.Add(new Refusal(path, 1, lines.FirstOrDefault() ?? "<empty>",
+                "unknown deadlock window header (" + deadlockRefusal + ")"));
             return;
         }
 
@@ -354,11 +359,12 @@ public sealed class ShellPackage
         var lines = File.ReadAllLines(path);
         CellsFormat = lines.FirstOrDefault() ?? "";
 
-        if (CellsFormat != "shploingus.cells/1")
+        if (!FormatFamilies.Cells.TryUpgrade(CellsFormat, out var cellsFormat, out var cellsRefusal))
         {
-            Refusals.Add(new Refusal(path, 1, CellsFormat, "unknown cells header"));
+            Refusals.Add(new Refusal(path, 1, CellsFormat, "unknown cells header (" + cellsRefusal + ")"));
             return;
         }
+        CellsFormat = cellsFormat;
 
         for (var i = 1; i < lines.Length; i++)
         {
@@ -385,9 +391,9 @@ public sealed class ShellPackage
         {
             var lines = File.ReadAllLines(file);
             var header = lines.FirstOrDefault() ?? "";
-            if (header != "shploingus.cellframe/1")
+            if (!FormatFamilies.CellFrame.TryUpgrade(header, out _, out var frameRefusal))
             {
-                Refusals.Add(new Refusal(file, 1, header, "unknown cellframe header"));
+                Refusals.Add(new Refusal(file, 1, header, "unknown cellframe header (" + frameRefusal + ")"));
                 continue;
             }
 

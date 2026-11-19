@@ -1,4 +1,4 @@
-shploingus.deadlock/1
+shploingus.deadlock/56f44490493209422686cb3e00c27183
 # Every top-level HUD, Citadel and ability window the game ships, one shell window each.
 # Generated from the game VPK layout list; the mount refuses any layout that will not load.
 window	game-ability_hud_element_cast	Ability Hud Element Cast	file://{resources}/layout/ability_hud_element_cast.xml

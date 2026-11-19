@@ -1,0 +1,1 @@
+{"dependencies":[],"entry_points":["panorama/layout/motd-panel.xml","panorama/styles/motd.css"],"lengths":{"files":2,"payload":344},"name":"openlock-motd","revision":1,"schemas":["secure-shell.files/1f5ac72f412f8462bff666a8e3b36eea","secure-shell.package/ff53bde81a9e26562c739676fff7d28e"]}

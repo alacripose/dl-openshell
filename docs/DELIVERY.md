@@ -15,10 +15,9 @@ proof hook or scratch artifact is in the package.
 
 Harness: the hidden dedicated server (`deadworks.exe -dedicated -console`, private window) and
 the hidden client on the private desktop (`D:\SteamLibrary\...\deadlock.exe -windowed -noborder`,
-launched with `.scratch/launch-client-hidden.py`). No synthetic mouse or keyboard input was sent
-to the game. The three commands were written by one long-lived console attach
-(`.scratch/proof-exchange.py`) so the server's console input handle was never detached between
-them:
+launched from the earlier hidden-desktop scratch harness). No synthetic mouse or keyboard input was
+sent to the game. The three commands were written by one long-lived console attach (the earlier
+scratch exchange driver) so the server's console input handle was never detached between them:
 
 ```text
 attached to 29144; plan is [(6, 'dl_openshell_deliver .../proof-v1.shpkg'),
@@ -103,10 +102,10 @@ What it asserts:
 - A payload carrying a package record with **no windows** applies cleanly, adds no window and
   reports a zero window delta — the client half of a successful zero-window delivery.
 
-The server half is `.scratch/deliverytest` (a scratch console over the compiled plugin):
+The server half is `tools/tests/deliverytest` (a focused console over the compiled plugin):
 
 ```text
-$ dotnet run --project .scratch/deliverytest/deliverytest.csproj -c Release
+$ dotnet run --project tools/tests/deliverytest/deliverytest.csproj -c Release
 ...
 ok   a zero-window package reports success, not a refusal
 ok   refusal records stay bounded by the package ceiling
@@ -207,6 +206,6 @@ worktree source digest 7810624dbd0cf245782b841699c98c576b388d7fbfd16ccc8c51e05d1
 source. The one drift line is the unrelated `Reduced_CSDK_10` tools tree, which carries an older
 build.
 
-The scratch packages (`proof-v1.shpkg`, `proof-v2.shpkg`), the exchange driver and the harness
-live in `.scratch/` and are not packed into the archive. No `deadlock.exe` or `deadworks.exe`
-process was left running after the install.
+The proof fixture (`tools/tests/fixtures/proof-v1.shpkg`) and both harnesses
+(`tools/tests/test_delivery.js`, `tools/tests/deliverytest`) are test inputs, not packed into the
+archive. No `deadlock.exe` or `deadworks.exe` process was left running after the install.

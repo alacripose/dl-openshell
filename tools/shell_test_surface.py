@@ -284,7 +284,7 @@ def main() -> int:
       <section class="refusal">
         <h2>REFUSED — game files and templates</h2>
         <p>The browser witness is gameless. It carries the shell's streamer format
-        (<code>openlock.game/1</code>) as code, but any <code>game-*</code> window, game layout
+        (<code>openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27</code>) as code, but any <code>game-*</code> window, game layout
         entry, <code>file://</code> resource path, live-panel declaration or streamed game frame in
         the page fails the browser check by name; only the shell/launcher windows the user,
         developer or observer asked for are allowed.</p>

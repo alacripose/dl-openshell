@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Impeccable — CUA Driver</title>
+<link rel="stylesheet" href="/cua/styles.css">
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5h16v11H9.5L5 20v-3.5H4z"/></symbol>
+  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M4 7h9M4 12h9M4 17h9"/><path d="M17 6.5l1.4 1.4L21 5.4M17 11.5l1.4 1.4L21 10.4M17 16.5l1.4 1.4L21 15.4"/></symbol>
+  <symbol id="i-status" viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.2 5.2L4 17v3h3l5.3-5.3a4 4 0 0 0 5.2-5.2l-2.5 2.5-2.8-2.8z"/></symbol>
+  <symbol id="i-agents" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15.5c2.8 0 5.5 1.6 5.5 4.5"/></symbol>
+  <symbol id="i-journal" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-skills" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+  <symbol id="i-attach" viewBox="0 0 24 24"><path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 6"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.2 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></symbol>
+</svg>
+<div class="host-frame">
+  <div class="cua-window" id="window" aria-label="Impeccable CUA driver window">
+    <header class="brand-row">
+      <span class="mark" aria-hidden="true"><i></i></span>
+      <div class="brand-text">
+        <strong>Impeccable</strong>
+        <span>CUA Driver</span>
+      </div>
+      <span class="adapter-badge" id="adapter-badge" title="configured adapter">axis</span>
+      <span class="connection" id="connection" data-state="waiting"><i></i><span>connecting</span></span>
+      <button class="ghost theme-toggle" id="theme-toggle" type="button" aria-label="Switch colour theme">Light mode</button>
+    </header>
+
+    <div class="body">
+      <nav class="rail" id="rail" aria-label="Sections">
+        <button type="button" class="rail-row active" data-panel="chat" aria-current="page" aria-label="Chat" title="Chat"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg><span class="label">Chat</span></button>
+        <button type="button" class="rail-row" data-panel="tasks" aria-label="Tasks" title="Tasks"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-tasks"></use></svg><span class="label">Tasks</span></button>
+        <button type="button" class="rail-row" data-panel="status" aria-label="Status" title="Status"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-status"></use></svg><span class="label">Status</span></button>
+        <button type="button" class="rail-row" data-panel="tools" aria-label="Tools" title="Tools"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-tools"></use></svg><span class="label">Tools</span></button>
+        <button type="button" class="rail-row" data-panel="agents" aria-label="Agents" title="Agents"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-agents"></use></svg><span class="label">Agents</span></button>
+        <button type="button" class="rail-row" data-panel="journal" aria-label="Journal" title="Journal"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-journal"></use></svg><span class="label">Journal</span></button>
+        <button type="button" class="rail-row" data-panel="skills" aria-label="Skills" title="Skills"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-skills"></use></svg><span class="label">Skills</span></button>
+        <button type="button" class="rail-row" data-panel="settings" aria-label="Settings" title="Settings"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-settings"></use></svg><span class="label">Settings</span></button>
+        <button type="button" class="rail-row rail-app" id="apps" aria-label="Apps" title="Apps" aria-expanded="false" aria-controls="apps-launcher"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-apps"></use></svg><span class="label">Apps</span></button>
+      </nav>
+
+      <aside class="fleet-pane" aria-label="Systems">
+        <div class="pane-head">
+          <h2>Systems</h2>
+          <span class="count" id="system-count">0</span>
+        </div>
+        <div class="systems" id="systems">
+          <p class="empty">reading the axis…</p>
+        </div>
+        <button class="add-cua" id="add-cua" type="button"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add CUA</button>
+
+        <section class="system-card" id="system-card" aria-label="Selected system">
+          <div class="card-head">
+            <span class="card-kicker" id="card-kicker">System 1</span>
+            <span class="state-word" id="card-state">unknown</span>
+          </div>
+          <h3 id="card-name">no CUA selected</h3>
+          <dl class="facts">
+            <div><dt>Uptime</dt><dd id="fact-uptime">unknown</dd></div>
+            <div><dt>Last action</dt><dd id="fact-action">none</dd></div>
+            <div><dt>Journal</dt><dd id="fact-journal">0 rows</dd></div>
+          </dl>
+        </section>
+      </aside>
+
+      <main class="chat-pane">
+        <div class="chat-head">
+          <div>
+            <span class="chat-kicker">Delegation</span>
+            <h1 id="chat-title">System 1 CUA</h1>
+          </div>
+          <span class="chat-target" id="chat-target">environment_driver</span>
+        </div>
+
+        <div class="transcript" id="transcript" role="log" aria-live="polite" aria-label="Conversation"></div>
+
+        <section class="activity" aria-label="Recent activity">
+          <div class="activity-head">
+            <h2>Recent Activity</h2>
+            <span id="activity-state">live</span>
+          </div>
+          <ul class="activity-list" id="activity-list"><li class="empty">no live activity yet</li></ul>
+        </section>
+
+        <form class="composer" id="composer" autocomplete="off">
+          <div class="composer-tools">
+            <button type="button" id="attach" title="Attach a file" aria-label="Attach a file"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-attach"></use></svg></button>
+            <button type="button" id="book" title="Open skills" aria-label="Open skills"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg></button>
+            <button type="button" id="file" title="Open tools" aria-label="Open tools"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file"></use></svg></button>
+            <button type="button" id="mic" title="Dictate" aria-label="Dictate"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-mic"></use></svg></button>
+            <span class="upload-state" id="upload-state"></span>
+          </div>
+          <label class="sr-only" for="message">Message the selected CUA</label>
+          <textarea id="message" rows="2" placeholder="Delegate a task to the selected CUA…"></textarea>
+          <div class="composer-send">
+            <span class="hint" id="composer-hint">axis ticket → driver task</span>
+            <button class="send" id="send" type="submit">Send</button>
+          </div>
+          <input type="file" id="upload-input" hidden>
+        </form>
+      </main>
+    </div>
+
+    <footer class="status-row">
+      <span class="version" id="version">version unknown</span>
+      <span class="foot-sep" aria-hidden="true">·</span>
+      <span class="stars" id="stars" aria-label="axis ladders"></span>
+      <span class="shield" id="shield" title="axis civilians score"><svg class="icon shield-glyph" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg><span id="shield-score">civilians unknown</span></span>
+      <span class="foot-mode" id="foot-mode">mode unknown</span>
+    </footer>
+
+    <div class="apps-launcher" id="apps-launcher" hidden>
+      <div class="launcher-head">
+        <h2>Apps</h2>
+        <span id="launcher-state">axis</span>
+      </div>
+      <div class="apps-grid" id="apps-grid"></div>
+      <p class="launcher-note">Axis surfaces open in a new tab; panels open in this window.</p>
+    </div>
+  </div>
+</div>
+
+<aside class="drawer" id="drawer" hidden aria-label="Panel">
+  <div class="drawer-head">
+    <h2 id="drawer-title">Panel</h2>
+    <button class="ghost" id="drawer-close" type="button" aria-label="Close panel"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<dialog class="register" id="register-dialog" aria-label="Register a CUA">
+  <form id="register-form" method="dialog">
+    <h2>Register CUA</h2>
+    <p class="register-note">This is a wish to the axis: the driver registers, then is attested. No row appears until the axis answers.</p>
+    <label>Driver id <input name="id" required pattern="[a-z0-9][a-z0-9.\-]{0,63}" placeholder="cua-node-4"></label>
+    <label>Revision <input name="revision" required value="1"></label>
+    <label>Capabilities <input name="capabilities" required value="cua_delegate, witness"></label>
+    <label>Verifier <input name="verifier" required value="owner"></label>
+    <label>Attestation minutes <input name="minutes" type="number" min="1" max="1440" value="60"></label>
+    <p class="register-refusal" id="register-refusal" hidden></p>
+    <div class="register-actions">
+      <button class="ghost" type="button" id="register-cancel">Cancel</button>
+      <button class="send" type="submit">Register</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/cua/app.js" defer></script>
+</body>
+</html>

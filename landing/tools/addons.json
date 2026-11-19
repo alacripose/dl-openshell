@@ -4,19 +4,21 @@
       "name": "Alpha Shell",
       "version": "v1-alpha",
       "author": "alacripose",
-      "format": "shploingus.recipe/3",
+      "format": "shploingus.recipe/30444cad3419800564faba6d4e252431",
       "target": "game 6821",
       "builtIn": true,
-      "note": "The built-in shell package: every window, lane and title-bar control is declared in the package, and every generated style comes from it. Use it as the reference for an addon that ships its own XML.",
+      "facts": ["30 windows", "5 tool layers"],
+      "note": "The built-in shell package: 30 windows, their lanes, title-bar controls and theme roles are declared here. Use it as the reference for an addon that ships its own XML; the palette comes from the scheme, not the package.",
       "source": "https://github.com/alacripose/dl-openshell/tree/main/shell/alpha-shell"
     },
     {
       "name": "Server MOTD",
       "version": "1.0.0",
       "author": "alacripose",
-      "format": "SHPKG003 · VPK",
+      "format": "secure-shell.package/<32 hex> · .pkg",
       "target": "game 6821",
-      "note": "A copyable demo addon: one shploingus package carrying its compiled XML layout, opened as a Server MOTD window with Pin, Minimize, Maximize and Close.",
+      "facts": ["1 window", "pin + 3 title-bar controls"],
+      "note": "A copyable demo addon: one canonical package carrying a secure-shell.surface/<32 hex> declaration, opened as a Server MOTD window with Pin, Minimize, Maximize and Close.",
       "source": "https://github.com/alacripose/dl-openshell/tree/main/examples/motd-addon"
     }
   ]

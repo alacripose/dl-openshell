@@ -17,8 +17,8 @@ namespace Openlock.Shell;
 /// </summary>
 public sealed class LayoutProfiles
 {
-    public const string ProfileFormat = "openlock.layout/1";
-    public const string PayloadFormat = "openlock.layouts/1";
+    public static readonly string ProfileFormat = FormatFamilies.Layout.Current;
+    public static readonly string PayloadFormat = FormatFamilies.Layouts.Current;
 
     private const int MaxWindows = 400;
     private const int MaxProfileBytes = 256 * 1024;
@@ -47,6 +47,21 @@ public sealed class LayoutProfiles
         "^[A-Za-z0-9_.:-]{1,192}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    // One Popit cell style, encoded by openlock_popit.js as indexes into its own tables:
+    // material m0..6, player colour c0..6, decoration d0..4, radius -1/0/6/12/18, border
+    // -1/0/1/2/3 and opacity -1/75/90/100. It is a fixed alphabet, not free-form CSS, so a
+    // profile can never write an arbitrary style into the game.
+    private static readonly Regex PopitStylePattern = new(
+        "^m[0-6]c[0-6]d[0-4]r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    // The chosen Popit colour pair. It is a lowercase slug from the shell's generated pair
+    // table; the host does not own the colours, only the save format, so an unknown-but-well-
+    // formed id is the client's problem, not a profile corruption.
+    private static readonly Regex PopitPairPattern = new(
+        "^[a-z0-9][a-z0-9-]{0,47}$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -67,6 +82,12 @@ public sealed class LayoutProfiles
         public int Y { get; set; }
         public int W { get; set; }
         public int H { get; set; }
+
+        /// <summary>
+        /// The cell's Popit edit, or null when the game's own rendering is wanted. The style
+        /// travels with the rectangle because it belongs to that cell, not to a global palette.
+        /// </summary>
+        public string? Popit { get; set; }
     }
 
     /// <summary>
@@ -82,6 +103,9 @@ public sealed class LayoutProfiles
         public string Frame { get; set; } = "lbp3";
         public string Mode { get; set; } = "create";
         public List<string> Order { get; set; } = [];
+        // The bible asks for a persisted palette choice: the pair travels in the same `popit=`
+        // row as the surface arrangement, so a saved desktop returns with its colours.
+        public string Pair { get; set; } = "";
     }
 
     public sealed class LayoutState
@@ -260,9 +284,9 @@ public sealed class LayoutProfiles
             }
 
             var fields = row.Split(',');
-            if (fields.Length != 5)
+            if (fields.Length != 5 && fields.Length != 6)
             {
-                why = $"layout row '{row}' is not id,x,y,w,h";
+                why = $"layout row '{row}' is not id,x,y,w,h[,popit]";
                 return false;
             }
 
@@ -286,7 +310,14 @@ public sealed class LayoutProfiles
                 return false;
             }
 
-            windows[id] = new Rect { X = x, Y = y, W = w, H = h };
+            var style = fields.Length == 6 ? fields[5].Trim() : "";
+            if (style.Length > 0 && !PopitStylePattern.IsMatch(style))
+            {
+                why = $"layout popit style '{style}' for '{id}' is not a known cell edit";
+                return false;
+            }
+
+            windows[id] = new Rect { X = x, Y = y, W = w, H = h, Popit = style.Length > 0 ? style : null };
         }
 
         return windows.Count > 0;
@@ -369,6 +400,16 @@ public sealed class LayoutProfiles
                     popit.Mode = mode;
                     break;
 
+                case "pair":
+                    if (field.Length > 0 && !PopitPairPattern.IsMatch(field))
+                    {
+                        why = $"popit pair '{field}' is not a colour-pair id";
+                        return false;
+                    }
+
+                    popit.Pair = field;
+                    break;
+
                 case "order":
                     if (field.Length == 0)
                         break;
@@ -394,7 +435,7 @@ public sealed class LayoutProfiles
                     break;
 
                 default:
-                    why = $"popit field '{key}' is not one of columns, width, frame, mode, order";
+                    why = $"popit field '{key}' is not one of columns, width, frame, mode, order, pair";
                     return false;
             }
         }
@@ -442,6 +483,12 @@ public sealed class LayoutProfiles
             return false;
         }
 
+        if (!string.IsNullOrEmpty(popit.Pair) && !PopitPairPattern.IsMatch(popit.Pair))
+        {
+            why = $"popit pair '{popit.Pair}' is not a colour-pair id";
+            return false;
+        }
+
         return true;
     }
 
@@ -475,6 +522,12 @@ public sealed class LayoutProfiles
                     pair.Key, pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
             {
                 why = $"window '{pair.Key}' has invalid geometry";
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(pair.Value.Popit) && !PopitStylePattern.IsMatch(pair.Value.Popit))
+            {
+                why = $"window '{pair.Key}' has an unknown Popit style";
                 return false;
             }
         }
@@ -520,6 +573,7 @@ public sealed class LayoutProfiles
                     Y = pair.Value.Y,
                     W = pair.Value.W,
                     H = pair.Value.H,
+                    Popit = pair.Value.Popit,
                 }),
             };
 
@@ -740,11 +794,12 @@ public sealed class LayoutProfiles
                 return null;
             }
 
-            if (!string.Equals(profile.Format, ProfileFormat, StringComparison.Ordinal))
+            if (!FormatFamilies.Layout.TryUpgrade(profile.Format, out var upgradedFormat, out var formatRefusal))
             {
-                why = $"unknown profile format '{profile.Format}'";
+                why = $"unknown profile format '{profile.Format}' ({formatRefusal})";
                 return null;
             }
+            profile.Format = upgradedFormat;
 
             if (!string.Equals(profile.Scheme, scheme, StringComparison.OrdinalIgnoreCase))
             {
@@ -781,6 +836,12 @@ public sealed class LayoutProfiles
                         pair.Key, pair.Value.X, pair.Value.Y, pair.Value.W, pair.Value.H))
                 {
                     why = $"window '{pair.Key}' has invalid geometry";
+                    return null;
+                }
+
+                if (!string.IsNullOrEmpty(pair.Value.Popit) && !PopitStylePattern.IsMatch(pair.Value.Popit))
+                {
+                    why = $"window '{pair.Key}' has an unknown Popit style";
                     return null;
                 }
             }

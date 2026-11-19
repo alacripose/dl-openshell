@@ -32,7 +32,7 @@ package this machine cannot key refuses it as ``untrusted-key`` rather than inve
 
 Envelope record, written directly after the file's first line::
 
-    envelope	openlock.envelope/1
+    envelope	openlock.envelope/d593054cb466a871f47d4804b3e2f333
     	digest	sha256:<64 lowercase hex of the body>
     	authority	openlock.dev
     	work	16
@@ -59,12 +59,14 @@ import argparse
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FORMAT = "openlock.envelope/1"
+FORMAT = "openlock.envelope/d593054cb466a871f47d4804b3e2f333"
+LEGACY_FORMAT = re.compile(r"^openlock\.envelope/[0-9]+$")
 RECORD_ID = "openlock-envelope"
 ALGORITHM = 1
 MIN_WORK = 12
@@ -234,11 +236,11 @@ def verify_text(text: str, key: bytes | None = None) -> dict:
             line,
         )
     declared_format = lines[start].split("\t")
-    if len(declared_format) < 2 or declared_format[1] != FORMAT:
+    declared = declared_format[1] if len(declared_format) > 1 else ""
+    if declared != FORMAT and not LEGACY_FORMAT.match(declared):
         return refuse(
             "unreadable-envelope",
-            f"the envelope names format '{declared_format[1] if len(declared_format) > 1 else ''}' "
-            f"and this build reads {FORMAT}",
+            f"the envelope names a foreign format '{declared}' and this build reads {FORMAT}",
             line,
         )
 

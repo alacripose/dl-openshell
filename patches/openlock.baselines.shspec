@@ -1,4 +1,4 @@
-shploingus.recipe/3
+shploingus.recipe/30444cad3419800564faba6d4e252431
 package	openlock	v0.4.0
 # Openlock's declared baselines, in the shploingus-clean record format:
 # one `kind<TAB>name` line per record, its fields tab-indented, `record-id` last.

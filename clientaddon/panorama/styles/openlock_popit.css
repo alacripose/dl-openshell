@@ -1,7 +1,12 @@
-/* Popit surface: placement, flow and typography only.
-   The silhouette (frame width, padding, radii, tail, hex edges, tile footprint) lives in
-   shell/alpha-shell/forms/popit.form. Colour lives in the active .theme palette, emitted as
-   .Scheme<Id> rules by tools/gen_shell_theme.py. No colour or shape is declared here. */
+/* Popit: placement, flow and layering only.
+   The silhouette, root/child geometry, item footprints and padding live in
+   shell/alpha-shell/forms/popit.form. Colour comes from the active .theme palette, emitted as
+   .Scheme<Id> rules by tools/gen_shell_theme.py, and from the chosen colour pair, emitted as
+   .Pair<Id> rules by tools/gen_popit_pairs.py. No colour, radius or border is declared here.
+
+   Structure follows the design bible's P0: the root stays mounted and a contextual child pane
+   reveals beside it. Section selection moves the root and fills the child; it never swaps the
+   root out for a new page. */
 
 .PopitDismiss {
     ignore-parent-flow: true;
@@ -9,128 +14,422 @@
     vertical-align: top;
     width: 100%;
     height: 100%;
-    z-index: 640;
-    opacity: 0.28;
+    z-index: 4600;
 }
 
 .PopitSurface {
-    z-index: 641;
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    z-index: 4602;
+    flow-children: right;
+    font-family: "Radiance", sans-serif;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+
+.PopitCursorHalo {
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    z-index: 4601;
+    border-width: 2px;
+    border-style: solid;
+}
+
+/* The root: one persistent instrument. */
+.PopitRoot {
+    width: 300px;
+    min-height: 230px;
     flow-children: down;
+    padding: 10px;
+    border-width: 2px;
+    transition: transform 220ms cubic-bezier(0.22, 0.68, 0.28, 1);
 }
 
-.PopitTail {
-    z-index: 0;
-}
-
-.PopitFrame {
-    flow-children: down;
-    horizontal-align: center;
-}
-
-.PopitPlate {
-    z-index: 0;
-}
-
-.PopitHex {
-    z-index: 1;
-}
-
-.PopitHexEdge {
-    z-index: 2;
-}
-
-.PopitBeam {
-    z-index: 0;
-}
-
-.PopitBody {
+.PopitRootBody {
     width: 100%;
     flow-children: down;
-    z-index: 3;
+    margin-top: 2px;
+}
+
+.PopitRootRow {
+    width: 100%;
+    height: 40px;
+    margin-bottom: 4px;
+    padding: 5px 8px;
+    border-width: 2px;
+    flow-children: right;
+    vertical-align: center;
+}
+
+.PopitRootCode {
+    width: 30px;
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    vertical-align: center;
+}
+
+.PopitRootName {
+    flex-grow: 1;
+    font-weight: bold;
+    font-size: 12px;
+    vertical-align: center;
+}
+
+.PopitRootHint {
+    width: 96px;
+    text-align: right;
+    font-size: 9px;
+    vertical-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.PopitRootRow.Active {
+    border-width: 2px;
 }
 
 .PopitHeader {
     width: 100%;
-    flow-children: right;
+    flow-children: down;
+    margin-bottom: 7px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-bottom-style: dashed;
 }
 
-.PopitHeaderTitle {
+.PopitHeaderRow {
+    width: 100%;
+    height: 26px;
+    flow-children: right;
     vertical-align: center;
-    font-weight: bold;
-    letter-spacing: 1px;
 }
 
 .PopitHeaderSpacer {
-    width: fill-parent-flow(1);
-    height: 1px;
+    flex-grow: 1;
 }
 
-.PopitFrameBadge {
+.PopitWordmark {
+    font-weight: bold;
+    font-size: 15px;
+    letter-spacing: 2.4px;
     vertical-align: center;
+}
+
+.PopitPairChip {
+    height: 22px;
+    margin-right: 5px;
+    padding: 0px 8px;
+    border-width: 1px;
+    border-radius: 11px;
     flow-children: right;
-    border: 1px solid transparent;
+    vertical-align: center;
+    horizontal-align: right;
 }
 
-.PopitFrameBadge Label {
-    width: 100%;
-    horizontal-align: center;
+.PopitPairDot {
+    width: 8px;
+    height: 8px;
+    margin-right: 5px;
+    margin-top: 6px;
+    border-radius: 4px;
+    border-width: 1px;
     vertical-align: center;
+}
+
+.PopitPairChipLabel {
+    vertical-align: center;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+}
+
+.PopitClassicChip {
+    height: 22px;
+    padding: 0px 8px;
+    border-width: 1px;
+    border-radius: 11px;
+    vertical-align: center;
+}
+
+.PopitClassicChipLabel {
+    width: 100%;
     text-align: center;
-}
-
-.PopitModeRow {
-    width: 100%;
-    flow-children: right;
-}
-
-.PopitModePill {
-    flow-children: right;
-    border: 1px solid transparent;
-}
-
-.PopitMode {
-    flow-children: right;
-}
-
-.PopitMode Label {
-    horizontal-align: center;
     vertical-align: center;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+}
+
+.PopitHeaderTitle {
+    width: 100%;
+    margin-top: 5px;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+}
+
+.PopitTargetLabel {
+    width: 100%;
+    white-space: normal;
+}
+
+.PopitPageDots {
+    width: 100%;
+    margin-top: 4px;
+    padding: 4px 2px 0px;
+    flow-children: right-wrap;
+    horizontal-align: center;
+}
+
+.PopitPageDot {
+    width: 7px;
+    height: 7px;
+    margin: 3px;
+    border-radius: 4px;
+    border-width: 1px;
+}
+
+/* The child: one contextual pane that reveals beside the root and closes on Back. */
+.PopitChild {
+    width: 340px;
+    min-height: 230px;
+    margin-left: 8px;
+    flow-children: down;
+    padding: 10px;
+    border-width: 2px;
+    opacity: 0;
+    transform: translate3d(-12px, 0px, 0px);
+    transition: opacity 220ms cubic-bezier(0.22, 0.68, 0.28, 1),
+        transform 280ms cubic-bezier(0.22, 0.68, 0.28, 1);
+}
+
+.PopitSurface.ChildOpen .PopitChild {
+    opacity: 1;
+    transform: translate3d(0px, 0px, 0px);
+}
+
+.PopitSurface.ChildOpen .PopitRoot {
+    transform: translate3d(-4px, 0px, 0px);
+}
+
+.PopitChildHead {
+    width: 100%;
+    height: 26px;
+    margin-bottom: 7px;
+    padding-bottom: 5px;
+    flow-children: right;
+    vertical-align: center;
+    border-bottom-width: 1px;
+    border-bottom-style: dashed;
+}
+
+.PopitBack {
+    height: 20px;
+    margin-right: 7px;
+    padding: 0px 8px;
+    border-width: 1px;
+    border-radius: 10px;
+    vertical-align: center;
+}
+
+.PopitBackLabel {
+    width: 100%;
+    text-align: center;
+    vertical-align: center;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+}
+
+.PopitChildTitle {
+    flex-grow: 1;
+    text-align: right;
+    font-weight: bold;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    vertical-align: center;
+}
+
+.PopitPage {
+    width: 100%;
+    min-height: 160px;
+    flow-children: down;
+    margin-top: 2px;
+}
+
+/* The labeller. One uppercase label, one dashed rule, the same in every group. */
+.PopitSection {
+    width: 100%;
+    margin-bottom: 8px;
+    flow-children: down;
+}
+
+.PopitSectionHead {
+    width: 100%;
+    height: 16px;
+    margin-bottom: 5px;
+    flow-children: right;
+    vertical-align: center;
+}
+
+.PopitSectionLabel {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1.4px;
+    vertical-align: center;
+}
+
+.PopitSectionRule {
+    flex-grow: 1;
+    height: 1px;
+    margin-left: 7px;
+    margin-top: 7px;
+    border-bottom-width: 1px;
+    border-bottom-style: dashed;
 }
 
 .PopitGrid {
     width: 100%;
+    flow-children: right-wrap;
+    horizontal-align: left;
+}
+
+.PopitItem {
+    width: 88px;
+    height: 68px;
+    margin: 3px;
+    padding: 5px;
+    border-width: 2px;
     flow-children: down;
 }
 
-.PopitRow {
+.PopitSwatch {
+    width: 36px;
+    height: 30px;
+    horizontal-align: center;
+    border-width: 2px;
+    border-style: solid;
+}
+
+.PopitItemLabel {
+    width: 100%;
+    text-align: center;
+    horizontal-align: center;
+    margin-top: 3px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* A pair tile carries the three shipped colours as one band, the way the bible's chip does. */
+.PopitItemPair {
+    width: 96px;
+    height: 76px;
+}
+
+.PopitPairGrid {
+    width: 100%;
+}
+
+.PopitPairSwatch {
+    width: 62px;
+    height: 20px;
+    horizontal-align: center;
+    flow-children: right;
+    border-width: 1px;
+}
+
+.PopitPairBand {
+    flex-grow: 1;
+    height: 100%;
+}
+
+.PopitPairGame {
+    width: 100%;
+    text-align: center;
+    horizontal-align: center;
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.PopitPairNote {
+    width: 100%;
+    white-space: normal;
+}
+
+.PopitTargetList {
+    width: 100%;
+    flow-children: down;
+}
+
+.PopitTarget {
+    width: 100%;
+    padding: 5px 7px;
+    margin-bottom: 4px;
+    border-width: 2px;
+    flow-children: down;
+}
+
+.PopitTargetName {
+    width: 100%;
+    font-weight: bold;
+}
+
+.PopitTargetKind {
+    width: 100%;
+}
+
+.PopitOptionRow {
     width: 100%;
     flow-children: right;
-    horizontal-align: center;
 }
 
-.PopitTile {
-    flow-children: down;
+.PopitOption {
+    flex-grow: 1;
+    height: 26px;
+    margin-right: 4px;
+    border-width: 2px;
     horizontal-align: center;
-    border: 1px solid transparent;
+    vertical-align: center;
 }
 
-.PopitTileIcon {
-    horizontal-align: center;
-}
-
-.PopitTileLabel {
+.PopitOptionLabel {
     width: 100%;
-    horizontal-align: center;
     text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.PopitReset {
+    width: 100%;
+    height: 30px;
+    border-width: 2px;
+    horizontal-align: center;
+    vertical-align: center;
+}
+
+.PopitResetLabel {
+    width: 100%;
+    text-align: center;
+    horizontal-align: center;
+    vertical-align: center;
+    font-weight: bold;
+}
+
+.PopitEmpty {
+    width: 100%;
+    white-space: normal;
+    margin-top: 8px;
 }
 
 .PopitDetail {
     width: 100%;
+    margin-top: 7px;
+    white-space: normal;
 }
 
-.PopitHint {
-    width: 100%;
-    white-space: normal;
+/* A real suppression path, not a decorative switch: the host can set it and every Popit
+   transition stops while the same state and order are preserved. */
+.PopitSurface.ReducedMotion,
+.PopitSurface.ReducedMotion .PopitRoot,
+.PopitSurface.ReducedMotion .PopitChild {
+    transition: none;
 }

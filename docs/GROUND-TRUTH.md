@@ -11,7 +11,7 @@ versioned and loaded**, not for their domain.
 
 | Convention | Where it comes from | What dl-openshell took |
 |---|---|---|
-| A package is a declared document with an explicit identity and version | `ala_package_designer/packages/designer-shell.shspec` header `shploingus.recipe/4` + `package designer-shell v1` | `openlock.manifest.json` with `id`, `version`, `target` |
+| A package is a declared document with an explicit identity and version | `ala_package_designer/packages/designer-shell.shspec` header legacy `shploingus.recipe/4` + `package designer-shell v1` (current ids are hash-pinned) | `openlock.manifest.json` with `id`, `version`, `target` |
 | Packages are named for the row they implement, not for a file | `.shspec`: `row DSGN-0001 the designer's own shell…` | The plugin is named for its mode (`dl-openshell`), and every tunable is declared, not implied |
 | Content-addressed build identity | `shploingus-clean/packages/BLD-0056-a99c4703…f049.shpkg` (`BLD-<sequence>-<sha256>`) | `deploy.ps1` prints the DLL's SHA-256 and refuses when the manifest version and assembly version disagree |
 | "Refuse, never default" | `shploingus-clean/README.md`, rule 1 | An unmapped spirit item is named on the console and left alone, never replaced by a guess |

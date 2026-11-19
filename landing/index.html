@@ -3,239 +3,1059 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>dl-openshell — a window manager for Deadlock</title>
-  <meta name="description" content="dl-openshell is a Panorama UI shell for Deadlock: windows, a taskbar, live game panels and Deadworks addon packages.">
+  <title>dl-openshell: a window manager for Deadlock</title>
+  <meta name="description" content="dl-openshell is a Panorama UI shell for Deadlock: windows, a taskbar, live game panels, saved layouts and verified Deadworks addon packages.">
+  <meta name="theme-color" content="#0c0e11">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%230c0e11'/%3E%3Crect x='6' y='6' width='20' height='20' rx='2' fill='none' stroke='%23f0c454' stroke-width='1.5'/%3E%3Crect x='12' y='12' width='8' height='8' rx='2' fill='%23f0c454'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink: #e8ebee;
-      --muted: #9aa3ae;
-      --dim: #606a76;
-      --bg: #101216;
-      --panel: #171a20;
-      --line: #2a2f38;
-      --gold: #f0c454;
-      --rose: #e46c64;
-      --green: #84d68a;
+      /* The family register's web-dark roles. Values live here once; every rule below names a
+         role, never a raw hex. The light set is declared in the register but not adopted: openlock
+         has no witnessed light surface yet. */
+      --ground: #0c0e11;
+      --surface: #12151a;
+      --raised: #171b21;
+      --line: #262c34;
+      --line-strong: #363e49;
+      --ink: #eceff2;
+      --muted: #aab3bd;
+      --dim: #8a94a0;
+      --faint: #7c8692;
+      --attention: #f0c454;
+      --attention-soft: color-mix(in srgb, var(--attention) 9%, transparent);
+      --interaction: #7c3aed;
+      --interaction-text: #b9a4ff;
+      --verified: #8bd694;
+      --refused: #e4786f;
+      --telemetry: #14b3b3;
+      --max: 1144px;
+      --keyline: clamp(16px, 4vw, 32px);
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --sans: "Archivo", system-ui, sans-serif;
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
       color: var(--ink);
-      background:
-        radial-gradient(1100px 600px at 80% -10%, rgba(240, 196, 84, .09), transparent 60%),
-        radial-gradient(800px 500px at -10% 30%, rgba(228, 108, 100, .06), transparent 60%),
-        var(--bg);
-      font: 16px/1.65 "Space Grotesk", system-ui, sans-serif;
+      background-color: var(--ground);
+      background-image:
+        radial-gradient(1000px 620px at 82% -12%, color-mix(in srgb, var(--attention) 7.5%, transparent), transparent 62%),
+        radial-gradient(760px 520px at -8% 34%, color-mix(in srgb, var(--refused) 4.5%, transparent), transparent 64%);
+      font: 14px/1.5 var(--sans);
     }
-    a { color: var(--gold); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .wrap { width: min(1080px, calc(100% - 48px)); margin: 0 auto; }
-    header { padding: 28px 0 0; }
-    nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: .02em; }
-    .brand-name { display: inline-block; color: var(--ink); transition: color .18s ease; }
-    .brand-name.cycling { color: var(--gold); }
+    ::selection { background: var(--attention); color: var(--ground); }
+    body::-webkit-scrollbar { width: 12px; }
+    body::-webkit-scrollbar-track { background: var(--ground); }
+    body::-webkit-scrollbar-thumb { background: var(--line-strong); border: 2px solid var(--ground); }
+    body::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+    .terminal pre::-webkit-scrollbar, .table-scroll::-webkit-scrollbar { height: 10px; }
+    .terminal pre::-webkit-scrollbar-track, .table-scroll::-webkit-scrollbar-track { background: var(--ground); }
+    .terminal pre::-webkit-scrollbar-thumb, .table-scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border: 2px solid var(--ground); }
+    .terminal pre::-webkit-scrollbar-thumb:hover, .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+    a { color: var(--attention); text-decoration: none; text-underline-offset: 3px; }
+    a:hover { text-decoration: underline; text-decoration-thickness: 1px; }
+    :focus-visible { outline: 2px solid var(--attention); outline-offset: 3px; }
+    .wrap { width: min(var(--max), calc(100% - (var(--keyline) * 2))); margin: 0 auto; }
+    .mono { font-family: var(--mono); }
+    .skip {
+      position: absolute; left: -999px; top: 0; z-index: 100;
+      background: var(--attention); color: var(--ground); padding: 8px 16px; font-weight: 700;
+    }
+    .skip:focus { left: 8px; top: 8px; }
+
+    header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--ground) 96%, transparent); border-bottom: 1px solid var(--line); box-shadow: 0 2px 8px rgb(0 0 0 / .28); }
+    nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 64px; }
+    .brand { display: flex; align-items: center; gap: 8px; font: 600 14px/1 var(--mono); letter-spacing: 0; }
+    .brand-name { display: inline-block; color: var(--ink); transition: color 160ms cubic-bezier(.4, 0, .2, 1); }
+    .brand-name.cycling { color: var(--attention); }
+    /* One geometry: the 20 x 20 square-in-square, 1.5 px outer stroke, 8 x 8 filled centre,
+       2 px radii. SVG carries the fractional stroke exactly; no bevel, no second glyph, no
+       letter inside. */
     .mark {
-      width: 28px; height: 28px; border-radius: 7px;
-      border: 1px solid var(--gold); position: relative;
-      box-shadow: inset 0 0 0 3px var(--bg), 0 0 18px rgba(240,196,84,.18);
+      flex: 0 0 auto; display: block; width: 20px; height: 20px;
+      color: var(--attention); overflow: visible;
     }
-    .mark::after {
-      content: ""; position: absolute; inset: 8px 7px 7px 8px;
-      border: 1px solid var(--gold); border-radius: 2px;
-    }
-    nav .links { display: flex; gap: 22px; color: var(--muted); font-size: 14px; }
-    nav .links a { color: var(--muted); }
-    nav .links a:hover { color: var(--ink); }
-    .hero { padding: 104px 0 72px; display: grid; grid-template-columns: 1.25fr .75fr; gap: 64px; align-items: end; }
-    .kicker { font: 600 12px/1.4 "IBM Plex Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
-    h1 { margin: 18px 0 22px; font-size: clamp(44px, 7vw, 82px); line-height: .98; letter-spacing: -.045em; font-weight: 700; }
-    h1 span { color: var(--dim); }
-    .lede { max-width: 620px; color: var(--muted); font-size: 18px; }
-    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    nav .links { display: flex; gap: 24px; font: 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    nav .links a { color: var(--dim); }
+    nav .links a:hover { color: var(--ink); text-decoration: none; }
+
+    .hero { padding: clamp(64px, 9vw, 96px) 0 clamp(56px, 7vw, 80px); display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(312px, .82fr); gap: clamp(32px, 6vw, 72px); align-items: center; }
+    h1 { margin: 0 0 24px; font-size: clamp(44px, 7vw, 80px); line-height: 1.2; letter-spacing: -.04em; font-weight: 700; text-wrap: balance; }
+    h1 span { color: var(--faint); }
+    .lede { max-width: 62ch; margin: 0; color: var(--muted); font-size: clamp(18px, 1.6vw, 20px); line-height: 1.5; }
+    .cta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
     .button {
-      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      min-height: 48px; padding: 0 20px; border-radius: 8px; border: 1px solid var(--line);
-      font-weight: 600; font-size: 14px; color: var(--ink); background: var(--panel);
+      display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 16px;
+      border: 1px solid var(--line-strong); border-radius: 3px; color: var(--ink); background: var(--surface);
+      font: 600 14px var(--mono); letter-spacing: .08em; text-transform: uppercase;
     }
     .button:hover { border-color: var(--dim); text-decoration: none; }
-    .button.primary { background: var(--gold); border-color: var(--gold); color: #15140f; }
-    .button.primary:hover { background: #ffd66e; }
-    .version { margin-top: 18px; color: var(--dim); font: 12px "IBM Plex Mono", monospace; }
-    .terminal {
-      background: #0b0d10; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
-      box-shadow: 0 30px 80px rgba(0,0,0,.32);
-    }
-    .terminal .bar { display: flex; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-    .terminal .bar i { width: 8px; height: 8px; border-radius: 50%; background: #343a44; }
-    .terminal .bar i:first-child { background: var(--rose); }
-    .terminal .bar i:nth-child(2) { background: var(--gold); }
-    .terminal .bar i:nth-child(3) { background: var(--green); }
-    .terminal pre { margin: 0; padding: 20px; overflow: auto; color: #c7ced8; font: 12px/1.8 "IBM Plex Mono", monospace; }
-    .terminal .gold { color: var(--gold); }
+    .button.primary { background: var(--attention); border-color: var(--attention); color: var(--ground); }
+    .button.primary:hover { background: var(--attention); filter: brightness(1.08); }
+    .version { margin-top: 16px; color: var(--dim); font: 12px/1.5 var(--mono); letter-spacing: .04em; }
+
+    .terminal { background: var(--ground); border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; box-shadow: 0 8px 24px rgb(0 0 0 / .36); }
+    .terminal .bar { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+    .terminal .bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+    .terminal .bar i:first-child { background: var(--refused); }
+    .terminal .bar i:nth-child(2) { background: var(--attention); }
+    .terminal .bar i:nth-child(3) { background: var(--verified); }
+    .terminal .bar span { margin-left: auto; color: var(--faint); font: 12px var(--mono); letter-spacing: .08em; }
+    .terminal pre { margin: 0; padding: 16px; overflow: auto; color: var(--muted); font: 12px/1.75 var(--mono); }
+    .terminal .gold { color: var(--attention); }
+    .terminal .green { color: var(--verified); }
     .terminal .muted { color: var(--dim); }
-    hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
-    section { padding: 76px 0; }
-    .section-head { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; margin-bottom: 34px; }
-    h2 { margin: 0; font-size: clamp(28px, 4vw, 42px); letter-spacing: -.035em; line-height: 1.08; }
-    .section-head p { max-width: 420px; margin: 0; color: var(--muted); font-size: 14px; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .card {
-      padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: rgba(23,26,32,.72);
+
+    .audit-line { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--dim); font: 12px/1.5 var(--mono); letter-spacing: .03em; }
+    .audit-line b { color: var(--verified); font-weight: 500; }
+    .audit-line span::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: 0 8px 4px 0; background: var(--line-strong); }
+    .audit-line span:first-child::before { display: none; }
+
+    section { padding-top: clamp(64px, 8vw, 96px); padding-bottom: clamp(64px, 8vw, 96px); border-top: 1px solid var(--line); scroll-margin-top: 88px; }
+    section:first-of-type { border-top: 0; }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(264px, .65fr); gap: clamp(24px, 5vw, 64px); align-items: end; margin-bottom: clamp(32px, 4vw, 48px); }
+    h2 { margin: 0; max-width: 17ch; font-size: clamp(34px, 4.2vw, 40px); line-height: 1.2; letter-spacing: -.04em; text-wrap: balance; }
+    .section-head p { max-width: 46ch; margin: 0; color: var(--muted); font-size: 14px; }
+    .section-head p code { color: var(--ink); font: 13px var(--mono); }
+
+    /* Module map */
+    .module-group { border-top: 1px solid var(--line-strong); padding-top: 16px; margin-top: 40px; }
+    .module-group:first-child { margin-top: 0; }
+    .module-group-head { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 32px; align-items: baseline; margin-bottom: 8px; }
+    .module-group-head h3 { margin: 0; font-size: 16px; letter-spacing: -.01em; }
+    .module-group-head .group-path { color: var(--attention); font: 12px var(--mono); letter-spacing: .04em; }
+    .module-group-head p { margin: 0; color: var(--dim); font-size: 13px; max-width: 68ch; }
+    .module-row { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 32px; padding: 16px 0; border-top: 1px solid var(--line); }
+    .module-name code { color: var(--ink); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
+    .module-name span { display: block; margin-top: 4px; color: var(--dim); font: 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .module-body p { margin: 0; max-width: 68ch; color: var(--muted); font-size: 14px; }
+    .module-body p + p { margin-top: 8px; }
+    .module-body .refuse { color: var(--dim); font-size: 13px; }
+    .module-body .refuse b { color: var(--refused); font: 500 12px var(--mono); letter-spacing: .09em; text-transform: uppercase; margin-right: 8px; }
+
+    /* Security ledger */
+    .ledger { display: grid; grid-template-columns: 184px minmax(0, 1fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+    .ledger-index { position: sticky; top: 96px; }
+    .ledger-index .index-title { margin: 0 0 16px; color: var(--faint); font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .ledger-index a { display: flex; align-items: baseline; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); color: var(--dim); font: 12px var(--mono); letter-spacing: .04em; }
+    .ledger-index a::before { content: ""; flex: 0 0 auto; width: 8px; height: 8px; border: 1px solid var(--line-strong); transition: background 160ms cubic-bezier(.4, 0, .2, 1), border-color 160ms cubic-bezier(.4, 0, .2, 1); }
+    .ledger-index a:hover { color: var(--ink); text-decoration: none; }
+    .ledger-index a.active { color: var(--attention); }
+    .ledger-index a.active::before { background: var(--attention); border-color: var(--attention); }
+    .ledger-index .rail-note { margin: 24px 0 0; color: var(--dim); font-size: 12px; line-height: 1.6; }
+    .stage { padding: 0 0 40px; margin: 0 0 40px; border-bottom: 1px solid var(--line-strong); }
+    .stage:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+    .stage-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 8px; }
+    .stage-no { color: var(--attention); font: 600 12px var(--mono); letter-spacing: .1em; }
+    .stage h3 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -.03em; }
+    .stage-where { margin-left: auto; color: var(--faint); font: 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; text-align: right; }
+    .stage > p { max-width: 68ch; margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+    .refuse-list { list-style: none; margin: 0; padding: 0; display: grid; }
+    .refuse-list li { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 24px; padding: 16px 0; border-top: 1px solid var(--line); }
+    .refuse-list code { color: var(--refused); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
+    .refuse-list span { color: var(--muted); font-size: 13px; }
+    .refuse-list span b { color: var(--ink); font-weight: 500; }
+    .claim-note { margin-top: 32px; padding: 16px 0 0; border-top: 1px solid var(--line); color: var(--dim); font-size: 13px; max-width: 68ch; }
+    .claim-note b { color: var(--muted); font-weight: 500; }
+
+    /* Comparison table */
+    .table-hint { display: none; }
+    .table-scroll { overflow-x: auto; border-top: 1px solid var(--line-strong); padding-top: 8px; }
+    .table-scroll:focus-visible { outline-offset: -2px; }
+    table.compare { width: 100%; min-width: 848px; border-collapse: collapse; }
+    table.compare th, table.compare td { text-align: left; vertical-align: top; padding: 16px; border-bottom: 1px solid var(--line); }
+    table.compare thead th { color: var(--dim); font: 500 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    table.compare thead th.this { color: var(--ink); background: linear-gradient(180deg, color-mix(in srgb, var(--attention) 10%, transparent), color-mix(in srgb, var(--attention) 2%, transparent)); border-top: 2px solid var(--attention); }
+    table.compare tbody th { width: 152px; color: var(--faint); font: 500 12px/1.5 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    table.compare td { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    table.compare td.this { color: var(--ink); background: color-mix(in srgb, var(--attention) 3.5%, transparent); }
+    table.compare td b { color: var(--ink); font-weight: 500; }
+    table.compare td code { color: var(--ink); font: 12px var(--mono); }
+    .compare-note { margin: 24px 0 0; max-width: 68ch; color: var(--dim); font-size: 13px; }
+    .compare-note b { color: var(--muted); font-weight: 500; }
+
+    /* Family */
+    .family-table { min-width: 860px; }
+    .family-table td:first-child code { color: var(--attention); }
+    .family-subhead { margin: 40px 0 8px; font-size: 20px; letter-spacing: -.01em; }
+    .family-note { margin: 0 0 16px; color: var(--dim); font: 12px var(--mono); letter-spacing: .04em; }
+    .family-lede { max-width: 72ch; margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+    .family-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .family-step { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+    .family-step b { color: var(--attention); font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .family-step span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .family-modern { display: grid; grid-template-columns: 1fr 1fr; margin: 28px 0 0; border-top: 1px solid var(--line); }
+    .family-modern > div { padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .family-modern > div:nth-child(odd) { padding-right: 28px; }
+    .family-modern > div:nth-child(even) { padding-left: 28px; border-left: 1px solid var(--line); }
+    .family-modern dt { color: var(--ink); font: 500 13px var(--mono); }
+    .family-modern dd { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .family-modern dd code { color: var(--ink); }
+    .family-source { margin: 18px 0 0; color: var(--dim); font: 12px var(--mono); line-height: 1.7; }
+    .family-refusals { max-width: 86ch; margin: 20px 0 0; color: var(--dim); font-size: 13px; line-height: 1.7; }
+    .family-refusals code { color: var(--muted); }
+    @media (max-width: 900px) { .family-flow { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 760px) {
+      .family-flow { grid-template-columns: 1fr; }
+      .family-modern { grid-template-columns: 1fr; }
+      .family-modern > div:nth-child(odd), .family-modern > div:nth-child(even) { padding-left: 0; padding-right: 0; border-left: 0; }
     }
-    .card h3 { margin: 0 0 8px; font-size: 17px; }
-    .card p { margin: 0; color: var(--muted); font-size: 14px; }
-    .addon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+    /* Addons */
+    .addon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+    .card { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
     .addon-card { display: flex; flex-direction: column; }
-    .addon-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; font: 11.5px "IBM Plex Mono", monospace; color: var(--dim); }
-    .addon-meta .hi { color: var(--gold); }
+    .addon-card:hover { border-top-color: var(--attention); }
+    .addon-card h3 { margin: 0 0 8px; font-size: 20px; letter-spacing: -.01em; }
+    .addon-meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--dim); font: 12px/1.5 var(--mono); letter-spacing: .04em; }
+    .addon-meta .hi { color: var(--attention); }
+    .addon-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .addon-fact { padding: 4px 8px; border: 1px solid var(--line); color: var(--muted); font: 12px var(--mono); letter-spacing: .04em; }
+    .addon-card p { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
     .addon-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; }
     .addon-link {
       display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px;
-      border: 1px solid var(--line); color: var(--ink); font: 600 11.5px "IBM Plex Mono", monospace;
-      letter-spacing: .06em; text-transform: uppercase;
+      border: 1px solid var(--line-strong); border-radius: 3px; color: var(--ink); font: 500 12px var(--mono);
+      letter-spacing: .07em; text-transform: uppercase;
     }
-    .addon-link:hover { border-color: var(--gold); color: var(--gold); text-decoration: none; }
-    .addon-tag { border: 1px solid var(--line); color: var(--dim); padding: 1px 6px; font-size: 10.5px; }
-    .addon-empty p { margin-top: 6px; }
-    @media (max-width: 820px) { .addon-grid { grid-template-columns: 1fr; } }
-    .grade { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
-    .grade code { font: 600 12px "IBM Plex Mono", monospace; color: var(--gold); }
-    .steps { display: grid; gap: 0; border-top: 1px solid var(--line); }
-    .step { display: grid; grid-template-columns: 64px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--line); }
-    .step b { color: var(--gold); font: 600 12px "IBM Plex Mono", monospace; }
-    .step h3 { margin: 0 0 4px; font-size: 17px; }
-    .step p { margin: 0; color: var(--muted); font-size: 14px; }
-    .note { padding: 18px 20px; border-left: 2px solid var(--gold); background: rgba(240,196,84,.045); color: var(--muted); font-size: 14px; }
-    footer { padding: 38px 0 54px; color: var(--dim); font-size: 13px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); }
-    @media (max-width: 820px) {
-      .hero { grid-template-columns: 1fr; padding-top: 64px; gap: 40px; }
-      .grid { grid-template-columns: 1fr; }
-      .section-head { flex-direction: column; }
+    .addon-link:hover { border-color: var(--attention); color: var(--attention); text-decoration: none; }
+    .addon-tag { border: 1px solid var(--line); color: var(--dim); padding: 4px 8px; font-size: 12px; }
+    .addon-empty p { margin-top: 8px; }
+
+    .contract { display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px; margin-top: 40px; border-top: 1px solid var(--line-strong); padding-top: 24px; }
+    .contract h3 { margin: 0 0 8px; font-size: 16px; }
+    .contract .contract-deck { margin: 0 0 16px; color: var(--dim); font-size: 13px; }
+    .contract-list { list-style: none; margin: 0; padding: 0; }
+    .contract-list li { padding: 8px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .contract-list li:first-child { border-top: 0; }
+    .contract-list code { color: var(--ink); font: 12px var(--mono); }
+    .contract-list b { color: var(--ink); font-weight: 500; }
+    .contract-list .no { color: var(--dim); }
+    .contract-list .no::before { content: "no "; color: var(--refused); font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .catalog-note { margin-top: 24px; color: var(--dim); font-size: 13px; max-width: 68ch; }
+    .catalog-note code { color: var(--muted); font: 12px var(--mono); }
+
+    /* Install */
+    .steps { border-top: 1px solid var(--line-strong); }
+    .step { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .step b { color: var(--attention); font: 500 12px var(--mono); letter-spacing: .08em; }
+    .step h3 { margin: 0 0 4px; font-size: 16px; }
+    .step p { margin: 0; max-width: 68ch; color: var(--muted); font-size: 13px; }
+    .note { margin: 24px 0 0; padding: 16px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line); background: var(--attention-soft); color: var(--muted); font-size: 13px; }
+    .note code { color: var(--ink); font: 12px var(--mono); }
+    p code, li code, .step code { overflow-wrap: anywhere; }
+    .install-foot { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; margin-top: 16px; color: var(--dim); font-size: 13px; }
+
+    /* Grades */
+    .grades { border-top: 1px solid var(--line-strong); }
+    .grade-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 168px; gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+    .grade-row code { color: var(--attention); font: 600 12px var(--mono); letter-spacing: .04em; }
+    .grade-row h3 { margin: 0 0 4px; font-size: 16px; }
+    .grade-row p { margin: 0; color: var(--muted); font-size: 13px; }
+    .grade-row .use { color: var(--dim); font: 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; text-align: right; }
+
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+    .foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; align-items: baseline; }
+    .foot-row .mono { font-size: 12px; letter-spacing: .03em; }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 16px; }
+    .foot-links a { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 40px; }
+      .section-head { grid-template-columns: 1fr; gap: 16px; }
+      h2 { max-width: 20ch; }
+      .module-group-head, .module-row { grid-template-columns: 1fr; gap: 8px; }
+      .module-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+      .module-name span { margin-top: 0; }
+      .ledger { grid-template-columns: 1fr; }
+      .ledger-index { position: static; display: flex; flex-wrap: wrap; gap: 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line-strong); }
+      .ledger-index .index-title, .ledger-index .rail-note { display: none; }
+      .ledger-index a { border-top: 0; padding: 4px 0; }
+      .contract { grid-template-columns: 1fr; gap: 32px; }
+      .grade-row { grid-template-columns: 72px minmax(0, 1fr); }
+      .grade-row .use { grid-column: 2; text-align: left; }
+    }
+    @media (max-width: 760px) {
       nav .links { display: none; }
-      footer { flex-direction: column; }
+      .hero { padding-top: 56px; }
+      .audit-line { gap: 8px 16px; }
+      .stage-where { display: none; }
+      .refuse-list li { grid-template-columns: 1fr; gap: 4px; }
+      .step { grid-template-columns: 56px minmax(0, 1fr); gap: 16px; }
+      .terminal pre { font-size: 12px; }
+      .addon-link { min-height: 48px; padding: 0 16px; }
+      .table-hint { display: block; margin: 0 0 8px; color: var(--dim); font: 12px var(--mono); letter-spacing: .04em; }
+      footer { padding-bottom: 40px; }
+    }
+    /* Popit: the cell editor drawn as the root/child instrument the bibles specify. Web-dark
+       roles only; a pair band is the same three colours the shell carries in its pair row. */
+    .popit-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: clamp(24px, 4vw, 48px); align-items: start; }
+    .popit-stage { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding: 16px; background: var(--ground); border: 1px solid var(--line-strong); border-radius: 4px; }
+    .popit-root { width: min(100%, 272px); padding: 10px; background: var(--raised); border: 2px solid var(--attention); border-radius: 26px 22px 26px 22px; }
+    .popit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); color: var(--attention); font: 600 11px var(--mono); letter-spacing: .18em; }
+    .popit-chip { padding: 3px 8px; border: 1px solid var(--attention); border-radius: 11px; color: var(--ink); font: 500 10px var(--mono); letter-spacing: .04em; }
+    .popit-target { margin: 8px 0; color: var(--dim); font: 11px/1.5 var(--mono); }
+    .popit-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-height: 34px; padding: 4px 8px; margin-bottom: 4px; border: 2px solid var(--line); border-radius: 14px; font: 12px var(--sans); }
+    .popit-row b { color: var(--faint); font: 500 9px var(--mono); letter-spacing: .12em; }
+    .popit-row span { flex: 1; }
+    .popit-row em { color: var(--faint); font: 10px var(--mono); font-style: normal; }
+    .popit-row[aria-current="true"] { border-color: var(--attention); background: color-mix(in srgb, var(--attention) 12%, transparent); }
+    .popit-child { flex: 1 1 240px; min-width: 220px; padding: 10px; background: var(--raised); border: 2px solid var(--attention); border-radius: 26px 22px 26px 22px; }
+    .popit-child-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px dashed var(--line); color: var(--muted); font: 600 10px var(--mono); letter-spacing: .14em; }
+    .popit-back { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink); font: 500 10px var(--mono); }
+    .popit-label { display: flex; align-items: center; gap: 8px; margin: 8px 0 6px; color: var(--muted); font: 600 10px var(--mono); letter-spacing: .14em; }
+    .popit-label::after { content: ""; flex: 1; border-bottom: 1px dashed var(--line); }
+    .popit-pairs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .popit-pair { padding: 5px; border: 1px solid var(--line); border-radius: 6px; }
+    .popit-pair[aria-current="true"] { border-color: var(--attention); }
+    .popit-band { display: grid; grid-template-columns: repeat(3, 1fr); height: 12px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; }
+    .popit-band i { display: block; height: 100%; }
+    .popit-pair span { display: block; margin-top: 4px; color: var(--faint); font: 9px/1.2 var(--mono); }
+    .popit-notes { display: grid; gap: 16px; }
+    .popit-note { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+    .popit-note h3 { margin: 0 0 6px; color: var(--ink); font: 600 13px var(--mono); letter-spacing: .06em; }
+    .popit-note p { margin: 0; color: var(--muted); font-size: 13px; }
+    .popit-planes { width: 100%; margin-top: 8px; border-collapse: collapse; }
+    .popit-planes th, .popit-planes td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); font-size: 12px; }
+    .popit-planes th { color: var(--faint); font: 600 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    .popit-honest { margin-top: 8px; color: var(--dim); font: 12px/1.6 var(--mono); }
+    @media (max-width: 860px) { .popit-grid { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
     }
   </style>
 </head>
 <body>
-  <header class="wrap">
-    <nav>
-      <div class="brand" aria-label="dl-openshell"><span class="mark" aria-hidden="true"></span><span class="brand-name" aria-hidden="true">dl-openshell</span></div>
-      <div class="links">
-        <a href="#install">Install</a>
-        <a href="#addons">Addons</a>
-        <a href="#grades">Grades</a>
-        <a href="https://github.com/alacripose/dl-openshell">Source</a>
-      </div>
-    </nav>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header>
+    <div class="wrap">
+      <nav aria-label="Primary">
+        <div class="brand" aria-label="dl-openshell"><svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><rect x="0.75" y="0.75" width="18.5" height="18.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="6" y="6" width="8" height="8" rx="2" fill="currentColor"/></svg><span class="brand-name" aria-hidden="true">dl-openshell</span></div>
+        <div class="links">
+          <a href="#modules">Modules</a>
+          <a href="#popit">Popit</a>
+          <a href="#security">Security</a>
+          <a href="#family">Family</a>
+          <a href="#compare">Compared</a>
+          <a href="#addons">Addons</a>
+          <a href="#install">Install</a>
+          <a href="https://github.com/alacripose/dl-openshell">Source</a>
+        </div>
+      </nav>
+    </div>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
+  <main id="main" class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
       <div>
-        <div class="kicker">A Panorama shell for Deadlock</div>
-        <h1>Your HUD,<br><span>with windows.</span></h1>
-        <p class="lede">dl-openshell is a window manager that runs over the live game. It frames Deadlock's
-          own panels without reparenting them, adds a taskbar, toasts and a workspace, and mounts
-          XML windows delivered by Deadworks addon packages.</p>
+        <h1 id="hero-title">dl-openshell<br><span>Deadlock shell</span></h1>
+        <p class="lede">The Deadlock shell. Panorama windows, taskbar, saved layouts, toasts, tool layers, addon packages.</p>
         <div class="cta">
           <a class="button primary" href="https://github.com/alacripose/dl-openshell/releases/latest">Download the player build</a>
-          <a class="button" href="#install">Install steps</a>
+          <a class="button" href="#security">Read the trust boundary</a>
         </div>
-        <div class="version">Player release · MIT licensed · no server required</div>
+        <div class="version">v0.7.0 · player build · game build 6821 · MIT · no server required</div>
       </div>
-      <div class="terminal" aria-label="Install example">
-        <div class="bar"><i></i><i></i><i></i></div>
+      <div class="terminal" aria-label="Install and verification example">
+        <div class="bar"><i></i><i></i><i></i><span>install / receipt</span></div>
         <pre><span class="muted">game/bin/win64</span>
-<span class="gold">install.cmd</span>  <span class="muted">← double-click beside deadlock.exe</span>
-<span class="gold">install.ps1</span>  <span class="muted">← the installer it runs</span>
+<span class="gold">install.cmd</span>
+<span class="gold">install.ps1</span>
 
-<span class="gold">citadel/addons/mods</span>
-<span class="muted">pak01_dir.vpk · verified</span></pre>
+  <span class="muted">↓ verify</span>  SHA-256 held
+  <span class="muted">↓ write</span>   citadel/addons/mods/pak01_dir.vpk
+  <span class="muted">↓ mount</span>   citadel/addons/mods
+  <span class="muted">↓ grade</span>   player
+
+<span class="green">single archive · single search path</span></pre>
       </div>
     </section>
 
-    <hr>
+    <div class="audit-line" aria-label="Audit status">
+      <span>audited <b>2026-11-12</b> against the tracked tree</span>
+      <span><b>11</b> behavioural suites</span>
+      <span><b>5</b> parity cells</span>
+      <span><b>11/11</b> family register checks</span>
+      <span>refusals are named, not counted away</span>
+    </div>
 
-    <section id="install">
+    <section id="modules" aria-labelledby="modules-title">
       <div class="section-head">
-        <h2>One file, next to the game.</h2>
-        <p>The release script downloads a verified archive, checks its SHA-256, and installs into a
-          private addon root. It never overwrites a VPK owned by a mod manager.</p>
+        <h2 id="modules-title">Modules</h2>
+      </div>
+
+      <article class="module-group" aria-labelledby="client-title">
+        <div class="module-group-head">
+          <div><span class="group-path">clientaddon/panorama/scripts</span><h3 id="client-title">Panorama client</h3></div>
+          <p>Runs inside Deadlock. No filesystem, no network and no second focus graph: every control is a
+            pointer-driven panel.</p>
+        </div>
+
+        <div class="module-row">
+          <div class="module-name"><code>openlock_shell.js</code><span>window manager</span></div>
+          <div class="module-body">
+            <p>Owns the catalog, taskbar, title bars, pins, drop grid, toasts, tools and console. Frames
+              live game panels by tracking their real rect and moving them with a transform; the panel
+              never leaves the game's tree.</p>
+            <p class="refuse"><b>refuses</b>to invent a panel the game has not drawn; it binds later in a
+              "not on screen" state.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_layout.js</code><span>layout arbitration</span></div>
+          <div class="module-body">
+            <p>Owns who gets this space: reserves the bar and per-window chrome insets, records each
+              participant's pre-shell rect, and returns it when the shell closes.</p>
+            <p class="refuse"><b>refuses</b>a participant that cannot fit; it is named, never clipped.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_split.js</code><span>split identity</span></div>
+          <div class="module-body">
+            <p>Owns the durable key for a split of a discovered window, so a HUD rebuild or a renamed
+              panel does not orphan its cells across a reload.</p>
+            <p class="refuse"><b>refuses</b>a discovery name that is only a position; that window cannot be
+              pinned.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_popit.js</code><span>cell editor</span></div>
+          <div class="module-body">
+            <p>The root stays mounted with six sections; opening one reveals a contextual child, and
+              Back closes the child rather than swapping the root out. It edits the selected window
+              or live cell, never a second shell. The cell's edit and the chosen colour pair are
+              saved in the same layout row.</p>
+            <p class="refuse"><b>refuses</b>a target the game has not drawn; the cursor lists only
+              panels that can be bound, never a declared window that is absent.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_delivery.js</code><span>live delivery</span></div>
+          <div class="module-body">
+            <p>Owns <code>openlock.addons/a5d7cf25e0a40c0a06b836992556491d</code> parsing, the version gate, atomic window-set
+              replacement and the chunked XML node renderer.</p>
+            <p class="refuse"><b>refuses</b>a payload over 4 MiB, a tree over 512 nodes or 24 deep, or
+              a window set that names no delivered package. An unknown tag is drawn as a plain Panel,
+              never executed.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_audio.js</code><span>four cues</span></div>
+          <div class="module-body">
+            <p>Owns select, place, refuse and notify: four synthesized cues, one 40 ms throttle each,
+              fired only by the shell's own actions.</p>
+            <p class="refuse"><b>refuses</b>to fail the layout when the build has no
+              <code>PlayUISoundEvent</code>; it runs silent.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>openlock_shell_data.js</code><span>generated catalog</span></div>
+          <div class="module-body">
+            <p>Owns the game layouts, windows, schemes, forms and build record read from the target
+              install at generation time. Generated, never hand-edited.</p>
+            <p class="refuse"><b>refuses</b>to bake a panel list from the build machine's game version;
+              the catalog describes the install it targets.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="module-group" aria-labelledby="host-title">
+        <div class="module-group-head">
+          <div><span class="group-path">src/Openlock/Shell</span><h3 id="host-title">Host and package gate</h3></div>
+          <p>C# in the Deadworks plugin reads packages before the client sees them. The client is not the
+            security boundary; the reader is.</p>
+        </div>
+
+        <div class="module-row">
+          <div class="module-name"><code>ShpPackage.cs</code><span>frame reader</span></div>
+          <div class="module-body">
+            <p>Reads SHPKG002/SHPKG003 as read-only migration inputs: the 44-byte header, SHA-256
+              over the recipe, the 13-key window grammar and the artifact table. New packages use
+              <code>ModernPackage.cs</code> and <code>secure-shell.surface/&lt;32 hex&gt;</code>.</p>
+            <p class="refuse"><b>refuses</b>a bad magic, digest mismatch, truncated table, duplicate
+              artifact, absolute or <code>..</code> path, or a missing required key, with file and
+              line.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>AddonPackages.cs</code><span>package catalog</span></div>
+          <div class="module-body">
+            <p>Owns discovery across the game's search paths, the 64-package catalog and the
+              <code>openlock.addons/a5d7cf25e0a40c0a06b836992556491d</code> payload the client reads.</p>
+            <p class="refuse"><b>refuses</b>a package over 16 MiB, a payload that would cross 4 MiB, an
+              older revision, or a replacement that fails validation.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>LayoutProfiles.cs</code><span>saved layouts</span></div>
+          <div class="module-body">
+            <p>Owns per-scheme window geometry, arrangement state and each cell's Popit style,
+              written through a temporary file so a failed save cannot truncate the old one.</p>
+            <p class="refuse"><b>refuses</b>a scheme or window id outside the grammar, out-of-range
+              rectangles, a file over 256 KiB or a set over 400 windows.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>VpkReader.cs</code><span>archive reader</span></div>
+          <div class="module-body">
+            <p>Owns the VPK directory tree and entry lookup used by the generators and the installer. It
+              reads; it never writes an archive.</p>
+            <p class="refuse"><b>refuses</b>a tree over 64 MiB, a malformed table, or an entry outside the
+              archive.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>ClientAddons.cs</code><span>search paths</span></div>
+          <div class="module-body">
+            <p>Owns the game's own addon roots. The shell reads only directories the game already mounts,
+              and lists what it actually found.</p>
+            <p class="refuse"><b>refuses</b>to invent a mount for a package that is not on a search path.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>ShellPackage.cs</code> · <code>LayoutTree.cs</code><span>grammar and tree</span></div>
+          <div class="module-body">
+            <p>Own the shell package's lanes, layers and title-bar projection, and turn source XML into a
+              node tree the client can build with <code>$.CreatePanel</code>.</p>
+            <p class="refuse"><b>refuses</b>an unknown lane, duplicate id, undeclared action target or
+              unusable geometry; a refused package contributes no window.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="module-group" aria-labelledby="gate-title">
+        <div class="module-group-head">
+          <div><span class="group-path">tools/</span><h3 id="gate-title">Build and witness</h3></div>
+          <p>A successful build is not evidence. The gate re-reads the installed bytes and refuses a tree
+            that does not describe itself.</p>
+        </div>
+
+        <div class="module-row">
+          <div class="module-name"><code>install.ps1</code> · <code>release/install.ps1</code><span>install</span></div>
+          <div class="module-body">
+            <p>Own compile, pack, SHA-256, VPK magic, the search-path edit and the one-time
+              <code>.pre-openlock</code> backup in a source install.</p>
+            <p class="refuse"><b>refuses</b>a hash mismatch, an unreadable VPK, a path that escapes the
+              checkout, or a search-path change while the client is running.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>parity_check.py</code><span>parity gate</span></div>
+          <div class="module-body">
+            <p>Owns five cells: repo, GitHub, browser surface, install and live client. It reads the
+              installed VPK rather than the installer's record.</p>
+            <p class="refuse"><b>refuses</b>a stale or hand-copied install, and treats a dev-grade tree
+              that lags the worktree as drift.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>shell_test_surface.py</code><span>witness page</span></div>
+          <div class="module-body">
+            <p>Owns the eleven behavioural suites and writes <code>docs/shell-test-surface.html</code>
+              with each command, exit status and check count.</p>
+            <p class="refuse"><b>refuses</b>to call a suite passing when no browser or shell witness
+              observed it; the card names the missing surface.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>package_envelope.py</code><span>optional envelope</span></div>
+          <div class="module-body">
+            <p>Owns the optional signed record over a package surface: digest, authority, proof of work
+              and an HMAC-SHA256 signature.</p>
+            <p class="refuse"><b>refuses</b><code>digest-mismatch</code>, <code>untrusted-key</code>,
+              <code>insufficient-work</code>, <code>signature-invalid</code> or
+              <code>unreadable-envelope</code>. An unsigned package loads unchanged.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="module-group" aria-labelledby="surfaces-title">
+        <div class="module-group-head">
+          <div><span class="group-path">shell/alpha-shell/package.shspec</span><h3 id="surfaces-title">Declared surfaces</h3></div>
+          <p>Every surface below is a real window in the built-in package. The shell draws it; the
+            package says where it lives.</p>
+        </div>
+
+        <div class="module-row">
+          <div class="module-name"><code>dashboard</code> · <code>windows</code><span>navigation</span></div>
+          <div class="module-body">
+            <p>Dashboard is the shell's own menu, because the release build reaches the game's only
+              through the pause menu. Windows lists every declared window and every game layout found
+              in the install.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>performance</code> · <code>wishes</code><span>evidence</span></div>
+          <div class="module-body">
+            <p>Performance draws the measured UI frame graph, apply and write counters, and a 64-line
+              ring of slow applies and refusals. Wishes draws the generated plan beside the host's
+              verdicts.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>tools</code> · <code>console</code><span>operation</span></div>
+          <div class="module-body">
+            <p>Tools reports the build stage, VPK size, update state, tool presence and the mounted
+              search paths. The console opens any declared window or any game layout by id.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>popit</code> · <code>picker</code><span>editing</span></div>
+          <div class="module-body">
+            <p>Popit edits a live cell's material, decoration, colour, corners, border and opacity.
+              Picker scrubs the live HUD and edits one panel's position, size, opacity and
+              colours, with a restore path.</p>
+          </div>
+        </div>
+        <div class="module-row">
+          <div class="module-name"><code>schemes</code> · <code>forms</code><span>appearance</span></div>
+          <div class="module-body">
+            <p>Six palettes (deadlock, alpha, holo, material, ios, touchwiz).
+              Forms are a separate axis. A mod theme can paint colour and opacity only.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="popit" aria-labelledby="popit-title">
+      <div class="section-head">
+        <h2 id="popit-title">Popit</h2>
+        <p>The cell editor, rebuilt to <code>POPIT-RE-AUDIT-v5</code> and
+          <code>OPENLOCK-CONFLUENT-DREAMS-INTERLINE-REV06</code>: a persistent root, a contextual
+          child, and the player's colour pair as a saved third axis.</p>
+      </div>
+
+      <div class="popit-grid">
+        <div class="popit-stage" aria-label="Popit root and Palette child">
+          <div class="popit-root">
+            <div class="popit-head"><span>POPIT</span><span class="popit-chip">POPIT BLUE</span></div>
+            <p class="popit-target">target · HUD cell / abilities</p>
+            <div class="popit-row" aria-current="false"><b>01</b><span>Cursor</span><em>select cell</em></div>
+            <div class="popit-row" aria-current="true"><b>02</b><span>Palette</span><em>37 pairs</em></div>
+            <div class="popit-row" aria-current="false"><b>03</b><span>Goodies</span><em>material</em></div>
+            <div class="popit-row" aria-current="false"><b>04</b><span>Stickers</span><em>edge</em></div>
+            <div class="popit-row" aria-current="false"><b>05</b><span>Tools</span><em>corners</em></div>
+            <div class="popit-row" aria-current="false"><b>06</b><span>Color</span><em>role</em></div>
+          </div>
+          <div class="popit-child">
+            <div class="popit-child-head"><span class="popit-back">‹ Back</span><span>PALETTE</span></div>
+            <p class="popit-label">LITTLEBIGPLANET</p>
+            <div class="popit-pairs">
+              <div class="popit-pair"><div class="popit-band"><i style="background:#e5e510"></i><i style="background:#e70f81"></i><i style="background:#5656e8"></i></div><span>Yellow &amp; Fuchsia</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#392853"></i><i style="background:#3973a8"></i><i style="background:#a87139"></i></div><span>Navy &amp; Blue</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#9a2853"></i><i style="background:#899929"></i><i style="background:#5c5699"></i></div><span>Deep Pink</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#6a39b5"></i><i style="background:#b23950"></i><i style="background:#3ab29e"></i></div><span>Violet</span></div>
+              <div class="popit-pair" aria-current="true"><div class="popit-band"><i style="background:#3f8ad7"></i><i style="background:#d641d6"></i><i style="background:#41d641"></i></div><span>Popit Blue</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#e76161"></i><i style="background:#a5e563"></i><i style="background:#a363e4"></i></div><span>Coral</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#ca0000"></i><i style="background:#67c900"></i><i style="background:#7d48c1"></i></div><span>Red &amp; Green</span></div>
+              <div class="popit-pair"><div class="popit-band"><i style="background:#f0c454"></i><i style="background:#12151a"></i><i style="background:#eceff2"></i></div><span>Classic</span></div>
+            </div>
+            <p class="popit-label">OPENLOCK</p>
+            <p class="popit-honest">37 pairs ship. Classic removes the pair and returns the scheme.
+              The chosen id is saved as <code>pair:&lt;slug&gt;</code> in the layout row.</p>
+          </div>
+        </div>
+
+        <div class="popit-notes">
+          <article class="popit-note">
+            <h3>Root stays, child reveals</h3>
+            <p>Sections replace the child's body, never the root. Back closes the child and leaves
+              the six rows where they were, so the instrument has one remembered shape.</p>
+          </article>
+          <article class="popit-note">
+            <h3>Three axes, one surface</h3>
+            <p>Scheme palette, form geometry and colour pair are separate choices. The pair data is
+              vendored from Popit Forge and generated into the client; Classic is the opt-out.</p>
+          </article>
+          <article class="popit-note">
+            <h3>What the pair may paint</h3>
+            <p>The slab, title, chips, selected rows and emphasis ink. The shell ground, its ink and
+              its single selection accent stay with the theme, so a light pair cannot turn the shell
+              into a highlighter.</p>
+          </article>
+        </div>
+      </div>
+
+      <h3 class="family-subhead">Four control planes, kept apart</h3>
+      <div class="table-scroll" role="region" aria-label="Control planes" tabindex="0">
+        <table class="compare popit-planes">
+          <thead>
+            <tr><th scope="col">Plane</th><th scope="col">Who owns it</th><th scope="col">What OpenLock does</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>OS taskbar</td><td>Windows, outside the game</td><td>Not replaced. The shell taskbar is inside Deadlock and never claims desktop ownership.</td></tr>
+            <tr><td>In-world rail</td><td>Deadlock's own HUD</td><td>Framed and moved only while the shell is open; every rect and transform is returned on close.</td></tr>
+            <tr><td>Pod computer</td><td>LittleBigPlanet's personal space</td><td>A reference for the model, not a shipped surface. No Pod is drawn here.</td></tr>
+            <tr><td>Popit</td><td>The player, over one selected object</td><td>This section. It edits a window or cell; it does not own a second desktop.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="popit-honest">OpenLock is a Deadlock shell. The bibles and the pair table are the
+        LittleBigPlanet lineage the Popit follows; no LittleBigPlanet mark, character or game asset
+        is used, and the OpenLock name and mark stay OpenLock's. Verified here: 60 Popit checks, 59
+        dashboard checks and a 385-fact parity gate. Not verified: the rendered crown and the child
+        reveal in a built client. Panorama approximates the Bezier contour with per-corner radii and
+        the form says so.</p>
+    </section>
+
+    <section id="security" aria-labelledby="security-title">
+      <div class="section-head">
+        <h2 id="security-title">Refusals</h2>
+        <p>Each refusal names a file, a line and a reason. Four boundaries cover the package frame and the installed bytes.</p>
+      </div>
+
+      <div class="ledger">
+        <aside class="ledger-index" aria-label="Security stages">
+          <p class="index-title">Boundary index</p>
+          <a href="#sec-ingress">01 · Ingress</a>
+          <a href="#sec-runtime">02 · Runtime</a>
+          <a href="#sec-delivery">03 · Delivery</a>
+          <a href="#sec-install">04 · Install</a>
+          <p class="rail-note">Every stage below names the fact it refuses. The shell data and the
+            Performance window keep the same rows at runtime.</p>
+        </aside>
+
+        <div class="ledger-body">
+          <article class="stage" id="sec-ingress">
+            <div class="stage-head"><span class="stage-no">01</span><h3>Ingress</h3><span class="stage-where">package → parse</span></div>
+            <p>Before a package's recipe is parsed, the frame must hold. The reader checks the bytes,
+              then the grammar; it never parses first and validates later.</p>
+            <ul class="refuse-list">
+              <li><code>SHA-256, fixed-time</code><span><b>The 44-byte header names a digest over the
+                recipe.</b> A mismatch refuses the whole package before one window is read.</span></li>
+              <li><code>16 MiB · 1 MiB · 64 MiB</code><span>Package, recipe and VPK tree ceilings. A file
+                over its ceiling is refused before the reader allocates its contents.</span></li>
+              <li><code>1,024 artifacts</code><span>256-byte artifact paths, 4 MiB per artifact, relative
+                only: no absolute path, no backslash, no <code>.</code> or <code>..</code> segment.</span></li>
+              <li><code>envelope</code><span>An optional signed record: digest, authority, proof of work
+                and HMAC-SHA256. A declared envelope that fails contributes no records.</span></li>
+            </ul>
+          </article>
+
+          <article class="stage" id="sec-runtime">
+            <div class="stage-head"><span class="stage-no">02</span><h3>Runtime</h3><span class="stage-where">host string → panel</span></div>
+            <p>Every host-supplied string is treated as hostile. The ceiling is checked before the parse.</p>
+            <ul class="refuse-list">
+              <li><code>4 MiB payload</code><span>The <code>layout</code> attribute and observer trees are
+                refused over 4 MiB before <code>JSON.parse</code>; the addon payload has the same
+                ceiling.</span></li>
+              <li><code>400 · 64 · 256 KiB</code><span>Windows per profile, profiles, and the saved file.
+                Coordinates must be finite and inside the declared range.</span></li>
+              <li><code>whole-profile reject</code><span>One bad row refuses the profile whole. It is never
+                half-applied and never becomes a partial window set.</span></li>
+              <li><code>__proto__</code><span>A scheme or window id of <code>__proto__</code> is refused by
+                name. A legacy geometry map skips <code>active</code>, <code>tab</code>,
+                <code>pinned</code>, <code>minimized</code> and <code>popit</code> as state.</span></li>
+              <li><code>8 tags · 512 nodes · 24 deep</code><span>The live renderer is closed to the tags
+                it knows; anything else becomes a plain Panel, with no script, event handler or new
+                resource path.</span></li>
+              <li><code>theme allowlist</code><span>A theme can paint colour and opacity only. No URLs,
+                layout, fonts or resource references; selectors and properties are allowlisted.</span></li>
+            </ul>
+          </article>
+
+          <article class="stage" id="sec-delivery">
+            <div class="stage-head"><span class="stage-no">03</span><h3>Delivery</h3><span class="stage-where">revision → catalog</span></div>
+            <p>Live packages replace a catalog atomically. A refused replacement leaves the mounted
+              version, its index and its signatures untouched.</p>
+            <ul class="refuse-list">
+              <li><code>version gate</code><span>A lower revision is refused; the mounted version stays.
+                The host treats the same version and digest as already mounted, and a same-version
+                package with different bytes is refused.</span></li>
+              <li><code>apply or reject</code><span>The candidate set is validated before commit. A
+                failure during the write rolls the catalog, index and signatures back together.</span></li>
+              <li><code>64 records</code><span>A stream of refused archives drops the oldest
+                refusal-only record, never a mounted package. The client log is a 64-line ring.</span></li>
+              <li><code>observer close</code><span>A delivered XML surface gets the shell's close
+                affordance outside the XML, so a surface cannot trap the observer.</span></li>
+            </ul>
+          </article>
+
+          <article class="stage" id="sec-install">
+            <div class="stage-head"><span class="stage-no">04</span><h3>Install</h3><span class="stage-where">bytes → claim</span></div>
+            <p>An install is a claim about bytes, so the gate re-reads the bytes. The installer's own
+              success record is not accepted as proof.</p>
+            <ul class="refuse-list">
+              <li><code>SHA-256 release</code><span>The player archive is hashed against the published
+                checksum. A mismatch refuses the install; a dropped download is retried.</span></li>
+              <li><code>VPK magic · paths</code><span>The archive must parse, and an entry that escapes the
+                archive root is refused before anything is copied.</span></li>
+              <li><code>package repos</code><span>A checkout must stay under <code>openlock-packages/</code>;
+                a wrong VPK magic, path escape or <code>steam.inf</code> mismatch is refused. A package
+                cannot write fonts or <code>gameinfo.gi</code>, and its scripts never run.</span></li>
+              <li><code>five cells</code><span>Repo, GitHub, browser, install and live client are re-read.
+                A dev-grade install that lags the worktree is a refusal.</span></li>
+            </ul>
+          </article>
+
+          <p class="claim-note"><b>What this page claims:</b> the enforcement above is read from the
+            tracked source and its suites. It is not a claim that every path was captured live. The
+            delivery evidence separates what was seen in a running client from what was seen only in the
+            harness: <a href="https://github.com/alacripose/dl-openshell/blob/main/docs/DELIVERY.md">docs/DELIVERY.md</a>.
+            The suite cards are the witness:
+            <a href="https://github.com/alacripose/dl-openshell/blob/main/docs/shell-test-surface.html">shell-test-surface.html</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" aria-labelledby="compare-title">
+      <div class="section-head">
+        <h2 id="compare-title">Shell comparison</h2>
+      </div>
+
+      <div class="table-scroll" role="region" aria-label="Shell comparison" tabindex="0">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th scope="col">Boundary</th>
+              <th scope="col" class="this">dl-openshell</th>
+              <th scope="col">voxel-client shell</th>
+              <th scope="col">holo_shell</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Surface</th>
+              <td class="this">Panorama overlay over Deadlock</td>
+              <td>Native Rust shell over a voxel client</td>
+              <td>Win32 desktop shell on Windows LTSC</td>
+            </tr>
+            <tr>
+              <th scope="row">Window source</th>
+              <td class="this">Package declarations plus the game's live panels</td>
+              <td>Package-declared windows and a pane tree</td>
+              <td>OS windows it did not create</td>
+            </tr>
+            <tr>
+              <th scope="row">Untrusted ingress</th>
+              <td class="this"><code>.shpkg</code>, VPKs and live host payloads</td>
+              <td>Local package XML, cells and theme fields</td>
+              <td>None. It reads Win32 state</td>
+            </tr>
+            <tr>
+              <th scope="row">Integrity gate</th>
+              <td class="this">SHA-256 frame, optional envelope, install and parity gates</td>
+              <td>Axis HMAC-SHA256 machine key outside the checkout, package census</td>
+              <td>No package gate; its boundary is the OS API</td>
+            </tr>
+            <tr>
+              <th scope="row">Refusal model</th>
+              <td class="this">Named package and layout refusals, bounded runtime log</td>
+              <td><code>UiRefusal</code> enum; <code>Palette::get</code> refuses an unadmitted role</td>
+              <td>Windows API errors; no data-refusal surface</td>
+            </tr>
+            <tr>
+              <th scope="row">Capability</th>
+              <td class="this">Dev / observer / player grades</td>
+              <td>Feature rows and arrangement state</td>
+              <td>Desktop / dock / windowed modes</td>
+            </tr>
+            <tr>
+              <th scope="row">Witness</th>
+              <td class="this">11 behavioural suites, 5 parity cells</td>
+              <td>Design-system tests, axis verify cells</td>
+              <td>Go unit tests, a <code>-selftest</code> Notepad flow</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <section id="family" aria-labelledby="family-title">
+      <div class="section-head">
+        <h2 id="family-title">Family</h2>
+      </div>
+
+      <div class="table-scroll" role="region" aria-label="Family shells" tabindex="0">
+        <table class="compare family-table">
+          <thead>
+            <tr><th scope="col">Shell</th><th scope="col">Path</th><th scope="col">Owns</th><th scope="col">Medium</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="this"><code>dl-openshell</code></td><td><code>openlock/</code></td><td>Deadlock shell, landing page, Panorama themes</td><td>web + Panorama</td></tr>
+            <tr><td><code>secure-shell</code></td><td><code>secure-shell/</code></td><td>Debian host, axis server, CUA window</td><td>web</td></tr>
+            <tr><td><code>axis</code></td><td><code>secure-shell/server/axis-*</code></td><td>Tickets, ledger, stars, civilians, refusals</td><td>web</td></tr>
+            <tr><td><code>shploingus</code></td><td><code>shploingus/</code></td><td>Deterministic city, voxel client</td><td>native</td></tr>
+            <tr><td><code>holo_shell</code></td><td><code>agent_god_files/holo_shell/</code></td><td>Go shell port, openlock verification surface</td><td>native</td></tr>
+            <tr><td><code>AWA3D</code></td><td><code>AWA3D/</code></td><td>Embodied browser client</td><td>web / 3D</td></tr>
+            <tr><td><code>the kiosk</code></td><td>MD1 surface</td><td>Pinned MD1 surface</td><td>MD1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="family-subhead">Legacy to modern</h3>
+      <p class="family-note">One reader · one direction · one carrier</p>
+      <p class="family-lede">Each project grew its own package family: <code>SHPKG002</code> and
+        <code>SHPKG003</code> frames, <code>shploingus.recipe/30444cad3419800564faba6d4e252431</code>, <code>openlock.envelope/d593054cb466a871f47d4804b3e2f333</code>,
+        <code>V4PKG001</code> and <code>V4PKG002</code>. The old frame digests are SHA-256 evidence
+        verified before the rewrite; the modern identity is BLAKE3 over canonical content. The family
+        target is one carrier, with canonical bytes and the signature outside the digest.</p>
+      <div class="family-flow">
+        <div class="family-step"><b>Read</b><span>Legacy frames enter a read-only decoder behind the streamer boundary. The source package keeps its bytes and its identity.</span></div>
+        <div class="family-step"><b>Represent</b><span>The decoder produces an explicit compatibility record with its own schema, not whatever object the old reader returned.</span></div>
+        <div class="family-step"><b>Record</b><span><code>dle-migrate</code> writes source and target ids, the old digest, the new <code>name@rev+blake3</code> identity, fields lost by name, actor and ticket.</span></div>
+        <div class="family-step"><b>Reframe</b><span>Only the modern carrier is emitted: <code>dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71</code>, a canonical header, a content-addressed payload, and a Debian signature outside the BLAKE3 preimage.</span></div>
+      </div>
+      <dl class="family-modern">
+        <div><dt>BLAKE3 identity</dt><dd><code>name@&lt;rev&gt;+blake3:&lt;64 hex&gt;</code> replaces SHA-256 as the modern content identity. The revision, framing, encryption and signature stay outside the preimage, so a reframe or re-sign does not move the package.</dd></div>
+        <div><dt>One carrier, typed modules</dt><dd><code>dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71</code> carries <code>goose.mod/0aae19884ea41415867d1385deea60e3</code>, <code>goose.vanilla/109e73f54aaaa7e072bbcb452569ebde</code> and <code>goose.client/d6f8a8b171f8c253b095d99f92e95b4a</code> as module schemas inside the carrier.</dd></div>
+        <div><dt>Canonical bytes</dt><dd>UTF-8, canonical serialization and a declared newline policy. Generated files record their generator, input identity and post-materialization identity.</dd></div>
+        <div><dt>Separate authority</dt><dd>BLAKE3 proves byte identity. The Debian signature over a domain-separated manifest proves who asserted the revision. Chunk digests belong to the transport; the package digest names the package.</dd></div>
+      </dl>
+      <p class="family-source">Recorded in <code>db-mc-indev/AGENTS.md</code> §11,
+        <code>dl-enclave/docs/PACKAGE-FORMAT.md</code> §6 and
+        <code>secure_shell_v2/docs/SECURE-SHELL-RESTORE@1.ARCHITECTURE.md</code> §5–§7, §12.8. The
+        migration tool is on the Phase 1 work list, so this section records the target state.</p>
+      <p class="family-refusals">The migration is one-way; there is no downgrade path. An input the
+        pipeline cannot honestly read is refused by name instead of converted: <code>schema-not-read</code>
+        for legacy <code>shploingus.recipe/4</code>, <code>foreign-versioning-idiom</code> for
+        <code>planet-*</code>, <code>no-format-behind-domain</code> for <code>planet-package-v1</code>,
+        and <code>excluded-format</code> for VPK and compiled assets.</p>
+    </section>
+
+    <section id="addons" aria-labelledby="addons-title">
+      <div class="section-head">
+        <h2 id="addons-title">Addons</h2>
+        <p>Deadworks packages are canonical <code>secure-shell.package/&lt;32 hex&gt;</code> directories
+          whose payload is a <code>secure-shell.surface/&lt;32 hex&gt;</code> declaration. The shell verifies the BLAKE3
+          identity before reading the surface, then mounts only declared windows. Legacy
+          <code>SHPKG002</code>/<code>SHPKG003</code> frames remain a read-only decoder. A package that
+          fails any row contributes no windows.</p>
+      </div>
+
+      <div class="addon-grid" id="addoncards"><!-- filled from tools/addons.json --></div>
+
+      <div class="contract">
+        <div>
+          <h3>A package may declare</h3>
+          <p class="contract-deck">Every row is read by the host, then projected into the client.</p>
+          <ul class="contract-list">
+            <li><code>window</code> · <code>content</code> · <code>lane</code>: a window, what it draws and
+              where it lives. An unknown content or lane refuses the package.</li>
+            <li><code>geometry</code> · <code>min-size</code> · <code>opacity</code> ·
+              <code>elevation</code>: finite and inside the window grammar.</li>
+            <li><code>theme-role</code>: selects a colour role. It cannot name a raw colour or load a
+              resource.</li>
+            <li><code>pinnable</code> · <code>layout</code> · <code>behavior</code>: the title-bar
+              projection. Pin is offered only when pinnable is true.</li>
+            <li><code>layer</code> · <code>action</code>: a tool layer. Actions are unique and their
+              target window must be declared.</li>
+            <li><code>record-id</code>: the stable row identity. A duplicate id refuses the package.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>No package gets</h3>
+          <p class="contract-deck">These are not conventions. They are the reader's bounds.</p>
+          <ul class="contract-list">
+            <li><span class="no">script execution</span>: the renderer is a closed tag and attribute map.</li>
+            <li><span class="no">absolute or <code>..</code> artifact path</span>: the artifact table is
+              relative-only.</li>
+            <li><span class="no">unbounded payload</span>: 16 MiB package, 4 MiB live payload, 1 MiB
+              recipe.</li>
+            <li><span class="no">write to <code>gameinfo.gi</code>, <code>panorama/fonts</code> or another
+              addon's folder</span>: the installer does not run package scripts.</li>
+            <li><span class="no"><code>__proto__</code> scheme or window id</span>: refused by name before
+              it reaches a map.</li>
+            <li><span class="no">theme rule that loads a URL, moves a window or hides a control</span>:
+              colour and opacity only.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="catalog-note">The catalog is data, not a second build: one entry in
+        <code>landing/tools/addons.json</code> adds a card. It carries the package name, version, author,
+        target build, a short note, optional facts and links to the download or source. The inline list
+        below is the fallback when the catalog is not reachable.</p>
+    </section>
+
+    <section id="install" aria-labelledby="install-title">
+      <div class="section-head">
+        <h2 id="install-title">Install</h2>
+        <p>The release installer verifies SHA-256, refuses a bad archive, writes one
+          <code>pak01_dir.vpk</code>, and adds one search path. If another shell already owns that
+          filename, move it aside first: the installer replaces the file, it does not merge archives.</p>
       </div>
       <div class="steps">
         <div class="step">
-          <b>01</b>
+          <b>files</b>
           <div><h3>Download install.cmd and install.ps1</h3>
-            <p>Take both from the latest GitHub release, next to the player VPK, checksum and MIT license.</p></div>
+            <p>The latest GitHub release carries both files, the player VPK, its checksum and the MIT license.</p></div>
         </div>
         <div class="step">
-          <b>02</b>
-          <div><h3>Drop it in game/bin/win64</h3>
-            <p>That is the folder holding deadlock.exe. The script finds the install from its own location.</p></div>
+          <b>place</b>
+          <div><h3>Drop them in game/bin/win64</h3>
+            <p>That is the folder holding deadlock.exe. The script finds the install from its own
+              location.</p></div>
         </div>
         <div class="step">
-          <b>03</b>
+          <b>install</b>
           <div><h3>Close Deadlock and double-click install.cmd</h3>
-            <p>The shell window appears, asks for the shell grade, verifies the release, writes
-              citadel/addons/mods to SearchPaths, and leaves the game's other addon folders untouched.</p></div>
+            <p>The shell window asks for the grade, verifies the archive, writes
+              <code>citadel/addons/mods/pak01_dir.vpk</code>, and adds <code>citadel/addons/mods</code>
+              to SearchPaths. Other addon folders are untouched.</p></div>
         </div>
         <div class="step">
-          <b>04</b>
+          <b>boot</b>
           <div><h3>Start Deadlock</h3>
             <p>The shell boots from its own archive. No server or plugin is required for the UI.</p></div>
         </div>
       </div>
-      <p class="note" style="margin-top:26px">Windows marks downloaded scripts, and the default policy
-        refuses to run them before they start. <code>install.cmd</code> applies a process-scoped bypass
-        for you. To run <code>install.ps1</code> directly, first right-click it → Properties → Unblock,
-        then choose “Run with PowerShell”, or run
-        <code>powershell -ExecutionPolicy Bypass -File install.ps1</code> from that folder.</p>
+      <p class="note">Windows marks downloaded scripts, and the default policy refuses to run them before
+        they start. <code>install.cmd</code> applies a process-scoped bypass for you. To run
+        <code>install.ps1</code> directly, first right-click it → Properties → Unblock, then choose
+        "Run with PowerShell", or run <code>powershell -ExecutionPolicy Bypass -File install.ps1</code>
+        from that folder.</p>
+      <p class="install-foot"><span>Building from source? The checkout installer also hashes the built and
+        installed VPK, keeps the first replaced archive as <code>pak01_dir.vpk.pre-openlock</code>, and
+        writes the build record the parity gate reads.</span>
+        <a href="https://github.com/alacripose/dl-openshell/blob/main/README.md#build-from-a-checkout">Build notes</a></p>
     </section>
 
-    <hr>
-
-    <section id="addons">
+    <section id="grades" aria-labelledby="grades-title">
       <div class="section-head">
-        <h2>Addons bring their own windows.</h2>
-        <p>Deadworks packages are shploingus <code>SHPKG002</code>/<code>SHPKG003</code> frames. The
-          shell verifies the frame digest before reading the recipe, then mounts only XML the archive
-          actually carries.</p>
+        <h2 id="grades-title">Grades</h2>
+        <p>The grade is recorded at install time. It gates what the shell is allowed to mount or show.</p>
       </div>
-      <div class="addon-grid" id="addoncards"><!-- filled from tools/addons.json --></div>
-      <p class="note" style="margin-top:26px">Addons are data, not a second build: one entry in
-        <code>landing/tools/addons.json</code> adds a card here. The card carries the package name,
-        version, author, target build and links to the download or source.</p>
-    </section>
-
-    <hr>
-
-    <section id="grades">
-      <div class="section-head">
-        <h2>Pick the shell that fits.</h2>
-        <p>The grade is recorded at install time. The player release is baked in player mode so a
-          fresh install restores the saved layout scheme without a server.</p>
-      </div>
-      <div class="grid">
-        <div class="card"><div class="grade"><h3>Dev</h3><code>dev</code></div>
-          <p>Every Deadlock and Deadworks addon and shell window is available. The default for working on the shell.</p></div>
-        <div class="card"><div class="grade"><h3>Observer</h3><code>observer</code></div>
-          <p>Shell chrome and windows stay out of recordings. Package XML surfaces still arrive as toasts.</p></div>
-        <div class="card"><div class="grade"><h3>Player</h3><code>player</code></div>
-          <p>Saved UI layout schemes are kept and loaded automatically at startup. The released VPK uses this mode.</p></div>
+      <div class="grades">
+        <div class="grade-row">
+          <code>dev</code>
+          <div><h3>Dev</h3><p>Every Deadlock and Deadworks addon and shell window is available. The default
+            for working on the shell.</p></div>
+          <span class="use">everything</span>
+        </div>
+        <div class="grade-row">
+          <code>observer</code>
+          <div><h3>Observer</h3><p>Shell chrome and windows stay out of recordings. Package XML surfaces
+            still arrive as toasts.</p></div>
+          <span class="use">clean recording</span>
+        </div>
+        <div class="grade-row">
+          <code>player</code>
+          <div><h3>Player</h3><p>Saved schemes are kept and load at startup. The released VPK is built in
+            this mode.</p></div>
+          <span class="use">release default</span>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="wrap">
-    <span>dl-openshell · Deadlock UI shell</span>
-    <span><a href="https://github.com/alacripose/dl-openshell/blob/main/LICENSE">MIT</a> ·
-      <a href="https://github.com/alacripose/dl-openshell/releases">Releases</a> ·
-      <a href="https://github.com/alacripose/dl-openshell">GitHub</a></span>
+  <footer>
+    <div class="wrap foot-row">
+      <span>dl-openshell · a Panorama shell for Deadlock</span>
+      <span class="mono">audited 2026-11-12 · MIT</span>
+      <span class="foot-links">
+        <a href="https://github.com/alacripose/dl-openshell">GitHub</a>
+        <a href="https://github.com/alacripose/dl-openshell/releases">Releases</a>
+        <a href="https://github.com/alacripose/dl-openshell/blob/main/docs/DELIVERY.md">Delivery evidence</a>
+      </span>
+    </div>
   </footer>
 
   <script>
@@ -246,22 +1066,24 @@
         name: "Alpha Shell",
         version: "v1-alpha",
         author: "alacripose",
-        format: "shploingus.recipe/3",
+        format: "shploingus.recipe/30444cad3419800564faba6d4e252431",
         target: "game 6821",
         builtIn: true,
-        note: "The built-in shell package: every window, lane and title-bar control is declared in " +
-          "the package, and every generated style comes from it. Use it as the reference for an " +
-          "addon that ships its own XML.",
+        facts: ["30 windows", "5 tool layers"],
+        note: "The built-in shell package: 30 windows, their lanes, title-bar controls and theme " +
+          "roles are declared here. Use it as the reference for an addon that ships its own XML; " +
+          "the palette comes from the scheme, not the package.",
         source: "https://github.com/alacripose/dl-openshell/tree/main/shell/alpha-shell"
       },
       {
         name: "Server MOTD",
         version: "1.0.0",
         author: "alacripose",
-        format: "SHPKG003 · VPK",
+        format: "secure-shell.package/<32 hex> · .pkg",
         target: "game 6821",
-        note: "A copyable demo addon: one shploingus package carrying its compiled XML layout, " +
-          "opened as a Server MOTD window with Pin, Minimize, Maximize and Close.",
+        facts: ["1 window", "pin + 3 title-bar controls"],
+        note: "A copyable demo addon: one canonical package carrying a secure-shell.surface/<32 hex> " +
+          "declaration, opened as a Server MOTD window with Pin, Minimize, Maximize and Close.",
         source: "https://github.com/alacripose/dl-openshell/tree/main/examples/motd-addon"
       }
     ];
@@ -315,7 +1137,17 @@
         }
         const body = addonNode("p");
         body.textContent = addon.note || "";
-        card.append(heading, meta, body);
+        card.append(heading, meta);
+        if (Array.isArray(addon.facts) && addon.facts.length) {
+          const facts = addonNode("div", "addon-facts");
+          addon.facts.slice(0, 4).forEach((fact) => {
+            const item = addonNode("span", "addon-fact");
+            item.textContent = fact;
+            facts.append(item);
+          });
+          card.append(facts);
+        }
+        card.append(body);
         const links = addonNode("div", "addon-links");
         if (addon.download) links.append(addonLink("Download", addon.download));
         if (addon.source) links.append(addonLink("Source", addon.source));
@@ -365,6 +1197,44 @@
         name.classList.add("cycling");
         tick();
       }, 280);
+    })();
+  </script>
+
+  <script>
+    // One authored motion: the boundary index marks the stage the reader is inside.
+    // The reading line is measured from the viewport, not from intersection ratios: stages are
+    // tall, so a ratio can pick the next stage while the reader is still in the current one.
+    (() => {
+      const links = Array.from(document.querySelectorAll(".ledger-index a"));
+      const stages = links
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+      if (!links.length || !stages.length) return;
+      const setActive = (id) => {
+        links.forEach((link) => {
+          const on = link.getAttribute("href") === "#" + id;
+          link.classList.toggle("active", on);
+          if (on) link.setAttribute("aria-current", "true");
+          else link.removeAttribute("aria-current");
+        });
+      };
+      const pick = () => {
+        const line = window.innerHeight * 0.3;
+        let current = stages[0].id;
+        for (const stage of stages) {
+          if (stage.getBoundingClientRect().top <= line) current = stage.id;
+        }
+        setActive(current);
+      };
+      let queued = false;
+      const onScroll = () => {
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(() => { pick(); queued = false; });
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll);
+      pick();
     })();
   </script>
 </body>

@@ -1,4 +1,4 @@
-shploingus.theme/1
+shploingus.theme/339926f6b1b54ebb89810d4c6238d523
 # Material Design 1, true MD1 dark. The four token values are MD1's own dark-theme values:
 # #121212 is the canonical dark surface, 8 dp is the layout grid, and the teal accent is the
 # kit's default swatch. Chrome geometry rides the separate `form` row so this palette can be

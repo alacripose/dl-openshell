@@ -20,7 +20,22 @@ installs those files instead of downloading; a complete release drop works offli
 
 The installer writes the archive to `game/citadel/addons/mods/pak01_dir.vpk` and adds
 `Game citadel/addons/mods` to `game/citadel/gameinfo.gi`. It does not install into
-`citadel/addons/openlock_ui` or overwrite a VPK owned by a mod manager.
+`citadel/addons/openlock_ui` or touch another addon folder, but it does replace the
+`pak01_dir.vpk` at that path if one exists; move another manager's archive at that filename aside
+first.
+
+## Design contract
+
+The release surface follows the family register in
+[`openlock_modern/docs/design/`](../../openlock_modern/docs/design/): the landing page uses the
+web-dark role names and the 20x20 square-in-square mark, and the installed shell uses the active
+Panorama scheme as its medium role map. The shell window radius ceiling is 8 px, and a corner grip
+has a 24 dp pointer target. No person has witnessed the running build's landing or shell render, so
+both stay `not-implemented`. The adoption record and measured contrast are in
+[docs/UI-PASS.md](../docs/UI-PASS.md) §8.
+
+A landing-only edit does not change the player archive. Rebuild it when the shell source changes:
+the landing publishes from `landing/`, while the VPK compiles locally.
 
 ## Build
 

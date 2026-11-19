@@ -7,11 +7,12 @@ namespace Openlock.Shell;
 /// Discovers real shploingus packages and hands their windows to the shell.
 ///
 /// <para>
-/// A package is a <c>SHPKG002</c>/<c>SHPKG003</c> frame: the frame's payload is the exact
-/// <c>shploingus.recipe/3</c> source and its SHA-256 is checked before a byte of it is read.
-/// The loader looks for those frames as <c>.shpkg</c> files, and for <c>.shpkg</c> entries
-/// inside a VPK. It never parses a raw <c>package.shspec</c> out of an archive and it never
-/// invents a manifest path: the frame is the package.
+/// A legacy window package is a <c>SHPKG002</c>/<c>SHPKG003</c> frame: the frame's payload is
+/// the exact <c>shploingus.recipe/30444cad3419800564faba6d4e252431</c> source and its SHA-256 is checked before a byte of it
+/// is read. The loader looks for those frames as <c>.shpkg</c> files, and for <c>.shpkg</c>
+/// entries inside a VPK. This is a read-only decoder for packages already written: new
+/// packages use the canonical <see cref="ModernPackage"/> object, and no new SHPKG revision is
+/// emitted. There is no package-byte cap here; the old 16 MiB ceiling was not a format rule.
 /// </para>
 ///
 /// <para>
@@ -23,11 +24,11 @@ namespace Openlock.Shell;
 /// </summary>
 public sealed class AddonPackages
 {
-    public const string PayloadFormat = "openlock.addons/2";
+    public static readonly string PayloadFormat = FormatFamilies.Addons.Current;
     public const string PackageExtension = ".shpkg";
+    public const string ModernPackageExtension = ".pkg";
 
     private const int MaxPackages = 64;
-    private const long MaxPackageBytes = 16 * 1024 * 1024;
 
     // The shell parses an addon payload in one scheduled tick and refuses anything larger than
     // this before JSON.parse. A live delivery that would build an unsendable payload is refused
@@ -51,6 +52,9 @@ public sealed class AddonPackages
         public string Version { get; set; } = "";
         public string Archive { get; set; } = "";
         public string Source { get; set; } = "";
+        public string Carrier { get; set; } = "legacy";
+        public string Surface { get; set; } = "";
+        public string Requires { get; set; } = "";
         public string Digest { get; set; } = "";
         public List<string> Artifacts { get; set; } = [];
         public List<string> WindowIds { get; set; } = [];
@@ -79,7 +83,6 @@ public sealed class AddonPackages
 
     public static AddonPackages Discover(OpenlockConfig config)
     {
-        var result = new AddonPackages();
         var gameDir = ClientAddons.GameDirectory;
         var roots = new List<(string Path, string Source)>();
         var seenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -109,6 +112,23 @@ public sealed class AddonPackages
                 roots.Add((path, source));
         }
 
+        return Scan(roots, gameDir);
+    }
+
+    /// <summary>
+    /// Discovers packages under explicit roots without reading the game configuration. The
+    /// production <see cref="Discover(OpenlockConfig)"/> builds the same root list, so this is the
+    /// same scanner, not a test-only parser.
+    /// </summary>
+    public static AddonPackages DiscoverFromRoots(IEnumerable<string> roots)
+    {
+        var list = roots.Select(root => (Path.GetFullPath(root), "config")).ToList();
+        return Scan(list, list.Count > 0 ? list[0].Item1 : Directory.GetCurrentDirectory());
+    }
+
+    private static AddonPackages Scan(IEnumerable<(string Path, string Source)> roots, string gameDir)
+    {
+        var result = new AddonPackages();
         var seenArchives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (root, source) in roots)
@@ -125,13 +145,6 @@ public sealed class AddonPackages
                 var label = DisplayPath(gameDir, full);
                 try
                 {
-                    var info = new FileInfo(full);
-                    if (info.Length > MaxPackageBytes)
-                    {
-                        result.Refuse(label, source, $"package is {info.Length} bytes; the ceiling is {MaxPackageBytes}");
-                        continue;
-                    }
-
                     var package = ShpPackage.LoadFile(full);
                     result.Add(package, label, source, null, full, false, out _, out _);
                 }
@@ -140,6 +153,23 @@ public sealed class AddonPackages
                     or ArgumentException)
                 {
                     result.Refuse(label, source, exception.Message);
+                }
+            }
+
+            foreach (var directory in EnumerateDirectories(root, "*" + ModernPackageExtension))
+            {
+                var full = Path.GetFullPath(directory);
+                if (!seenArchives.Add(full))
+                    continue;
+
+                var label = DisplayPath(gameDir, full);
+                if (TryReadModern(full, label, source, out var modern, out _, out _, out var modernWhy))
+                {
+                    result.Add(modern, label, source, null, null, false, out _, out _);
+                }
+                else
+                {
+                    result.Refuse(label, source, modernWhy);
                 }
             }
 
@@ -169,13 +199,6 @@ public sealed class AddonPackages
                         result.Refuse($"{label}!/{entry}", source, "VPK entry could not be read");
                         continue;
                     }
-                    if (bytes.Length > MaxPackageBytes)
-                    {
-                        result.Refuse($"{label}!/{entry}", source,
-                            $"package is {bytes.Length} bytes; the ceiling is {MaxPackageBytes}");
-                        continue;
-                    }
-
                     var package = ShpPackage.Parse(bytes, $"{label}!/{entry}");
                     result.Add(package, $"{label}!/{entry}", source, archiveEntries, full, false, out _, out _);
                 }
@@ -210,7 +233,7 @@ public sealed class AddonPackages
         try { full = Path.GetFullPath(path); }
         catch (Exception exception) { why = exception.Message; return 0; }
 
-        if (!File.Exists(full))
+        if (!File.Exists(full) && !Directory.Exists(full))
         {
             why = $"'{path}' does not exist";
             return 0;
@@ -220,15 +243,20 @@ public sealed class AddonPackages
         var lastWhy = "";
         try
         {
-            if (Path.GetExtension(full).Equals(PackageExtension, StringComparison.OrdinalIgnoreCase))
+            if (Directory.Exists(full))
             {
-                var info = new FileInfo(full);
-                if (info.Length > MaxPackageBytes)
+                if (!TryReadModern(full, full, "live", out var modern, out _, out _, out var modernWhy))
                 {
-                    why = $"package is {info.Length} bytes; the ceiling is {MaxPackageBytes}";
+                    why = modernWhy;
                     return 0;
                 }
 
+                added += Add(modern, full, "live", null, null, true,
+                    out var oneChanged, out lastWhy);
+                changed |= oneChanged;
+            }
+            else if (Path.GetExtension(full).Equals(PackageExtension, StringComparison.OrdinalIgnoreCase))
+            {
                 added += Add(ShpPackage.LoadFile(full), full, "live", null, full, true,
                     out var oneChanged, out lastWhy);
                 changed |= oneChanged;
@@ -251,12 +279,6 @@ public sealed class AddonPackages
                         continue;
                     }
 
-                    if (bytes.Length > MaxPackageBytes)
-                    {
-                        lastWhy = $"package '{entry}' is {bytes.Length} bytes; the ceiling is {MaxPackageBytes}";
-                        continue;
-                    }
-
                     added += Add(ShpPackage.Parse(bytes, $"{full}!/{entry}"),
                         $"{full}!/{entry}", "live", archiveEntries, full, true,
                         out var oneChanged, out lastWhy);
@@ -265,7 +287,7 @@ public sealed class AddonPackages
             }
             else
             {
-                why = "live delivery takes a .shpkg or a .vpk carrying one";
+                why = "live delivery takes a modern .pkg directory, a .shpkg, or a .vpk carrying one";
                 return 0;
             }
         }
@@ -281,6 +303,146 @@ public sealed class AddonPackages
                 : "the package declares no windows and no package state changed";
 
         return added;
+    }
+
+    /// <summary>
+    /// Reads a modern `.pkg` directory: the canonical package is verified first, then its
+    /// `secure-shell.surface/<32 hex>` payload is parsed (a numeric legacy header is upgraded in
+    /// memory), and only then are windows built. A surface
+    /// cannot be read without the package identity that it belongs to.
+    /// </summary>
+    private static bool TryReadModern(
+        string directory,
+        string label,
+        string source,
+        out ShpPackage package,
+        out ModernPackage modern,
+        out SurfaceDocument surface,
+        out string why)
+    {
+        package = new ShpPackage();
+        modern = null!;
+        surface = null!;
+        why = "";
+
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        var payloadPath = Path.Combine(directory, "payload.bin");
+        if (!ModernPackage.TryLoad(manifestPath, payloadPath, out modern, out why))
+            return false;
+
+        if (!modern.Schemas.Any(SurfaceDocument.AcceptsSchema))
+        {
+            why = $"modern package does not declare {SurfaceDocument.Schema} or a numeric legacy surface id";
+            return false;
+        }
+
+        if (!modern.TryReadPayloadText(SurfaceDocument.MaxBytes, out var text, out why))
+            return false;
+
+        if (!SurfaceDocument.TryParse(text, label, out surface, out var refusal))
+        {
+            why = refusal.Describe;
+            return false;
+        }
+
+        if (!string.Equals(surface.Id, modern.Name, StringComparison.Ordinal))
+        {
+            why = $"surface-declared-id: declared '{surface.Id}', manifest names '{modern.Name}'";
+            return false;
+        }
+
+        package = ShpPackage.FromModern(
+            directory,
+            modern.Name,
+            modern.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            text,
+            modern.ContentDigest);
+        foreach (var window in surface.Windows)
+            package.Windows.Add(ToWindow(window, surface));
+
+        return true;
+    }
+
+    private static ShpPackage.Window ToWindow(SurfaceDocument.Window source, SurfaceDocument surface)
+    {
+        var chrome = source.Chrome == "none"
+            ? new List<string>()
+            : source.Chrome.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        var moves = source.Moves == "none"
+            ? new List<string>()
+            : source.Moves.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        var layout = chrome.Count == 0 ? "none" : string.Join(",", ["title-position", .. chrome]);
+        var behavior = string.Join(",", moves.Concat(chrome));
+        if (behavior.Length == 0)
+            behavior = "none";
+
+        var window = new ShpPackage.Window
+        {
+            Id = source.Id,
+            Title = source.Title,
+            Content = source.Content,
+            Lane = source.Lane,
+            Extent = "square-pixels",
+            Geometry = [source.X, source.Y, source.Width, source.Height],
+            MinSize = [source.MinWidth, source.MinHeight],
+            Opacity = 930,
+            Elevation = 1,
+            ThemeRole = source.ThemeRole,
+            Pinnable = source.Pinnable,
+            Pinned = source.Pinned,
+            Layout = layout,
+            Behavior = behavior,
+            RecordId = source.Id,
+            Rule = source.Rule,
+            SurfaceRequires = surface.Requires,
+        };
+        window.SurfaceNodes.AddRange(surface.Nodes.Where(node => node.Window == source.Id));
+        window.SurfaceActions.AddRange(surface.Actions.Where(action => action.Window == source.Id));
+        window.LiveTree = SurfaceTree(surface, source.Id);
+        return window;
+    }
+
+    /// <summary>
+    /// Projects the surface's node rows onto the shell's Panorama node model. The mapping is
+    /// structural: a `label` becomes a Label with its literal value, every other surface kind is
+    /// a Panel. A `@slot` is a data placeholder, not literal text, and stays empty until its
+    /// consumer binds it. This is what keeps a modern surface drawable without inventing an
+    /// artifact table or reading bytes the package identity did not cover.
+    /// </summary>
+    private static List<LayoutTree.Node>? SurfaceTree(SurfaceDocument surface, string windowId)
+    {
+        var rows = surface.Nodes.Where(node => node.Window == windowId).ToList();
+        if (rows.Count == 0)
+            return null;
+
+        var byId = rows.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var children = rows.ToDictionary(node => node.Id, _ => new List<SurfaceDocument.Node>(),
+            StringComparer.Ordinal);
+        var roots = new List<SurfaceDocument.Node>();
+        foreach (var row in rows)
+        {
+            if (row.Parent != "-" && byId.ContainsKey(row.Parent))
+                children[row.Parent].Add(row);
+            else
+                roots.Add(row);
+        }
+
+        LayoutTree.Node Convert(SurfaceDocument.Node row)
+        {
+            var node = new LayoutTree.Node
+            {
+                Tag = row.Kind == "label" ? "Label" : "Panel",
+                Id = row.Id,
+                Class = "Surface" + char.ToUpperInvariant(row.Kind[0]) + row.Kind[1..],
+                Text = row.Value.StartsWith('@') ? "" : row.Value == "-" ? "" : row.Value,
+            };
+            foreach (var child in children[row.Id])
+                node.Children.Add(Convert(child));
+            return node;
+        }
+
+        return roots.Select(Convert).ToList();
     }
 
     public string PayloadJson() => SerializePayload(Revision, _packages, _windows);
@@ -324,6 +486,9 @@ public sealed class AddonPackages
             Archive = archive,
             Source = source,
             Digest = package.PackageDigest,
+            Carrier = package.Magic == ModernPackage.ObjectSchema ? "modern" : "legacy",
+            Surface = package.Magic == ModernPackage.ObjectSchema ? package.Name : "",
+            Requires = package.Windows.FirstOrDefault()?.SurfaceRequires ?? "",
             Artifacts = package.Artifacts.Keys.ToList(),
         };
 
@@ -408,8 +573,10 @@ public sealed class AddonPackages
             // package pushed after launch draws from this tree instead. A layout that exists
             // but cannot become a tree is a real refusal, and this whole candidate set is
             // discarded so the previous version stays mounted.
-            window.LiveTree = LayoutTree.Read(package, window, localId, archiveEntries, archivePath, out var liveWhy);
-            if (window.LiveTree is null && !string.IsNullOrEmpty(liveWhy))
+            var live = LayoutTree.Read(package, window, localId, archiveEntries, archivePath, out var liveWhy);
+            if (live is not null)
+                window.LiveTree = live;
+            else if (window.LiveTree is null && !string.IsNullOrEmpty(liveWhy))
                 record.Refusals.Add(new ShpPackage.Refusal(
                     archive, 1, localId, "live layout refused: " + liveWhy));
             record.WindowIds.Add(fullId);
@@ -606,6 +773,18 @@ public sealed class AddonPackages
         try
         {
             return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).ToArray();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static IEnumerable<string> EnumerateDirectories(string root, string pattern)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(root, pattern, SearchOption.AllDirectories).ToArray();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

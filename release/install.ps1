@@ -575,7 +575,7 @@ try {
 
     Update-ShellUi -Percent 94 -Stage 'record' -Message 'writing the installed-build record'
     $record = [ordered]@{
-        format = 'openlock.build/1'
+        format = 'openlock.build/c0fe71e57305319a492946bbe18ea9dd'
         grade = $chosenGrade
         stage = 'installed'
         state = 'ok'

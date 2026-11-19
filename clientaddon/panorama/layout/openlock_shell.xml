@@ -3,10 +3,13 @@
         <include src="file://{resources}/styles/openlock_shell.css" />
         <include src="file://{resources}/styles/openlock_popit.css" />
         <include src="file://{resources}/styles/openlock_schemes.css" />
+        <!-- The colour-pair skin loads after the scheme so a pair wins on the Popit slab only. -->
+        <include src="file://{resources}/styles/openlock_pairs.css" />
     </styles>
     <scripts>
         <include src="file://{resources}/scripts/openlock_shell_data.js" />
         <include src="file://{resources}/scripts/openlock_audio.js" />
+        <include src="file://{resources}/scripts/openlock_pairs.js" />
         <include src="file://{resources}/scripts/openlock_popit.js" />
         <include src="file://{resources}/scripts/openlock_delivery.js" />
         <include src="file://{resources}/scripts/openlock_layout.js" />
