@@ -88,7 +88,10 @@ material/decoration/tweak/colour edits, the profile alphabet and the profile row
 dashboard harness (59 checks) proves the same surface opens from the dashboard, paints the live
 fake HUD panel and writes the style and pair into the saved row. `tools/popit_parity.py` holds
 386 declared facts across the elements inventory, the pair roles and the persistence path, and
-`tools/ui_prose.py --check` reports no hits in the three scripts this rework owns.
+`tools/ui_prose.py --check` reports no hits in the three scripts this rework owns, using an
+explicit literal scanner rather than the earlier regex that matched nothing. The gate also applies
+Brass Meridian's 24-word sentence and 18-word/92-character UI budget; seven shell strings were
+corrected to pass it. Long-form docs are not yet under that budget and `--docs` names the gap.
 
 **Browser witness (2026-11-19).** `node tools/browser_probe.js` drives the shipped module in
 headless Chromium through a Panorama-to-DOM host (`tools/browser/panorama-dom-host.js`), with

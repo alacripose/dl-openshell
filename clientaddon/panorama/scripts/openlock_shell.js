@@ -142,7 +142,7 @@
             file: "hud",
             line: 1,
             subject: "bulk framing",
-            why: count + " visible panels would make bulk framing a performance risk; use the UI tree stream or disable it"
+            why: count + " visible panels risk bulk framing; use the UI tree stream or disable it"
         });
     }
 
@@ -6478,7 +6478,7 @@
 
     function renderPicker(body, win) {
         headingXd(body, "scrub the live panorama");
-        rowXd(body, "The picker reads the panels the HUD actually built, not the package's catalog. " +
+        rowXd(body, "The picker reads the panels the HUD built, not the package's catalog. " +
             "The overlay owns the pointer only while scrubbing, so a click cannot leak into the game.", "ViewMuted");
         actionXd(body, pickerActive ? "Scrubbing…" : "Start scrub", function () { startPicker(); });
 
@@ -7255,7 +7255,7 @@
     function renderDashMenu(body) {
         rowXd(body, "The shell's own surfaces. The game's Citadel dashboard is a full screen only " +
             "in the tools client; in the release build it lives behind the pause menu, so this " +
-            "dashboard is drawn by the shell and opens over whatever the game is showing — on " +
+            "dashboard is drawn by the shell and opens over whatever the game is showing; on " +
             "release, the pause menu's blurred world.", "PaletteNote");
         headingXd(body, "surfaces");
         var entries = dashboardEntries();
@@ -7603,7 +7603,7 @@
                 "  ·  GameUI " + (typeof GameUI !== "undefined" ? "present" : "absent"), "ViewMuted");
 
             headingXd(body, "server");
-            rowXd(body, connected() ? "connected" : "not connected — showing the declared package only", "ViewMuted");
+            rowXd(body, connected() ? "connected" : "not connected; showing the declared package only", "ViewMuted");
             actionXd(body, "Reconcile", function () { send("steady"); });
             actionXd(body, "Restore hero baselines", function () { send("restore"); });
             actionXd(body, "Mode on/off", function () { send("mode"); });
@@ -8071,12 +8071,12 @@
         for (var scheme in profiles) {
             if (!profiles.hasOwnProperty(scheme)) continue;
             if (String(scheme) === "__proto__") {
-                refused.push("__proto__ — the scheme is not a profile name");
+                refused.push("__proto__: the scheme is not a profile name");
                 continue;
             }
             var entry = profiles[scheme];
             if (!entry || typeof entry !== "object") {
-                refused.push(String(scheme) + " — the profile is not an object");
+                refused.push(String(scheme) + ": the profile is not an object");
                 continue;
             }
             // Current payloads wrap geometry and arrangement state; an older payload is the
@@ -8092,7 +8092,7 @@
                 // state, not window rows, and must not be read as one.
                 if (!wraps && (id === "active" || id === "tab" || id === "pinned" ||
                     id === "minimized" || id === "popit")) continue;
-                if (String(id) === "__proto__") { bad = "__proto__ — the id is not a window id"; break; }
+                if (String(id) === "__proto__") { bad = "__proto__: the id is not a window id"; break; }
                 var checked = savedRect(rows[id]);
                 if (!checked.rect) { bad = String(id) + " — " + checked.why; break; }
                 out[id] = checked.rect;

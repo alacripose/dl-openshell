@@ -1,4 +1,4 @@
-CSDK13 compile receipt — 2026-11-19 (after the browser-probe changes)
+CSDK13 compile receipt — 2026-11-19 (after the prose-copy corrections)
 compiler: <home>\Downloads\Reduced_CSDK_13\game\bin\win64\resourcecompiler.exe
 inputs: layout/openlock_shell.xml, scripts/openlock_popit.js, scripts/openlock_pairs.js, scripts/openlock_shell.js, styles/openlock_popit.css, styles/openlock_pairs.css, styles/openlock_schemes.css, styles/openlock_shell.css
  OK: 8 compiled, 0 failed, 0 skipped, 0m:00s

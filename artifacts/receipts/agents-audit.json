@@ -1,7 +1,7 @@
 {
   "format": "openlock.agents-audit/1",
   "subject": {
-    "AGENTS.md": "c89285e4fa9b7e8393694abbcd5007f3b9ba68934aa6b2ae08347db04b5c95c2",
+    "AGENTS.md": "c326dbe1cc2b4f0c79a22babcf46770b5d0be7ed8b7545af629249067541eb59",
     "AGENTS-INDEX.md": "03a83144194deea04620169e31eae7198976320b4c0a42eec93868634fdadd89"
   },
   "checker": {
@@ -72,7 +72,7 @@
       "criterion": "A5",
       "subject": "line 94",
       "ok": true,
-      "detail": "62 lines, bounded"
+      "detail": "74 lines, bounded"
     }
   ],
   "refusals": [],

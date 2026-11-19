@@ -501,7 +501,7 @@ hostPanel.attrs.dwv_layout =
     '{"x":1,"y":2,"w":30,"h":40}}},' +
     '"alpha":{"windows":{"abilities":{"x":300,"y":140,"w":400,"h":240}}}}}';
 advance(700);
-check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__ — the scheme is not a profile name') >= 0),
+check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__: the scheme is not a profile name') >= 0),
     'a __proto__ scheme is refused by name');
 check(msgs.slice(layoutMark).some(m => m.indexOf('layout profiles: 1') >= 0),
     'a refused __proto__ scheme does not take the valid profile beside it down');
@@ -517,7 +517,7 @@ hostPanel.attrs.dwv_layout =
     '"abilities":{"x":260,"y":120,"w":360,"h":220}}},' +
     '"alpha":{"windows":{"abilities":{"x":300,"y":140,"w":400,"h":240}}}}}';
 advance(700);
-check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__ — the id is not a window id') >= 0),
+check(msgs.slice(layoutMark).some(m => m.indexOf('__proto__: the id is not a window id') >= 0),
     'a __proto__ window id is refused by name');
 check(msgs.slice(layoutMark).some(m => m.indexOf('layout profiles: 1') >= 0),
     'a refused __proto__ window id does not take the valid profile beside it down');

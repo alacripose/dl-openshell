@@ -149,6 +149,18 @@ has seen this surface in game.
 - The `popit=` row grammar now lives in `clientaddon/panorama/scripts/openlock_popit.js`
   (`encodeProfile`/`decodeProfile`); `openlock_shell.js` calls it in `layoutSnapshot` and
   `normalizePopitLayout`, so the writer and reader cannot drift. The C# reader still validates.
+- **The prose gate was silently matching nothing.** `tools/ui_prose.py` used a regex whose
+  backslashes had been written twice, so it scanned almost no literals and reported "0 hits". That
+  is an autological failure: a gate that cannot fail is not evidence. It is now an explicit
+  quote-and-escape scanner with `--selftest`, and its first real run found seven shell strings
+  (one over the UI character budget, one `actually`, five em-dashes). Those strings were corrected
+  and `chrome-test.js` now asserts the corrected `__proto__:` refusal text.
+- The gate now also carries **Brass Meridian's two-second budget**
+  (`F:/Documents/brass-meridian/docs/PROSE.md`, `tools/prose.mjs`): at most 24 words per sentence,
+  18 words and 92 characters per UI string, and the Brass Meridian banned-word list. Long-form docs
+  are **not** under the budget yet; `python tools/ui_prose.py --docs` reports their over-budget
+  paragraphs (34 in `docs/UI-PASS.md`, 45 in `README.md`) and is named as a not-implemented pass
+  rather than silently exempted.
 - **Not witnessed**: the in-game render, the crown contour (Panorama approximation, stated in
   `shell/alpha-shell/forms/popit.form`), and any per-pair contrast beyond the measured values. The
   browser probe measures `lbp1-yellow-fuchsia` at 1.05:1 wordmark-on-slab and does not retune the
