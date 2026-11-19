@@ -423,11 +423,11 @@
         ],
         "planes": 4,
         "overlap": false,
-        "sectionHeight": 1124,
+        "sectionHeight": 1143,
         "overflowX": 0,
         "rootVisible": true,
         "childVisible": true,
-        "pairText": 2208
+        "pairText": 2324
       },
       "auditLine": "audited 2026-11-12 against the tracked tree 11 behavioural suites 5 parity cells 11/11 family register checks refusals are named, not counted away",
       "externalFailures": []
@@ -502,11 +502,11 @@
         ],
         "planes": 4,
         "overlap": false,
-        "sectionHeight": 1967,
+        "sectionHeight": 2024,
         "overflowX": 0,
         "rootVisible": true,
         "childVisible": true,
-        "pairText": 2208
+        "pairText": 2324
       },
       "auditLine": "audited 2026-11-12 against the tracked tree 11 behavioural suites 5 parity cells 11/11 family register checks refusals are named, not counted away",
       "externalFailures": []
