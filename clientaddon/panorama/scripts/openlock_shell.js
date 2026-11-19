@@ -6835,6 +6835,14 @@
     // CREATE/PLAY invention. The layout fields remain only so an old `popit=` profile still
     // parses; the Popit itself no longer has a mode, a card row or a tile order.
     function normalizePopitLayout(input) {
+        // A profile can arrive as the raw `popit=` row (a save written by this client, a probe or
+        // an older reader) or as the parsed object the host returns. Both go through the module's
+        // own decoder so the pair slug is validated against the generated table once.
+        if (typeof input === "string") {
+            return globalThis.OpenlockPopit && globalThis.OpenlockPopit.decodeProfile
+                ? globalThis.OpenlockPopit.decodeProfile(input)
+                : defaultPopitLayout();
+        }
         var src = input || {};
         var columns = parseInt(src.columns, 10);
         var width = parseInt(src.width, 10);
@@ -7787,11 +7795,12 @@
             if (!minimized.hasOwnProperty(minId) || !minimized[minId] || !open[minId] || !windowById(minId)) continue;
             rows.push("min=" + minId);
         }
-        // The Popit surface's arrangement travels with the desktop it belongs to. Tiles are
-        // `+`-joined because a comma already separates a rectangle row.
-        rows.push("popit=columns:" + popitLayout.columns + ";width:" + popitLayout.width +
-            ";frame:" + popitLayout.frame + ";mode:" + popitLayout.mode +
-            ";order:" + popitLayout.order.join("+") + ";pair:" + (popitLayout.pair || ""));
+        // The Popit surface's arrangement travels with the desktop it belongs to. The module owns
+        // the row grammar, so the snapshot and the host parser cannot drift on field order, the
+        // pair slug or the clamps. The constant is the documented default, not a second grammar.
+        rows.push("popit=" + (globalThis.OpenlockPopit && globalThis.OpenlockPopit.encodeProfile
+            ? globalThis.OpenlockPopit.encodeProfile(popitLayout)
+            : "columns:4;width:356;frame:lbp3;mode:create;order:;pair:"));
         for (var id in open) {
             if (!open.hasOwnProperty(id) || !open[id] || !windowById(id)) continue;
             var g = geometry[id];

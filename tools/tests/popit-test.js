@@ -244,6 +244,23 @@ check(colors.length === 7, 'Player Color lists Default and six scheme roles');
 colors.find(item => item.value === 'accent').events.onmouseactivate();
 check(edits[3].color === 'accent', 'picking a Player Colour emits a colour edit');
 
+// The profile row grammar lives in the module, so the shell writer and the host reader share it.
+const profileRow = globalThis.OpenlockPopit.encodeProfile({
+    columns: 4, width: 356, frame: "lbp3", mode: "create", order: [], pair: "lbp1-yellow-fuchsia"
+});
+check(profileRow === "columns:4;width:356;frame:lbp3;mode:create;order:;pair:lbp1-yellow-fuchsia",
+    'the profile row carries the chosen pair: ' + profileRow);
+const decodedProfile = globalThis.OpenlockPopit.decodeProfile(profileRow);
+check(decodedProfile.pair === "lbp1-yellow-fuchsia" && decodedProfile.columns === 4,
+    'the profile row decodes to the same pair');
+check(globalThis.OpenlockPopit.decodeProfile("popit=columns:2;width:420;mode:play;order:a+b;pair:popit-blue").width === 420,
+    'a raw popit= row decodes with its width and mode');
+check(globalThis.OpenlockPopit.decodeProfile("columns:9;width:10;pair:not-a-pair")
+    .columns === 4 && globalThis.OpenlockPopit.decodeProfile("columns:9;width:10;pair:not-a-pair").pair === "",
+    'an out-of-range width and an unknown pair are clamped and dropped');
+check(globalThis.OpenlockPopit.encodeProfile({ columns: 9, width: 10 }).indexOf("columns:4;width:240") === 0,
+    'an out-of-range arrangement is clamped on the way out');
+
 const encoded = globalThis.OpenlockPopit.encodeState(edits[3]);
 check(encoded === 'm6c1d4r-1b-1o-1', 'a style encodes to the fixed profile alphabet');
 const decoded = globalThis.OpenlockPopit.decodeState(encoded);

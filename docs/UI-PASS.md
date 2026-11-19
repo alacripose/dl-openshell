@@ -82,15 +82,33 @@ declares `.PopitRoot` and `.PopitChild` with a crowned per-corner approximation.
  draw the bibles' single Bezier contour, so that gap is named in `forms/popit.form` and in the
 parity gate's `not-implemented` line instead of being passed off as the contour.
 
-**Proof state.** The Node harness (`tools/tests/popit-test.js`, 60 checks) proves the persistent
+**Proof state.** The Node harness (`tools/tests/popit-test.js`, 65 checks) proves the persistent
 root, the child reveal and Back, the 37-pair Palette, Classic, reduced motion, target selection,
-material/decoration/tweak/colour edits and the profile alphabet. The dashboard harness (59 checks)
-proves the same surface opens from the dashboard, paints the live fake HUD panel and writes the
-style and pair into the saved row. `tools/popit_parity.py` holds 385 declared facts across the
-elements inventory, the pair roles and the persistence path, and `tools/ui_prose.py --check`
-reports no hits in the three scripts this rework owns. No person has witnessed this surface in
-the built client; the old CREATE/PLAY capture and its VPK hash describe a design that no longer
-exists and are not evidence for this one.
+material/decoration/tweak/colour edits, the profile alphabet and the profile row grammar. The
+dashboard harness (59 checks) proves the same surface opens from the dashboard, paints the live
+fake HUD panel and writes the style and pair into the saved row. `tools/popit_parity.py` holds
+386 declared facts across the elements inventory, the pair roles and the persistence path, and
+`tools/ui_prose.py --check` reports no hits in the three scripts this rework owns.
+
+**Browser witness (2026-11-19).** `node tools/browser_probe.js` drives the shipped module in
+headless Chromium through a Panorama-to-DOM host (`tools/browser/panorama-dom-host.js`), with
+`tools/browser/popit-probe.html` serving the real scripts and the real translated stylesheets. It
+reports 59 checks: the root element and its six rows keep the same node instances across a
+section change, the child reveals beside the root and Back hides only the child, two pair slugs
+round-trip through `encodeProfile`/`decodeProfile` into a reload, the LBP3 roles render as
+`secondary` slab / `primary` border and selected states / `tertiary` wordmark / `emphasis` detail,
+Classic returns the scheme's slab, and `setReducedMotion` turns the computed child, root and
+surface transition durations to `0s` while the normal path reads `0.22s`/`0.28s`. Measured
+contrast on the slab for `lbp1-yellow-fuchsia`: wordmark 1.05:1, emphasis 3.22:1, border and page
+dot 3.82:1. The source pair sets that ratio; the role mapping is correct, the palette is not
+silently retuned to pass a contrast target. Receipt: `artifacts/receipts/browser-probe.json`.
+
+The landing page was measured in the same browser at 1280x900 and 420x900: no local console
+errors or failed local requests, the Popit root (272x315) and child (314x282 / 352x271) render
+non-zero and do not overlap, the eight pair bands are 12 px tall with three computed colours
+each, and the four control-plane rows are present. The browser witness is a Chromium DOM, not
+the Deadlock client: no person has witnessed this surface in the built client, and the old
+CREATE/PLAY capture and its VPK hash describe a design that no longer exists.
 
 ## 3. Picker
 
@@ -154,9 +172,13 @@ the existing table.
 - **Reduced motion** has a Popit suppression path (`OpenlockSetPopitMotion`), but no user-facing
   switch and no profile row yet; the idle-chrome animation is unchanged.
 - **Live rendering**: the new Popit cell editor has not been seen in a built client. The Node
-  harnesses cover the root/child behaviour, the pair palette and the live-cell paint, and the C#
-  parser covers the saved alphabet and pair slug; the rendered crown, child reveal, halo and item
-  contrast remain unwitnessed.
+  harnesses and the headless browser probe cover the root/child behaviour, the pair palette, the
+  computed role colours and the landing page, and the C# parser covers the saved alphabet and
+  pair slug; the rendered crown, the in-game transitions and the halo/item contrast in Deadlock
+  remain unwitnessed. The browser witness above records the measured DOM result.
+- **Contrast**: the palette is not retuned. `lbp1-yellow-fuchsia` measures a 1.05:1 wordmark on
+  its slab in the browser probe, which is the source pair's own ratio; a later palette pass would
+  have to change the pair table, not the role mapping.
 - **Audio mix** is not measured on a device. The samples are bounded and the compiled soundevents
   load, but perceived loudness against Deadlock's own UI remains a listening check.
 

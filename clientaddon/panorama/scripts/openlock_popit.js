@@ -1066,6 +1066,52 @@
         } catch (e) {}
     }
 
+    // The `popit=` layout row. The module owns the grammar so the shell writer, the host reader
+    // and the browser probe share one definition instead of three copies. The C#
+    // LayoutProfiles reader accepts the same fields; this side drops an unknown pair id rather
+    // than painting a palette the table does not contain.
+    function encodeProfile(input) {
+        var src = input || {};
+        var columns = clampInt(src.columns, 1, 4, 4);
+        var width = clampInt(src.width, 240, 900, 356);
+        var mode = src.mode === "play" ? "play" : "create";
+        var order = [];
+        if (src.order instanceof Array) {
+            for (var i = 0; i < src.order.length && order.length < 32; i++) {
+                var id = String(src.order[i] || "");
+                if (id && order.indexOf(id) < 0) order.push(id);
+            }
+        }
+        var pair = typeof src.pair === "string" && pairById(src.pair) ? src.pair : "";
+        return "columns:" + columns + ";width:" + width + ";frame:" + FRAME +
+            ";mode:" + mode + ";order:" + order.join("+") + ";pair:" + pair;
+    }
+
+    function decodeProfile(row) {
+        var text = String(row == null ? "" : row);
+        if (text.indexOf("popit=") === 0) text = text.slice("popit=".length);
+        var out = { columns: 4, width: 356, frame: FRAME, mode: "create", order: [], pair: "" };
+        var fields = text.split(";");
+        for (var i = 0; i < fields.length; i++) {
+            var at = fields[i].indexOf(":");
+            if (at < 0) continue;
+            var key = fields[i].slice(0, at);
+            var value = fields[i].slice(at + 1);
+            if (key === "columns") out.columns = clampInt(value, 1, 4, 4);
+            else if (key === "width") out.width = clampInt(value, 240, 900, 356);
+            else if (key === "mode") out.mode = value === "play" ? "play" : "create";
+            else if (key === "order") {
+                var ids = value ? value.split("+") : [];
+                for (var o = 0; o < ids.length && out.order.length < 32; o++) {
+                    if (ids[o] && out.order.indexOf(ids[o]) < 0) out.order.push(ids[o]);
+                }
+            } else if (key === "pair") {
+                out.pair = pairById(value) ? value : "";
+            }
+        }
+        return out;
+    }
+
     globalThis.OpenlockPopit = {
         show: show,
         close: close,
@@ -1082,6 +1128,8 @@
         hasEdit: hasEdit,
         encodeState: encodeState,
         decodeState: decodeState,
+        encodeProfile: encodeProfile,
+        decodeProfile: decodeProfile,
         targets: function () { return targets.slice(0); },
         status: function () { return status; },
         pair: function () { return pairId; },

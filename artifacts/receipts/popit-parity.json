@@ -1,9 +1,9 @@
 {
   "format": "openlock.popit-parity/1",
   "subject": {
-    "docs/popit-elements.json": "e9956001e0203d745ef9566f28c3d9431828f3e9352fd5d76221ed034c43c143",
-    "clientaddon/panorama/scripts/openlock_popit.js": "a7e3761b028eae72923b0a21bbf52acc4109b811c62225a7bdc903f372216c64",
-    "clientaddon/panorama/scripts/openlock_shell.js": "77eaf935e1c60ffc4523c54f831ed80e786d0fc0f53822cdd07320a97286903b",
+    "docs/popit-elements.json": "d3b06e7e3ad5187da25da4fe5d79673a0fdc4f47b243ba5f4b628021058ce226",
+    "clientaddon/panorama/scripts/openlock_popit.js": "0629b71836ef6a11a6cd02ea4f0e778f9f808aadd93ae75bad1c10956037acc7",
+    "clientaddon/panorama/scripts/openlock_shell.js": "23cfdc30cfe233f6dfca3e41c8961ecae12291013a3fdcd8868023b24663f0f9",
     "clientaddon/panorama/scripts/openlock_pairs.js": "7c15c3730ce23f4f3b90113dc31123c6a6544b8c7b625cf993921c307f2b6152",
     "clientaddon/panorama/styles/openlock_popit.css": "cc329a22d12cebf74594b00a2ac7c33d914dfc3e6fa13e21166f6ef1c0cbcb73",
     "clientaddon/panorama/styles/openlock_pairs.css": "139ddfbac8b907c36d1d25210c329043222ecc1e0c5214c32762b5fe6bc960f2",
@@ -413,6 +413,12 @@
       "subject": "popit.persistence.style",
       "ok": true,
       "detail": "symbol 'PopitStylePattern' is not in src/Openlock/Shell/LayoutProfiles.cs"
+    },
+    {
+      "criterion": "E2",
+      "subject": "popit.persistence.profile",
+      "ok": true,
+      "detail": "symbol 'encodeProfile' is not in clientaddon/panorama/scripts/openlock_popit.js"
     },
     {
       "criterion": "E2",
