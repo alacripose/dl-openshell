@@ -25,7 +25,7 @@ operator, not the player. It is the boundary where remote data becomes DOM.
 
 ## Controls observed in the KB
 
-- Payload must be ≤ 4 MiB and `format === "openlock.addons/2"`.
+- Payload must be ≤ 4 MiB and `format === "openlock.addons/a5d7cf25e0a40c0a06b836992556491d"` (or a numeric `openlock.addons/<n>` legacy id).
 - Revision monotonicity: a lower revision is ignored as stale; an equal revision with different
   content is refused.
 - Package versions may not go backwards for an already-mounted name.

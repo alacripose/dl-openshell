@@ -1,9 +1,9 @@
-"""Build the MOTD demo as a real shploingus package and install its addon VPK.
+"""Build the MOTD demo as a modern `secure-shell.surface/<32 hex>` package.
 
-The package frame is SHPKG003: the eight-byte magic, a little-endian recipe length, the
-SHA-256 of the recipe, the shploingus.recipe/3 source, then the artifact table. The VPK
-carries the same compiled layout and stylesheet, because the loader resolves a window's
-layout only when the archive actually contains it.
+The package is a canonical `secure-shell.package/<32 hex>` directory: `manifest.json` + `payload.bin`,
+BLAKE3 identity, and a `secure-shell.surface/<32 hex>` payload. There is no SHPKG frame and no package
+emit path for the legacy format. The VPK still carries the compiled resources for a mounted
+layout, but the window declaration comes from the modern package.
 
 Run from this folder:
     python build.py --game "D:\\SteamLibrary\\steamapps\\common\\Deadlock\\game"
@@ -13,10 +13,8 @@ Run from this folder:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 import shutil
-import struct
 import subprocess
 import sys
 import time
@@ -62,23 +60,26 @@ def render_layout(motd: str) -> str:
     return template.replace("{{MOTD_LINES}}", labels)
 
 
-def write_frame(recipe: bytes, artifacts: list[tuple[str, bytes]]) -> bytes:
-    if not recipe.endswith(b"\n"):
-        recipe += b"\n"
-    if b"\r" in recipe:
-        recipe = recipe.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-
-    parts = [
-        b"SHPKG003",
-        struct.pack("<I", len(recipe)),
-        hashlib.sha256(recipe).digest(),
-        recipe,
-        struct.pack("<I", len(artifacts)),
-    ]
-    for path, data in artifacts:
-        encoded = path.encode("utf-8")
-        parts.extend((struct.pack("<H", len(encoded)), encoded, struct.pack("<I", len(data)), data))
-    return b"".join(parts)
+def write_modern_package(package_dir: Path) -> str:
+    """Invoke the one modern packer; this example has no legacy emit path."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools" / "modern_package.py"),
+            "--surface",
+            str(HERE / "package.surface"),
+            "--out",
+            str(package_dir),
+            "--name",
+            PACKAGE_ID,
+        ],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"modern packer failed ({result.returncode})\n{result.stdout}\n{result.stderr}")
+    return (package_dir / "identity.txt").read_text(encoding="utf-8").strip()
 
 
 def pack_vpk(packer: Path, content: Path, archive: Path) -> None:
@@ -124,7 +125,7 @@ def validate_vpk(archive: Path) -> set[str]:
 
     entries, _ = vpk_read.read_tree(str(archive))
     names = {entry["path"] for entry in entries}
-    required = {"addons/motd.shpkg", "panorama/layout/motd-panel.vxml_c", "panorama/styles/motd.vcss_c"}
+    required = {"panorama/layout/motd-panel.vxml_c", "panorama/styles/motd.vcss_c"}
     missing = required - names
     if missing:
         raise SystemExit(f"VPK is missing {sorted(missing)}; entries: {sorted(names)}")
@@ -188,24 +189,12 @@ def main() -> int:
     if missing:
         raise SystemExit(f"resourcecompiler wrote no {missing}")
 
-    recipe = (HERE / "package.shspec").read_bytes()
-    layout_bytes = layout.encode("utf-8")
-    style_bytes = (HERE / "panorama" / "styles" / "motd.css").read_bytes()
-    artifacts = [
-        (f"panorama/layout/{WINDOW_ID}.xml", layout_bytes),
-        ("panorama/styles/motd.css", style_bytes),
-        (f"panorama/layout/{WINDOW_ID}.vxml_c", compiled_layout.read_bytes()),
-        ("panorama/styles/motd.vcss_c", compiled_style.read_bytes()),
-    ]
-    frame = write_frame(recipe, artifacts)
-    shpkg = stage / "motd.shpkg"
-    shpkg.write_bytes(frame)
+    package = stage / "motd-demo.pkg"
+    identity = write_modern_package(package)
 
     vpk_root = stage / "vpk"
     (vpk_root / "panorama" / "layout").mkdir(parents=True)
     (vpk_root / "panorama" / "styles").mkdir(parents=True)
-    (vpk_root / "addons").mkdir(parents=True)
-    shutil.copy2(shpkg, vpk_root / "addons" / "motd.shpkg")
     shutil.copy2(compiled_layout, vpk_root / "panorama" / "layout" / f"{WINDOW_ID}.vxml_c")
     shutil.copy2(compiled_style, vpk_root / "panorama" / "styles" / "motd.vcss_c")
 
@@ -213,12 +202,17 @@ def main() -> int:
     pack_vpk(packer, vpk_root, archive)
     names = validate_vpk(archive)
 
-    target = game / "citadel" / "deadworks_addons" / "vpks" / "motd-demo.vpk"
+    game_vpks = game / "citadel" / "deadworks_addons" / "vpks"
+    target = game_vpks / "motd-demo.pkg"
     if not args.no_install:
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(archive, target)
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(package, target)
+        shutil.copy2(archive, game_vpks / "motd-demo.vpk")
 
-    print(f"package   {PACKAGE_ID} ({len(frame)} bytes, SHA-256 {hashlib.sha256(frame).hexdigest()})")
+    print(f"package   {identity}")
+    print(f"path      {package}")
     print(f"archive   {archive}")
     print(f"entries   {', '.join(sorted(names))}")
     print(f"window    addon:{PACKAGE_ID}:{WINDOW_ID}")

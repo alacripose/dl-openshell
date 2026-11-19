@@ -6,10 +6,11 @@ using System.Text.Json.Serialization;
 namespace Openlock.Shell;
 
 /// <summary>
-/// The one reader for a shploingus package frame and its <c>shploingus.recipe/3</c> source.
+/// The read-only decoder for a legacy shploingus package frame and its
+/// <c>shploingus.recipe/30444cad3419800564faba6d4e252431</c> source.
 ///
 /// <para>
-/// The frame is the format the shploingus build writes: <c>SHPKG002</c> is an eight-byte magic,
+/// The frame is a legacy input, not an emit target: <c>SHPKG002</c> is an eight-byte magic,
 /// a little-endian payload length, a SHA-256 of the payload, and the recipe source;
 /// <c>SHPKG003</c> appends the package's own artifacts after the source. The recipe grammar is
 /// the 13-key window grammar from <c>crates/voxel-package/src/recipe.rs</c>, not a second
@@ -27,7 +28,7 @@ namespace Openlock.Shell;
 /// </summary>
 public sealed class ShpPackage
 {
-    public const string RecipeHeader = "shploingus.recipe/3";
+    public static readonly string RecipeHeader = FormatFamilies.Recipe.Current;
     public const string MagicSource = "SHPKG002";
     public const string MagicArtifacts = "SHPKG003";
 
@@ -199,6 +200,27 @@ public sealed class ShpPackage
         public string RecordId { get; set; } = "";
 
         /// <summary>
+        /// The surface placement rule. A legacy recipe has no such row, so it stays "none"; a
+        /// modern `secure-shell.surface/<32 hex>` window carries its rule here instead of losing it.
+        /// </summary>
+        [JsonPropertyName("rule")]
+        public string Rule { get; set; } = "none";
+
+        [JsonPropertyName("pinned")]
+        public bool Pinned { get; set; }
+
+        [JsonPropertyName("surfaceRequires")]
+        public string SurfaceRequires { get; set; } = "";
+
+        /// <summary>The surface's node rows, preserved in the delivered window.</summary>
+        [JsonPropertyName("surfaceNodes")]
+        public List<SurfaceDocument.Node> SurfaceNodes { get; } = [];
+
+        /// <summary>The surface's action rows, preserved in the delivered window.</summary>
+        [JsonPropertyName("surfaceActions")]
+        public List<SurfaceDocument.Action> SurfaceActions { get; } = [];
+
+        /// <summary>
         /// The mounted Panorama layout this window draws, when the package or its VPK delivered
         /// one. The path is package-relative and is only set by the addon loader after it has
         /// checked that the archive really carries it. A window without one keeps its declared
@@ -316,6 +338,23 @@ public sealed class ShpPackage
         package.ReadFrame(frame);
         return package;
     }
+
+    /// <summary>
+    /// The carrier-backed package value used by the modern addon path. It is not a frame and
+    /// does not run the legacy parser; <see cref="ModernPackage"/> has already verified the
+    /// canonical content identity.
+    /// </summary>
+    internal static ShpPackage FromModern(string file, string name, string version,
+        string source, string digest) => new()
+    {
+        File = file,
+        Name = name,
+        Version = version,
+        Magic = ModernPackage.ObjectSchema,
+        Source = source,
+        SourceDigest = digest,
+        PackageDigest = digest,
+    };
 
     private void ReadFrame(byte[] frame)
     {
@@ -456,9 +495,11 @@ public sealed class ShpPackage
             Refusals.Add(new Refusal(File, 1, "recipe", "recipe requires LF lines and a final newline"));
 
         var lines = Source.Split('\n');
-        if (lines.Length == 0 || lines[0] != RecipeHeader)
+        var recipeRefusal = "format-schema";
+        if (lines.Length == 0 || !FormatFamilies.Recipe.TryUpgrade(lines[0], out _, out recipeRefusal))
         {
-            Refusals.Add(new Refusal(File, 1, lines.Length == 0 ? "<empty>" : lines[0], "unknown recipe schema"));
+            Refusals.Add(new Refusal(File, 1, lines.Length == 0 ? "<empty>" : lines[0],
+                "unknown recipe schema (" + recipeRefusal + ")"));
             return;
         }
 

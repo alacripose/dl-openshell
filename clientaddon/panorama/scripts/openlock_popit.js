@@ -1,52 +1,135 @@
-// Popit surface: the LittleBigPlanet tool menu as a real panel, not a ring of text rows.
+// Popit: the in-game cell editor, rebuilt to the design bible.
 //
-// This module owns the surface only. The shell hands it the window geometry, the declared
-// layer actions, the other open windows and three callbacks (act, refuse, hover). Shape is
-// selected by a frame class from forms/popit.form; colour is chosen by the active
-// .Scheme<Id> palette. No colour or frame geometry is declared in JavaScript.
+// The bible corrects the old surface in three ways, and this module follows all three:
 //
-// The version frames are the documented family: LBP3's rounded hexagon, LBP1's soft bubble,
-// LBP2's flat block, the PSP page, the Vita card and Karting's beam card. The frame badge
-// cycles them; the CREATE/PLAY pill is a local selection and never sends a game mode.
+//   ROOT / CHILD   The root stays present. Choosing a section keeps the root (same identity,
+//                  same selection) and reveals a contextual child pane beside it; Back closes
+//                  the child and returns the root without resetting anything. Section selection
+//                  never unmounts the root into a different page.
+//   ROLE MAP       The LBP3 player palette is a role map, not four decorative colours:
+//                  secondary is the menu background, primary the highlight/tooltip/ownership
+//                  accent, tertiary the menu accent, emphasis the emphasised text. A pair is a
+//                  skin for the Popit slab; the cell edit and the shell ground are separate.
+//   PERSISTENCE    The chosen pair travels in the saved layout profile (`popit=...;pair:<id>`)
+//                  and is restored with the rest of the desktop, not remembered for one open.
+//
+// The cell edit contract is unchanged: the six axes are indexes into the tables below and
+// `encodeState` still writes the fixed alphabet the host's LayoutProfiles parses.
+//
+// Geometry limit, stated rather than hidden: Panorama cannot draw the bible's custom Nexus
+// contour as a path. The surface uses the closest per-corner approximation the form declares;
+// `shell/alpha-shell/forms/popit.form` says so at the rule.
 (function () {
-    var ICON_ROOT = "s2r://panorama/images/";
-    var ICONS = {
-        trees: "control_icons/expand_collapse_png.vtex",
-        refusals: "control_icons/warning_alt_png.vtex",
-        picker: "control_icons/star_png.vtex",
-        reconcile: "control_icons/refresh_psd.vtex",
-        uitree: "control_icons/hamburger_png.vtex",
-        settings: "control_icons/icon_auto_style_png.vtex",
-        performance: "control_icons/history_png.vtex",
-        repo: "control_icons/arrow_solid_right_png.vtex",
-        landing: "control_icons/broadcast_psd.vtex",
-        updates: "control_icons/refresh_psd.vtex",
-        skin: "control_icons/icon_auto_style_png.vtex",
-        minimap: "getting_started/map_lanes_icon_png.vtex",
-        world: "getting_started/map_bg_nolines_png.vtex",
-        abilities: "control_icons/mod_track_tech_psd.vtex",
-        "default": "control_icons/playbutton_psd.vtex"
-    };
-    var FRAMES = [
-        { id: "lbp3", label: "LBP3", cls: "Lbp3" },
-        { id: "lbp1", label: "LBP1", cls: "Lbp1" },
-        { id: "lbp2", label: "LBP2", cls: "Lbp2" },
-        { id: "psp", label: "PSP", cls: "Psp" },
-        { id: "vita", label: "VITA", cls: "Vita" },
-        { id: "karting", label: "KART", cls: "Karting" }
+    var FRAME = "lbp3";
+    var ROOT_W = 300;
+    var CHILD_W = 340;
+    var GAP = 8;
+    var WIDTH = ROOT_W;
+
+    // The same six slots the shell's scheme exposes. The labels are the shell's vocabulary,
+    // not a new palette: every swatch is resolved from req.palette at draw time.
+    var COLORS = [
+        { id: "accent", label: "Accent" },
+        { id: "ink", label: "Ink" },
+        { id: "muted", label: "Muted" },
+        { id: "borderStrong", label: "Strong" },
+        { id: "alert", label: "Alert" },
+        { id: "title", label: "Title" }
     ];
-    var COLUMNS = 4;
-    var WIDTH = 356;
-    var MIN_WIDTH = 240;
-    var MAX_WIDTH = 900;
-    var MAX_ROWS = 4;
-    // These are the same fixed frame heights as forms/popit.form's PopitRows* classes. They
-    // are used only for the overlap/screen test; the actual height comes from the form.
-    var FRAME_HEIGHTS = [0, 260, 380, 480, 580];
-    // The surface's arrangement. The shell's dashboard edits this and saves it with the layout;
-    // the module owns only the legal range, so a hand-edited profile cannot draw a 40-column
-    // surface in a frame that has no height class for it.
-    var currentLayout = { columns: COLUMNS, width: WIDTH, frame: "lbp3", mode: "create", order: [] };
+
+    var MATERIALS = [
+        { id: "paper", label: "Paper", wash: "panel" },
+        { id: "card", label: "Card", wash: "title" },
+        { id: "glass", label: "Glass", wash: "meta" },
+        { id: "tint", label: "Tint", wash: "color" },
+        { id: "ink", label: "Ink", wash: "ink" },
+        { id: "accent", label: "Accent", wash: "accent" },
+        { id: "none", label: "Bare", wash: "" }
+    ];
+
+    var DECORATIONS = [
+        { id: "edge", label: "Edge" },
+        { id: "stitch", label: "Stitch" },
+        { id: "tag", label: "Tag" },
+        { id: "corners", label: "Corners" },
+        { id: "none", label: "None" }
+    ];
+
+    var RADII = [
+        { value: -1, label: "Form" },
+        { value: 0, label: "0" },
+        { value: 6, label: "6" },
+        { value: 12, label: "12" },
+        { value: 18, label: "18" }
+    ];
+    var BORDERS = [
+        { value: -1, label: "Form" },
+        { value: 0, label: "0" },
+        { value: 1, label: "1" },
+        { value: 2, label: "2" },
+        { value: 3, label: "3" }
+    ];
+    var OPACITIES = [
+        { value: -1, label: "Form" },
+        { value: 75, label: "75%" },
+        { value: 90, label: "90%" },
+        { value: 100, label: "100%" }
+    ];
+
+    // The root's sections. The short code stays on the root row as a stable label anchor; the
+    // words carry the meaning, so a section is never identified by a colour or an icon alone.
+    var PAGES = [
+        { id: "cursor", code: "CUR", title: "Cursor", hint: "select a cell" },
+        { id: "palette", code: "PAL", title: "Palette", hint: "37 player colours" },
+        { id: "goodies", code: "GOO", title: "Goodies Bag", hint: "materials" },
+        { id: "stickers", code: "STK", title: "Stickers", hint: "edges and decorations" },
+        { id: "tools", code: "TLS", title: "Tools Bag", hint: "corners, border, opacity" },
+        { id: "color", code: "CLR", title: "Player Color", hint: "scheme roles" }
+    ];
+
+    var root = null;
+    var dismiss = null;
+    var surface = null;
+    var rootPanel = null;
+    var rootBody = null;
+    var child = null;
+    var childBody = null;
+    var childTitle = null;
+    var headerTitle = null;
+    var targetLabel = null;
+    var detailLabel = null;
+    var pairLabel = null;
+    var pairDot = null;
+    var classicChip = null;
+    var dotRow = null;
+    var cursorHalo = null;
+    var rowButtons = {};
+    var currentPage = "";
+    var childOpen = false;
+    var current = null;
+    var targets = [];
+    var target = null;
+    var state = defaultState();
+    var palette = {};
+    var placed = null;
+    var hovered = null;
+    var pairId = "";
+    var classic = false;
+    var reduced = false;
+    var appliedPair = "";
+    var status = {
+        visible: false, frame: FRAME, page: "", target: null, targets: 0,
+        items: 0, pageTiles: 0, placed: null, width: WIDTH, pair: "", classic: false,
+        child: false, reducedMotion: false
+    };
+
+    function defaultState() {
+        return { material: "none", color: "", decoration: "none", radius: -1, border: -1, opacity: -1 };
+    }
+
+    function note(text) {
+        try { $.Msg("[Openlock] popit: ", text); } catch (e) {}
+    }
 
     function clampInt(value, low, high, fallback) {
         var n = Math.round(Number(value));
@@ -54,104 +137,238 @@
         return Math.max(low, Math.min(high, n));
     }
 
-    function normalizeLayout(input) {
+    function normalizeState(input) {
         var src = input || {};
-        var columns = clampInt(src.columns, 1, 4, COLUMNS);
-        var width = clampInt(src.width, MIN_WIDTH, MAX_WIDTH, WIDTH);
-        var frame = "lbp3";
-        if (src.frame) frame = frameById(src.frame).id;
-        var mode = src.mode === "play" ? "play" : "create";
-        var order = [];
-        var raw = src.order instanceof Array ? src.order : [];
-        for (var i = 0; i < raw.length && order.length < 32; i++) {
-            var id = String(raw[i] || "");
-            if (id && order.indexOf(id) < 0) order.push(id);
-        }
-        return { columns: columns, width: width, frame: frame, mode: mode, order: order };
-    }
-
-    // The edited order leads; any action the surface also carries follows in declaration order,
-    // so a tile added to the package appears without the player having to reset their layout.
-    function orderActions(actions, order) {
-        if (!order || !order.length) return actions.slice(0);
-        var out = [];
-        var used = {};
-        for (var i = 0; i < order.length; i++) {
-            for (var j = 0; j < actions.length; j++) {
-                if (used[j]) continue;
-                if (String(actions[j].id) !== order[i]) continue;
-                out.push(actions[j]);
-                used[j] = true;
-                break;
-            }
-        }
-        for (var k = 0; k < actions.length; k++) if (!used[k]) out.push(actions[k]);
+        var out = defaultState();
+        var material = String(src.material || "none");
+        var decoration = String(src.decoration || "none");
+        var color = String(src.color || "");
+        for (var m = 0; m < MATERIALS.length; m++) if (MATERIALS[m].id === material) out.material = material;
+        for (var d = 0; d < DECORATIONS.length; d++) if (DECORATIONS[d].id === decoration) out.decoration = decoration;
+        for (var c = 0; c < COLORS.length; c++) if (COLORS[c].id === color) out.color = color;
+        out.radius = clampInt(src.radius, -1, 18, -1);
+        out.border = clampInt(src.border, -1, 3, -1);
+        out.opacity = clampInt(src.opacity, -1, 100, -1);
         return out;
     }
 
-    var root = null;
-    var dismiss = null;
-    var surface = null;
-    var current = null;
-    var framePanel = null;
-    var tailPanel = null;
-    var badgeLabel = null;
-    var detailLabel = null;
-    var actions = [];
-    var modePanels = { create: null, play: null };
-    var tiles = [];
-    var selected = 0;
-    var hovered = -1;
-    var frame = "lbp3";
-    var mode = "create";
-    var placed = null;
-    var screen = { w: 1600, h: 900, top: 46 };
-    var status = { visible: false, frame: "lbp3", mode: "create", actions: 0, rows: 0, placed: null };
+    // A saved profile carries one compact style per cell. The six axes are indexes into the
+    // same tables the surface draws, so a profile can never name a material or colour the
+    // editor does not have. `-1` is the form's own value, not a colour or a radius.
+    var MATERIAL_INDEX = ["paper", "card", "glass", "tint", "ink", "accent", "none"];
+    var COLOR_INDEX = ["", "accent", "ink", "muted", "borderStrong", "alert", "title"];
+    var DECORATION_INDEX = ["edge", "stitch", "tag", "corners", "none"];
 
-    function note(text) {
-        try { $.Msg("[Openlock] popit: ", text); } catch (e) {}
+    function indexOf(list, value) {
+        for (var i = 0; i < list.length; i++) if (list[i] === value) return i;
+        return -1;
     }
 
-    function frameById(id) {
-        for (var i = 0; i < FRAMES.length; i++) {
-            if (FRAMES[i].id === id) return FRAMES[i];
+    function indexValue(list, value) {
+        for (var i = 0; i < list.length; i++) if (Number(list[i].value) === Number(value)) return Number(value);
+        return -1;
+    }
+
+    function hasEdit(input) {
+        var s = normalizeState(input);
+        return s.material !== "none" || s.decoration !== "none" || !!s.color ||
+            s.radius >= 0 || s.border >= 0 || s.opacity >= 0;
+    }
+
+    function encodeState(input) {
+        var s = normalizeState(input);
+        if (!hasEdit(s)) return "";
+        var m = indexOf(MATERIAL_INDEX, s.material);
+        var c = indexOf(COLOR_INDEX, s.color);
+        var d = indexOf(DECORATION_INDEX, s.decoration);
+        var r = indexValue(RADII, s.radius);
+        var b = indexValue(BORDERS, s.border);
+        var o = indexValue(OPACITIES, s.opacity);
+        if (m < 0) m = MATERIAL_INDEX.length - 1;
+        if (c < 0) c = 0;
+        if (d < 0) d = DECORATION_INDEX.length - 1;
+        return "m" + m + "c" + c + "d" + d + "r" + r + "b" + b + "o" + o;
+    }
+
+    function decodeState(code) {
+        var text = String(code || "");
+        var match = /^m([0-6])c([0-6])d([0-4])r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)$/.exec(text);
+        if (!match) return null;
+        return normalizeState({
+            material: MATERIAL_INDEX[Number(match[1])],
+            color: COLOR_INDEX[Number(match[2])],
+            decoration: DECORATION_INDEX[Number(match[3])],
+            radius: Number(match[4]),
+            border: Number(match[5]),
+            opacity: Number(match[6])
+        });
+    }
+
+    // --- colour pairs ---------------------------------------------------------
+    // The table is generated from shell/alpha-shell/popit-pairs.json by
+    // tools/gen_popit_pairs.py. A missing table refuses the page instead of inventing colours.
+
+    function pairList() {
+        var data = globalThis.OpenlockPopitPairs;
+        return data && data.pairs instanceof Array ? data.pairs : [];
+    }
+
+    function defaultPairId() {
+        var data = globalThis.OpenlockPopitPairs;
+        return data && data.default ? String(data.default) : "";
+    }
+
+    function pairById(id) {
+        var pairs = pairList();
+        for (var i = 0; i < pairs.length; i++) if (pairs[i].id === id) return pairs[i];
+        return null;
+    }
+
+    function pairClass(id) {
+        // Keep this identical to pair_class() in tools/gen_popit_pairs.py.
+        var words = String(id || "").split(/[-_]/);
+        var out = "Pair";
+        for (var i = 0; i < words.length; i++) {
+            if (!words[i]) continue;
+            out += words[i].charAt(0).toUpperCase() + words[i].slice(1);
         }
-        return FRAMES[0];
+        return out;
     }
 
-    function frameClass(id) {
-        return frameById(id).cls;
-    }
-
-    function iconFor(action) {
-        var id = String((action && action.id) || "").toLowerCase();
-        if (ICONS[id]) return ICON_ROOT + ICONS[id];
-        var label = String((action && action.label) || "").toLowerCase();
-        for (var key in ICONS) {
-            if (key !== "default" && label.indexOf(key) >= 0) return ICON_ROOT + ICONS[key];
+    function applyPairClass() {
+        if (!surface) return;
+        if (appliedPair) {
+            try { surface.RemoveClass(appliedPair); } catch (e) {}
+            appliedPair = "";
         }
-        return ICON_ROOT + ICONS["default"];
+        if (classic || !pairId || !pairById(pairId)) return;
+        appliedPair = pairClass(pairId);
+        try { surface.AddClass(appliedPair); } catch (e) { note("pair class refused " + appliedPair); }
     }
 
-    function setImage(panel, src) {
-        if (!panel) return false;
-        try {
-            if (typeof panel.SetImage === "function") {
-                panel.SetImage(src);
-                return true;
+    function pageSpec(id) {
+        for (var i = 0; i < PAGES.length; i++) if (PAGES[i].id === id) return PAGES[i];
+        return null;
+    }
+
+    function targetTitle() {
+        return target ? target.title : "no cell selected";
+    }
+
+    function targetDetail() {
+        if (!target) return "point at a cell";
+        var kind = target.kind === "window" ? "window" : (target.kind === "panel" ? "game panel" : "cell");
+        return kind + (target.detail ? " · " + target.detail : "");
+    }
+
+    function renderHeader() {
+        var spec = pageSpec(currentPage);
+        if (headerTitle) headerTitle.text = spec ? spec.title.toUpperCase() : "POPIT";
+        if (targetLabel) targetLabel.text = targetTitle() + (target ? "  ·  " + targetDetail() : "");
+        var pair = classic ? null : pairById(pairId);
+        if (pairLabel) pairLabel.text = classic ? "Classic" : (pair ? pair.name : "No pair");
+        if (pairDot) {
+            try {
+                pairDot.style.backgroundColor = pair ? pair.secondary : "transparent";
+                pairDot.style.borderColor = pair ? pair.primary : "";
+            } catch (e) {}
+        }
+        if (classicChip) {
+            try {
+                if (classic) classicChip.AddClass("On");
+                else classicChip.RemoveClass("On");
+            } catch (e) {}
+        }
+        for (var id in rowButtons) {
+            if (!rowButtons.hasOwnProperty(id)) continue;
+            try {
+                if (id === currentPage) rowButtons[id].AddClass("Active");
+                else rowButtons[id].RemoveClass("Active");
+            } catch (e) {}
+        }
+        if (dotRow) {
+            for (var d = 0; d < dotRow.GetChildCount(); d++) {
+                var dot = dotRow.GetChild(d);
+                try {
+                    if (dot.pairPage === currentPage) dot.AddClass("On");
+                    else dot.RemoveClass("On");
+                } catch (e) {}
             }
-        } catch (e) {}
-        try {
-            panel.src = src;
-            return true;
-        } catch (e) {}
-        return false;
+        }
     }
 
-    function describe(action) {
-        if (!action) return "";
-        if (action.window) return "OPENS " + String(action.window).toUpperCase();
-        return "SENDS " + String(action.id || "").toUpperCase();
+    function choosePair(pair) {
+        if (!pair) return;
+        pairId = pair.id;
+        classic = false;
+        status.pair = pairId;
+        status.classic = false;
+        applyPairClass();
+        renderHeader();
+        renderChild();
+        if (current && current.onPair) {
+            try { current.onPair(pair); } catch (e) {}
+        }
+        if (detailLabel) detailLabel.text = "palette  ·  " + pair.name + "  ·  " + pair.game;
+        note("pair " + pairId);
+    }
+
+    function setClassic(on) {
+        classic = !!on;
+        if (surface) {
+            try {
+                if (classic) surface.AddClass("Classic");
+                else surface.RemoveClass("Classic");
+            } catch (e) {}
+        }
+        applyPairClass();
+        renderHeader();
+        renderChild();
+        status.classic = classic;
+        if (current && current.onClassic) {
+            try { current.onClassic(classic); } catch (e) {}
+        }
+        if (detailLabel) detailLabel.text = classic
+            ? "classic  ·  the scheme's own colours"
+            : "palette  ·  " + (pairById(pairId) ? pairById(pairId).name : "no pair");
+        note("classic " + classic);
+    }
+
+    function normalizeTarget(input) {
+        if (!input) return null;
+        var rect = input.rect || input.geometry || null;
+        var out = {
+            id: String(input.id || ""),
+            title: String(input.title || input.id || "cell"),
+            kind: String(input.kind || "cell"),
+            detail: String(input.detail || "")
+        };
+        if (rect && isFinite(Number(rect.x)) && isFinite(Number(rect.y)) &&
+            isFinite(Number(rect.w)) && isFinite(Number(rect.h))) {
+            out.rect = {
+                x: Number(rect.x), y: Number(rect.y),
+                w: Math.max(1, Number(rect.w)), h: Math.max(1, Number(rect.h))
+            };
+        }
+        return out;
+    }
+
+    function normalizeTargets(list) {
+        var out = [];
+        var raw = list instanceof Array ? list : [];
+        for (var i = 0; i < raw.length && out.length < 64; i++) {
+            var t = normalizeTarget(raw[i]);
+            if (t && t.id) out.push(t);
+        }
+        return out;
+    }
+
+    function paletteValue(role, fallback) {
+        return palette[role] || palette[fallback] || "";
+    }
+
+    function currentColor() {
+        return state.color ? paletteValue(state.color, "accent") : paletteValue("accent", "ink");
     }
 
     function overlaps(a, b) {
@@ -160,26 +377,32 @@
             a.y < b.y + b.h + pad && a.y + a.h + pad > b.y;
     }
 
-    // A Popit that would cover another floating window is refused instead of drawn over it.
-    // Candidate 0 is inside the owner's own frame; the others sit around it. Every candidate is
-    // clamped to the safe screen box before the overlap test.
+    // The root and the child are one instrument: the child opens beside the root, and the pair
+    // stays glued to whichever side has room. A full desktop falls back to a clamped position
+    // rather than refusing to open.
     function place(req, height, width) {
-        var g = req.geometry || { x: 16, y: 64, w: 480, h: 440 };
-        var s = req.screen || screen;
+        var s = (req && req.screen) || { w: 1600, h: 900, top: 46 };
         var sw = Number(s.w) || 1600;
         var sh = Number(s.h) || 900;
         var top = Number(s.top) || 46;
         var w = width || WIDTH;
-        var open = req.openRects || [];
-        var candidates = [
-            { x: Math.round(g.x + g.w - w - 8), y: Math.round(g.y + 30) },
-            { x: Math.round(g.x + g.w + 10), y: Math.round(g.y) },
-            { x: Math.round(g.x - w - 10), y: Math.round(g.y) },
-            { x: Math.round(g.x), y: Math.round(g.y + g.h + 10) },
-            { x: Math.round(g.x), y: Math.round(g.y - height - 10) },
-            { x: Math.round((sw - w) / 2), y: Math.round(top + 18) }
-        ];
+        var candidates = [];
+        if (target && target.rect) {
+            var g = target.rect;
+            candidates.push({ x: Math.round(g.x + g.w + 10), y: Math.round(g.y) });
+            candidates.push({ x: Math.round(g.x - w - 10), y: Math.round(g.y) });
+            candidates.push({ x: Math.round(g.x), y: Math.round(g.y + g.h + 8) });
+            candidates.push({ x: Math.round(g.x), y: Math.round(g.y - height - 8) });
+            candidates.push({ x: Math.round(g.x + g.w - w - 8), y: Math.round(g.y + 24) });
+        }
+        candidates.push({ x: Math.round((sw - w) / 2), y: Math.round(top + 18) });
         var blockers = [];
+        var open = req && req.openRects instanceof Array ? req.openRects : [];
+        for (var b = 0; b < open.length; b++) {
+            var r = open[b];
+            if (!r || r.id === (target && target.id)) continue;
+            blockers.push({ x: Number(r.x), y: Number(r.y), w: Number(r.w), h: Number(r.h) });
+        }
         for (var i = 0; i < candidates.length; i++) {
             var at = {
                 x: Math.max(8, Math.min(Math.max(8, sw - w - 8), candidates[i].x)),
@@ -187,170 +410,484 @@
                 w: w,
                 h: height
             };
-            var hit = null;
-            for (var j = 0; j < open.length; j++) {
-                if (overlaps(at, open[j])) { hit = open[j]; break; }
+            var hit = target && target.rect && overlaps(at, target.rect);
+            for (var k = 0; !hit && k < blockers.length; k++) {
+                if (isFinite(blockers[k].w) && overlaps(at, blockers[k])) hit = true;
             }
-            if (!hit) return { ok: true, x: at.x, y: at.y };
-            if (blockers.indexOf(hit.title || hit.id) < 0) blockers.push(hit.title || hit.id);
+            if (!hit || i === candidates.length - 1) return { ok: true, x: at.x, y: at.y };
         }
-        return {
-            ok: false,
-            why: "the surface would overlap " + (blockers.length ? blockers.join(", ") : "another floating window")
-        };
+        return { ok: true, x: 8, y: top };
+    }
+
+    function clearChildren(panel) {
+        if (!panel) return;
+        var kids = [];
+        try {
+            for (var i = 0; i < panel.GetChildCount(); i++) kids.push(panel.GetChild(i));
+        } catch (e) {}
+        for (var k = 0; k < kids.length; k++) {
+            try { kids[k].DeleteAsync(0); } catch (e) {}
+        }
+    }
+
+    function addLabel(parent, cls, text) {
+        var label = $.CreatePanel("Label", parent, "");
+        label.AddClass(cls);
+        label.text = text;
+        label.hittest = false;
+        return label;
+    }
+
+    function bindHover(panel, title, body) {
+        panel.SetPanelEvent("onmouseover", function () {
+            hovered = panel;
+            try { panel.AddClass("Hover"); } catch (e) {}
+            if (current && current.onHover) {
+                try { current.onHover(panel, title, body); } catch (e) {}
+            }
+            paintHalo();
+        });
+        panel.SetPanelEvent("onmouseout", function () {
+            if (hovered === panel) hovered = null;
+            try { panel.RemoveClass("Hover"); } catch (e) {}
+            if (current && current.onHoverEnd) {
+                try { current.onHoverEnd(); } catch (e) {}
+            }
+            paintHalo();
+        });
+    }
+
+    function paintHalo() {
+        if (!cursorHalo) return;
+        if (!target || !target.rect) {
+            try { cursorHalo.style.visibility = "collapse"; } catch (e) {}
+            return;
+        }
+        var r = target.rect;
+        try {
+            cursorHalo.style.visibility = "visible";
+            cursorHalo.style.marginLeft = Math.round(r.x) + "px";
+            cursorHalo.style.marginTop = Math.round(r.y) + "px";
+            cursorHalo.style.width = Math.round(r.w) + "px";
+            cursorHalo.style.height = Math.round(r.h) + "px";
+            cursorHalo.style.borderColor = currentColor();
+        } catch (e) {}
     }
 
     function close() {
+        var wasVisible = !!surface;
         if (surface) {
             try { surface.DeleteAsync(0); } catch (e) {}
         }
         if (dismiss) {
             try { dismiss.DeleteAsync(0); } catch (e) {}
         }
+        if (cursorHalo) {
+            try { cursorHalo.DeleteAsync(0); } catch (e) {}
+        }
         surface = null;
         dismiss = null;
-        current = null;
-        framePanel = null;
-        tailPanel = null;
-        badgeLabel = null;
+        cursorHalo = null;
+        rootPanel = null;
+        rootBody = null;
+        child = null;
+        childBody = null;
+        childTitle = null;
+        headerTitle = null;
+        targetLabel = null;
         detailLabel = null;
-        tiles = [];
-        modePanels = { create: null, play: null };
-        selected = 0;
-        hovered = -1;
+        pairLabel = null;
+        pairDot = null;
+        classicChip = null;
+        dotRow = null;
+        rowButtons = {};
         placed = null;
+        hovered = null;
+        appliedPair = "";
+        currentPage = "";
+        childOpen = false;
         status.visible = false;
         status.placed = null;
-    }
-
-    function selectedAction() {
-        var at = hovered >= 0 ? hovered : selected;
-        return tiles[at] ? tiles[at].action : null;
-    }
-
-    function updateDetail() {
-        if (!detailLabel) return;
-        var action = selectedAction();
-        if (!action) {
-            detailLabel.text = "NO TOOLS";
-            return;
+        status.page = "";
+        status.child = false;
+        if (wasVisible && current && current.onClose) {
+            try { current.onClose(); } catch (e) {}
         }
-        detailLabel.text = (mode === "create" ? "CREATE" : "PLAY") + "  ·  " +
-            (action.label || action.id) + "  ·  " + describe(action);
     }
 
-    function refreshSelection() {
-        for (var i = 0; i < tiles.length; i++) {
+    function selectedValue(field, value) {
+        if (field === "radius" || field === "border" || field === "opacity") {
+            return Number(state[field]) === Number(value);
+        }
+        return String(state[field] || "") === String(value || "");
+    }
+
+    function markSelected(items, field) {
+        for (var i = 0; i < items.length; i++) {
             try {
-                if (i === selected) tiles[i].panel.AddClass("Selected");
-                else tiles[i].panel.RemoveClass("Selected");
+                if (selectedValue(field, items[i].value)) items[i].panel.AddClass("Selected");
+                else items[i].panel.RemoveClass("Selected");
             } catch (e) {}
         }
-        updateDetail();
     }
 
-    function setSelected(index) {
-        selected = Math.max(0, Math.min(tiles.length - 1, Number(index) || 0));
-        refreshSelection();
+    function itemDetail(item, field) {
+        if (field === "material") return "material  ·  " + item.label;
+        if (field === "decoration") return "decoration  ·  " + item.label;
+        if (field === "color") return "player colour  ·  " + item.label;
+        return field + "  ·  " + item.label;
     }
 
-    function setMode(next) {
-        mode = next === "play" ? "play" : "create";
-        var ids = ["create", "play"];
-        for (var i = 0; i < ids.length; i++) {
-            var panel = modePanels[ids[i]];
-            if (!panel) continue;
-            try {
-                if (ids[i] === mode) panel.AddClass("Active");
-                else panel.RemoveClass("Active");
-            } catch (e) {}
+    function commit(field, value, label) {
+        var patch = {};
+        patch[field] = value;
+        var next = normalizeState(state);
+        for (var key in patch) if (patch.hasOwnProperty(key)) next[key] = patch[key];
+        state = next;
+        if (current && current.onApply) {
+            try { current.onApply(state, field, value); } catch (e) {}
         }
-        currentLayout.mode = mode;
-        status.mode = mode;
-        updateDetail();
-        note("mode " + mode);
+        if (detailLabel) detailLabel.text = label;
+        paintHalo();
+        renderChild();
+        note("edit " + field + "=" + String(value));
     }
 
-    function setFrame(next) {
-        var target = frameById(next);
-        frame = target.id;
-        if (framePanel) {
-            for (var i = 0; i < FRAMES.length; i++) {
-                try { framePanel.RemoveClass(FRAMES[i].cls); } catch (e) {}
-            }
-            try { framePanel.AddClass(target.cls); } catch (e) {}
-        }
-        if (tailPanel) {
-            for (var j = 0; j < FRAMES.length; j++) {
-                try { tailPanel.RemoveClass(FRAMES[j].cls); } catch (e) {}
-            }
-            try { tailPanel.AddClass(target.cls); } catch (e) {}
-        }
-        if (badgeLabel) badgeLabel.text = target.label;
-        currentLayout.frame = frame;
-        status.frame = frame;
-        note("frame " + frame);
+    // The bible's labeller: an uppercase section label and a dashed rule to a collapse mark.
+    function section(title) {
+        var group = $.CreatePanel("Panel", childBody, "");
+        group.AddClass("PopitSection");
+        var head = $.CreatePanel("Panel", group, "");
+        head.AddClass("PopitSectionHead");
+        addLabel(head, "PopitSectionLabel", String(title).toUpperCase());
+        var rule = $.CreatePanel("Panel", head, "");
+        rule.AddClass("PopitSectionRule");
+        return group;
     }
 
-    function cycleFrame() {
-        var at = 0;
-        for (var i = 0; i < FRAMES.length; i++) {
-            if (FRAMES[i].id === frame) { at = i; break; }
-        }
-        setFrame(FRAMES[(at + 1) % FRAMES.length].id);
-    }
-
-    function addMode(pill, id, label) {
-        var item = $.CreatePanel("Panel", pill, id === "play" ? "OpenlockPopitModePlay" : "OpenlockPopitModeCreate");
-        item.AddClass("PopitMode");
+    function addGridItem(parent, spec) {
+        var item = $.CreatePanel("Panel", parent, "");
+        item.AddClass("PopitItem");
         item.hittest = true;
-        item.SetPanelEvent("onmouseactivate", function () { setMode(id); });
-        var text = $.CreatePanel("Label", item, "");
-        text.text = label;
-        text.hittest = false;
-        modePanels[id] = item;
+        var swatch = $.CreatePanel("Panel", item, "");
+        swatch.AddClass("PopitSwatch");
+        swatch.hittest = false;
+        if (spec.wash) {
+            try { swatch.style.backgroundColor = spec.wash; } catch (e) {}
+        }
+        if (spec.border) {
+            try {
+                swatch.style.borderColor = spec.border;
+                swatch.style.borderStyle = spec.borderStyle || "solid";
+            } catch (e) {}
+        }
+        if (spec.dash) {
+            try { swatch.style.borderStyle = "dashed"; } catch (e) {}
+        }
+        var label = addLabel(item, "PopitItemLabel", spec.label);
+        item.value = spec.value;
+        item.panel = item;
+        bindHover(item, spec.label, spec.detail || spec.label);
+        item.SetPanelEvent("onmouseactivate", function () {
+            commit(spec.field, spec.value, itemDetail(spec, spec.field));
+        });
         return item;
     }
 
-    function makeTile(row, action, index) {
-        var tile = $.CreatePanel("Panel", row, "");
-        tile.AddClass("PopitTile");
-        if (index === selected) tile.AddClass("Selected");
-        tile.hittest = true;
+    function buildGrid(field, specs, title) {
+        var host = title ? section(title) : childBody;
+        var grid = $.CreatePanel("Panel", host, "");
+        grid.AddClass("PopitGrid");
+        var made = [];
+        for (var i = 0; i < specs.length; i++) {
+            var spec = specs[i];
+            spec.field = field;
+            made.push(addGridItem(grid, spec));
+        }
+        markSelected(made, field);
+        status.pageTiles += made.length;
+        return grid;
+    }
 
-        var icon = $.CreatePanel("Image", tile, "");
-        icon.AddClass("PopitTileIcon");
-        icon.hittest = false;
-        setImage(icon, iconFor(action));
+    function materialSpecs() {
+        var out = [];
+        for (var i = 0; i < MATERIALS.length; i++) {
+            var m = MATERIALS[i];
+            var wash = "";
+            if (m.wash === "color") wash = currentColor();
+            else if (m.wash) wash = paletteValue(m.wash, "panel");
+            out.push({
+                id: m.id, label: m.label, value: m.id, wash: wash,
+                detail: m.id === "none" ? "restore the cell surface" : "material  ·  " + m.label
+            });
+        }
+        return out;
+    }
 
-        var label = $.CreatePanel("Label", tile, "");
-        label.AddClass("PopitTileLabel");
-        label.text = action.label || action.id;
-        label.hittest = false;
+    function decorationSpecs() {
+        var out = [];
+        for (var i = 0; i < DECORATIONS.length; i++) {
+            var d = DECORATIONS[i];
+            out.push({
+                id: d.id, label: d.label, value: d.id, wash: "",
+                border: d.id === "none" ? "" : currentColor(),
+                borderStyle: d.id === "stitch" ? "dashed" : "solid",
+                detail: d.id === "none" ? "remove the decoration" : "decoration  ·  " + d.label
+            });
+        }
+        return out;
+    }
 
-        tile.SetPanelEvent("onmouseover", function () {
-            hovered = index;
-            try { tile.AddClass("Hover"); } catch (e) {}
-            updateDetail();
-            if (current && current.onHover) {
-                try { current.onHover(tile, action.label || action.id, describe(action)); } catch (e) {}
+    function colorSpecs() {
+        var out = [];
+        out.push({ id: "default", label: "Default", value: "", wash: "", detail: "use the form's colour" });
+        for (var i = 0; i < COLORS.length; i++) {
+            var c = COLORS[i];
+            out.push({
+                id: c.id, label: c.label, value: c.id,
+                wash: paletteValue(c.id, "accent"),
+                detail: "player colour  ·  " + c.label
+            });
+        }
+        return out;
+    }
+
+    function buildCursorPage() {
+        var host = section("Cells");
+        if (!targets.length) {
+            addLabel(host, "PopitEmpty", "No open cell. Split a game window into cells, or open a panel, then press Popit again.");
+            status.pageTiles = 0;
+            return;
+        }
+        var list = $.CreatePanel("Panel", host, "");
+        list.AddClass("PopitTargetList");
+        for (var i = 0; i < targets.length; i++) {
+            (function (t) {
+                var row = $.CreatePanel("Panel", list, "");
+                row.AddClass("PopitTarget");
+                row.hittest = true;
+                if (target && t.id === target.id) row.AddClass("Selected");
+                addLabel(row, "PopitTargetName", t.title);
+                addLabel(row, "PopitTargetKind",
+                    (t.kind === "window" ? "window" : (t.kind === "panel" ? "game panel" : "cell")) +
+                    (t.detail ? "  ·  " + t.detail : ""));
+                bindHover(row, t.title, "select this cell with the Popit cursor");
+                row.SetPanelEvent("onmouseactivate", function () {
+                    if (current && current.onSelect) {
+                        try { current.onSelect(t); } catch (e) {}
+                    }
+                });
+            })(targets[i]);
+        }
+        status.pageTiles = targets.length;
+    }
+
+    function addPairItem(parent, pair) {
+        var item = $.CreatePanel("Panel", parent, "");
+        item.AddClass("PopitItem");
+        item.AddClass("PopitItemPair");
+        item.hittest = true;
+        if (!classic && pair.id === pairId) item.AddClass("Selected");
+        var strip = $.CreatePanel("Panel", item, "");
+        strip.AddClass("PopitPairSwatch");
+        strip.hittest = false;
+        var roles = ["primary", "secondary", "tertiary"];
+        for (var i = 0; i < roles.length; i++) {
+            var band = $.CreatePanel("Panel", strip, "");
+            band.AddClass("PopitPairBand");
+            band.hittest = false;
+            try { band.style.backgroundColor = pair[roles[i]]; } catch (e) {}
+        }
+        addLabel(item, "PopitItemLabel", pair.name);
+        addLabel(item, "PopitPairGame", pair.game);
+        item.value = pair.id;
+        item.pair = pair;
+        bindHover(item, pair.name, pair.game + "  ·  palette");
+        item.SetPanelEvent("onmouseactivate", function () { choosePair(pair); });
+        return item;
+    }
+
+    function buildPairPage() {
+        var pairs = pairList();
+        if (!pairs.length) {
+            var empty = section("Palette");
+            addLabel(empty, "PopitEmpty", "The colour-pair table is not in this build. The scheme's own colours still apply.");
+            status.pageTiles = 0;
+            return;
+        }
+        var games = [];
+        for (var i = 0; i < pairs.length; i++) {
+            if (games.indexOf(pairs[i].game) < 0) games.push(pairs[i].game);
+        }
+        for (var g = 0; g < games.length; g++) {
+            var host = section(games[g]);
+            var grid = $.CreatePanel("Panel", host, "");
+            grid.AddClass("PopitGrid");
+            grid.AddClass("PopitPairGrid");
+            for (var p = 0; p < pairs.length; p++) {
+                if (pairs[p].game !== games[g]) continue;
+                addPairItem(grid, pairs[p]);
+                status.pageTiles++;
             }
-        });
-        tile.SetPanelEvent("onmouseout", function () {
-            hovered = -1;
-            try { tile.RemoveClass("Hover"); } catch (e) {}
-            updateDetail();
-            if (current && current.onHoverEnd) {
-                try { current.onHoverEnd(); } catch (e) {}
+        }
+        var noteRow = section("Pair");
+        addLabel(noteRow, "PopitPairNote",
+            classic
+                ? "Classic is on; pick a pair to leave it."
+                : "The pair skins this slab and its title. The cell's own colour is on Player Color.");
+    }
+
+    function optionGroup(title, field, options) {
+        var group = section(title);
+        var row = $.CreatePanel("Panel", group, "");
+        row.AddClass("PopitOptionRow");
+        var made = [];
+        for (var i = 0; i < options.length; i++) {
+            (function (opt) {
+                var button = $.CreatePanel("Panel", row, "");
+                button.AddClass("PopitOption");
+                button.hittest = true;
+                addLabel(button, "PopitOptionLabel", opt.label);
+                button.value = opt.value;
+                button.panel = button;
+                made.push(button);
+                bindHover(button, title + ": " + opt.label, "tweak  ·  " + title.toLowerCase());
+                button.SetPanelEvent("onmouseactivate", function () {
+                    commit(field, opt.value, title + "  ·  " + opt.label);
+                });
+            })(options[i]);
+        }
+        markSelected(made, field);
+        return group;
+    }
+
+    function buildToolsPage() {
+        optionGroup("Corners", "radius", RADII);
+        optionGroup("Border", "border", BORDERS);
+        optionGroup("Opacity", "opacity", OPACITIES);
+        status.pageTiles = RADII.length + BORDERS.length + OPACITIES.length;
+        var host = section("Reset");
+        var reset = $.CreatePanel("Panel", host, "");
+        reset.AddClass("PopitReset");
+        reset.hittest = true;
+        addLabel(reset, "PopitResetLabel", "Restore this cell");
+        bindHover(reset, "Restore this cell", "remove every Popit edit from the selected cell");
+        reset.SetPanelEvent("onmouseactivate", function () {
+            if (current && current.onReset) {
+                try { current.onReset(state); } catch (e) {}
             }
+            state = defaultState();
+            paintHalo();
+            renderChild();
+            if (detailLabel) detailLabel.text = "cell restored to the game's rendering";
         });
-        tile.SetPanelEvent("onmouseactivate", function () {
-            setSelected(index);
-            var onAction = current && current.onAction;
-            if (onAction) onAction(action);
+        status.pageTiles += 1;
+    }
+
+    function renderChild() {
+        if (!childBody) return;
+        clearChildren(childBody);
+        status.pageTiles = 0;
+        var spec = pageSpec(currentPage);
+        if (childTitle) childTitle.text = spec ? spec.title.toUpperCase() : "";
+        if (!spec) return;
+        if (currentPage === "cursor") buildCursorPage();
+        else if (currentPage === "palette") buildPairPage();
+        else if (currentPage === "goodies") buildGrid("material", materialSpecs(), "Materials");
+        else if (currentPage === "stickers") buildGrid("decoration", decorationSpecs(), "Decorations");
+        else if (currentPage === "tools") buildToolsPage();
+        else if (currentPage === "color") buildGrid("color", colorSpecs(), "Player Colour");
+    }
+
+    // Opening a section keeps the root mounted and reveals the child beside it. That is the
+    // bible's P0: the root is a persistent personal tool, not a page that is replaced.
+    function openSection(id) {
+        var spec = pageSpec(id);
+        if (!spec) return false;
+        currentPage = spec.id;
+        childOpen = true;
+        if (surface) {
+            try { surface.AddClass("ChildOpen"); } catch (e) {}
+            try { surface.style.width = (ROOT_W + GAP + CHILD_W) + "px"; } catch (e) {}
+        }
+        if (child) {
+            try { child.style.visibility = "visible"; } catch (e) {}
+        }
+        if (detailLabel) detailLabel.text = "editing " + (target ? target.title : "no cell");
+        status.page = currentPage;
+        status.child = true;
+        renderHeader();
+        renderChild();
+        note("child " + currentPage);
+        return true;
+    }
+
+    function closeSection() {
+        currentPage = "";
+        childOpen = false;
+        if (surface) {
+            try { surface.RemoveClass("ChildOpen"); } catch (e) {}
+            try { surface.style.width = ROOT_W + "px"; } catch (e) {}
+        }
+        if (child) {
+            try { child.style.visibility = "collapse"; } catch (e) {}
+        }
+        if (childBody) clearChildren(childBody);
+        status.page = "";
+        status.child = false;
+        status.pageTiles = 0;
+        renderHeader();
+        if (detailLabel) detailLabel.text = target ? "editing " + target.title : "select a cell with the cursor";
+        note("child closed");
+    }
+
+    function setPage(id) {
+        if (!id) {
+            closeSection();
+            return;
+        }
+        openSection(id);
+    }
+
+    function addRootRow(parent, spec) {
+        var row = $.CreatePanel("Panel", parent, "");
+        row.AddClass("PopitRootRow");
+        row.hittest = true;
+        var code = addLabel(row, "PopitRootCode", spec.code);
+        code.hittest = false;
+        var name = addLabel(row, "PopitRootName", spec.title);
+        name.hittest = false;
+        var hint = addLabel(row, "PopitRootHint", spec.hint);
+        hint.hittest = false;
+        bindHover(row, spec.title, spec.hint);
+        row.SetPanelEvent("onmouseactivate", function () { openSection(spec.id); });
+        rowButtons[spec.id] = row;
+        return row;
+    }
+
+    function addDot(parent, spec) {
+        var dot = $.CreatePanel("Panel", parent, "");
+        dot.AddClass("PopitPageDot");
+        dot.pairPage = spec.id;
+        dot.hittest = true;
+        bindHover(dot, spec.title, "open the " + spec.title.toLowerCase() + " section");
+        dot.SetPanelEvent("onmouseactivate", function () { openSection(spec.id); });
+        return dot;
+    }
+
+    function animate() {
+        if (!surface || reduced) return;
+        try {
+            surface.style.opacity = "0";
+            surface.style.transform = "translate3d(0, 8px, 0)";
+        } catch (e) {}
+        $.Schedule(0, function () {
+            if (!surface) return;
+            try {
+                surface.style.opacity = "1";
+                surface.style.transform = "translate3d(0, 0, 0)";
+            } catch (e) {}
         });
-        tiles.push({ panel: tile, action: action });
-        return tile;
     }
 
     function show(req) {
@@ -360,169 +897,136 @@
         }
         close();
         root = req.root;
-        screen = req.screen || screen;
         current = req;
-        actions = req.actions || [];
-        if (!actions.length) {
-            current = null;
-            note("REFUSED no actions");
-            if (req.onRefusal) req.onRefusal("Popit refused", "this window declares no tool layer");
-            return { ok: false, why: "no actions" };
-        }
+        palette = req.palette || {};
+        targets = normalizeTargets(req.targets);
+        target = normalizeTarget(req.target);
+        if (!target && targets.length && req.autoSelect) target = targets[0];
+        state = normalizeState(req.state);
+        pairId = req.pair && pairById(req.pair) ? String(req.pair) : defaultPairId();
+        classic = !!req.classic;
+        reduced = !!req.reducedMotion;
+        currentPage = "";
+        childOpen = false;
 
-        var layout = normalizeLayout(req.layout || {
-            columns: COLUMNS, width: WIDTH, frame: req.frame || frame, mode: req.mode || mode,
-            order: []
-        });
-        currentLayout = layout;
-        actions = orderActions(actions, layout.order);
-        frame = layout.frame;
-        mode = layout.mode;
-        var rows = Math.min(MAX_ROWS, Math.ceil(actions.length / layout.columns));
-        var capacity = rows * layout.columns;
-        if (capacity < actions.length) {
-            // The form has four row heights. A one-column surface with more tiles than that fits
-            // is refused rather than drawn clipped, because a clipped tile is a tile the player
-            // cannot see or press.
-            if (req.onRefusal) {
-                req.onRefusal("Popit refused",
-                    layout.columns + " column(s) show " + capacity + " of " + actions.length +
-                    " tiles; widen the surface or use more columns");
-            }
-            current = null;
-            return { ok: false, why: "too many tiles for the frame", capacity: capacity, tiles: actions.length };
-        }
-        var height = FRAME_HEIGHTS[Math.min(FRAME_HEIGHTS.length - 1, Math.max(1, rows))];
-        var at = place(req, height, layout.width);
-        if (!at.ok) {
-            current = null;
-            note("REFUSED " + at.why);
-            if (req.onRefusal) req.onRefusal("Popit refused", at.why);
-            return { ok: false, why: at.why };
-        }
+        var at = place(req, 320, ROOT_W);
         placed = at;
 
-        // The dismiss surface is the only full-screen hit-testable panel. It is created before
-        // the frame, so the frame and every tile paint above it.
         dismiss = $.CreatePanel("Panel", root, "OpenlockPopitDismiss");
         dismiss.AddClass("PopitDismiss");
         dismiss.hittest = true;
+        try { dismiss.style.top = "0px"; dismiss.style.left = "0px"; } catch (e) {}
         dismiss.SetPanelEvent("onmouseactivate", close);
+
+        cursorHalo = $.CreatePanel("Panel", root, "OpenlockPopitCursor");
+        cursorHalo.AddClass("PopitCursorHalo");
+        cursorHalo.hittest = false;
+        cursorHalo.hittestchildren = false;
+        try { cursorHalo.style.top = "0px"; cursorHalo.style.left = "0px"; } catch (e) {}
+        paintHalo();
 
         surface = $.CreatePanel("Panel", root, "OpenlockPopit");
         surface.AddClass("PopitSurface");
+        surface.AddClass("Lbp3");
         surface.hittest = true;
+        if (reduced) {
+            try { surface.AddClass("ReducedMotion"); } catch (e) {}
+        }
+        try { surface.style.top = "0px"; surface.style.left = "0px"; } catch (e) {}
         surface.style.marginLeft = at.x + "px";
         surface.style.marginTop = at.y + "px";
-        surface.style.width = layout.width + "px";
-
-        // Tail first, frame second: the opaque plate covers the upper half of the rotated tail,
-        // leaving the lower half as a speech-bubble point.
-        tailPanel = $.CreatePanel("Panel", surface, "");
-        tailPanel.AddClass("PopitTail");
-        tailPanel.AddClass(frameClass(frame));
-        tailPanel.hittest = false;
-
-        framePanel = $.CreatePanel("Panel", surface, "");
-        framePanel.AddClass("PopitFrame");
-        framePanel.AddClass(frameClass(frame));
-        framePanel.AddClass("PopitRows" + rows);
-        framePanel.style.width = layout.width + "px";
-        framePanel.hittest = true;
-
-        var hex = $.CreatePanel("Panel", framePanel, "");
-        hex.AddClass("PopitHex");
-        hex.hittest = false;
-        var edges = ["Top", "UpperLeft", "LowerLeft", "Bottom", "LowerRight", "UpperRight"];
-        for (var e = 0; e < edges.length; e++) {
-            var edge = $.CreatePanel("Panel", hex, "");
-            edge.AddClass("PopitHexEdge");
-            edge.AddClass(edges[e]);
-            edge.hittest = false;
+        surface.style.width = ROOT_W + "px";
+        if (classic) {
+            try { surface.AddClass("Classic"); } catch (e) {}
         }
+        applyPairClass();
 
-        var plate = $.CreatePanel("Panel", framePanel, "");
-        plate.AddClass("PopitPlate");
-        plate.hittest = false;
+        // The root: identity, the pair chip, the six sections and the page dots. It stays.
+        rootPanel = $.CreatePanel("Panel", surface, "");
+        rootPanel.AddClass("PopitRoot");
+        rootPanel.AddClass("PopitTray");
+        rootPanel.hittest = true;
 
-        var beam = $.CreatePanel("Panel", framePanel, "");
-        beam.AddClass("PopitBeam");
-        beam.hittest = false;
-
-        var body = $.CreatePanel("Panel", framePanel, "");
-        body.AddClass("PopitBody");
-
-        var header = $.CreatePanel("Panel", body, "");
+        var header = $.CreatePanel("Panel", rootPanel, "");
         header.AddClass("PopitHeader");
-        var title = $.CreatePanel("Label", header, "");
-        title.AddClass("PopitHeaderTitle");
-        title.text = (req.layer && req.layer.title) || "Popit";
-        title.hittest = false;
-        var spacer = $.CreatePanel("Panel", header, "");
+        var top = $.CreatePanel("Panel", header, "");
+        top.AddClass("PopitHeaderRow");
+        addLabel(top, "PopitWordmark", "POPIT");
+        var spacer = $.CreatePanel("Panel", top, "");
         spacer.AddClass("PopitHeaderSpacer");
-        spacer.hittest = false;
-        var badge = $.CreatePanel("Panel", header, "");
-        badge.AddClass("PopitFrameBadge");
-        badge.hittest = true;
-        badge.SetPanelEvent("onmouseactivate", cycleFrame);
-        badgeLabel = $.CreatePanel("Label", badge, "");
-        badgeLabel.text = frameById(frame).label;
-        badgeLabel.hittest = false;
+        var pairChip = $.CreatePanel("Panel", top, "");
+        pairChip.AddClass("PopitPairChip");
+        pairChip.hittest = true;
+        pairDot = $.CreatePanel("Panel", pairChip, "");
+        pairDot.AddClass("PopitPairDot");
+        pairDot.hittest = false;
+        pairLabel = addLabel(pairChip, "PopitPairChipLabel", "Pair");
+        bindHover(pairChip, "Popit colour pair", "open the 37 player colours");
+        pairChip.SetPanelEvent("onmouseactivate", function () { openSection("palette"); });
+        classicChip = $.CreatePanel("Panel", top, "");
+        classicChip.AddClass("PopitClassicChip");
+        classicChip.hittest = true;
+        addLabel(classicChip, "PopitClassicChipLabel", "Classic");
+        bindHover(classicChip, "Classic", "drop the pair and use the scheme's own colours");
+        classicChip.SetPanelEvent("onmouseactivate", function () { setClassic(!classic); });
 
-        var modeRow = $.CreatePanel("Panel", body, "");
-        modeRow.AddClass("PopitModeRow");
-        var pill = $.CreatePanel("Panel", modeRow, "");
-        pill.AddClass("PopitModePill");
-        var create = addMode(pill, "create", "CREATE");
-        var play = addMode(pill, "play", "PLAY");
-        try {
-            (mode === "play" ? play : create).AddClass("Active");
-        } catch (err) {}
+        headerTitle = addLabel(header, "PopitHeaderTitle", "POPIT");
+        targetLabel = addLabel(header, "PopitTargetLabel", "");
 
-        var grid = $.CreatePanel("Panel", body, "");
-        grid.AddClass("PopitGrid");
-        for (var r = 0; r < rows; r++) {
-            var row = $.CreatePanel("Panel", grid, "");
-            row.AddClass("PopitRow");
-            for (var c = 0; c < layout.columns; c++) {
-                var index = r * layout.columns + c;
-                if (index >= actions.length) break;
-                makeTile(row, actions[index], index);
-            }
-        }
+        rootBody = $.CreatePanel("Panel", rootPanel, "");
+        rootBody.AddClass("PopitRootBody");
+        for (var p = 0; p < PAGES.length; p++) addRootRow(rootBody, PAGES[p]);
 
-        detailLabel = $.CreatePanel("Label", body, "");
-        detailLabel.AddClass("PopitDetail");
-        detailLabel.hittest = false;
-        var hint = null;
-        if (req.layer && req.layer.hint) {
-            hint = $.CreatePanel("Label", body, "");
-            hint.AddClass("PopitHint");
-            hint.text = req.layer.hint;
-            hint.hittest = false;
-        }
+        dotRow = $.CreatePanel("Panel", rootPanel, "");
+        dotRow.AddClass("PopitPageDots");
+        dotRow.hittest = true;
+        for (var d = 0; d < PAGES.length; d++) addDot(dotRow, PAGES[d]);
+
+        detailLabel = addLabel(rootPanel, "PopitDetail", "");
+
+        // The child: one contextual pane. It reveals beside the root and is closed by Back.
+        child = $.CreatePanel("Panel", surface, "");
+        child.AddClass("PopitChild");
+        child.hittest = true;
+        try { child.style.visibility = "collapse"; } catch (e) {}
+        var childHead = $.CreatePanel("Panel", child, "");
+        childHead.AddClass("PopitChildHead");
+        var back = $.CreatePanel("Panel", childHead, "");
+        back.AddClass("PopitBack");
+        back.hittest = true;
+        addLabel(back, "PopitBackLabel", "Back");
+        bindHover(back, "Back", "close this pane and keep the Popit root");
+        back.SetPanelEvent("onmouseactivate", closeSection);
+        childTitle = addLabel(childHead, "PopitChildTitle", "");
+        childBody = $.CreatePanel("Panel", child, "");
+        childBody.AddClass("PopitPage");
+        childBody.hittest = true;
 
         status.visible = true;
-        status.frame = frame;
-        status.mode = mode;
-        status.actions = actions.length;
-        status.rows = rows;
-        status.columns = layout.columns;
-        status.width = layout.width;
+        status.frame = FRAME;
+        status.target = target ? target.id : "";
+        status.targets = targets.length;
         status.placed = { x: at.x, y: at.y };
-        refreshSelection();
-        note("open " + frame + " " + actions.length + " tile(s) at " + at.x + "," + at.y +
-            " form=" + String(req.form || "?"));
+        status.width = ROOT_W;
+        status.items = 0;
+        status.pair = pairId;
+        status.classic = classic;
+        status.reducedMotion = reduced;
 
-        // The frame's height is content-driven; one post-layout check keeps a tall surface
-        // inside the screen without a recurring schedule.
-        var expected = height;
+        renderHeader();
+        if (detailLabel) detailLabel.text = target ? "editing " + target.title : "select a cell with the cursor";
+        if (req.page) openSection(req.page);
+        animate();
+        note("open target=" + (target ? target.id : "none") + " page=" + (currentPage || "root") +
+            " pair=" + (pairId || "none") + " at " + at.x + "," + at.y);
+
         $.Schedule(0, function () {
             if (!surface || placed !== at) return;
             var actual = 0;
             try { actual = Number(surface.actuallayoutheight) || 0; } catch (e) {}
-            if (actual <= 0) actual = expected;
-            var maxY = Math.max(screen.top, screen.h - actual - 8);
+            if (actual <= 0) actual = 320;
+            var maxY = Math.max(Number(req.screen && req.screen.top) || 46,
+                (Number(req.screen && req.screen.h) || 900) - actual - 8);
             if (at.y > maxY) {
                 at.y = maxY;
                 try { surface.style.marginTop = maxY + "px"; } catch (e) {}
@@ -530,37 +1034,73 @@
         });
 
         return {
-            ok: true, frame: frame, placed: at, rows: rows, tiles: actions.length,
-            layout: { columns: layout.columns, width: layout.width, frame: frame, mode: mode, order: layout.order }
+            ok: true, frame: FRAME, placed: at, page: currentPage, target: target,
+            targets: targets.length, tiles: status.pageTiles, pair: pairId, classic: classic,
+            child: childOpen, reducedMotion: reduced, layout: { frame: FRAME }
         };
+    }
+
+    function setTarget(next, page) {
+        target = normalizeTarget(next);
+        status.target = target ? target.id : "";
+        paintHalo();
+        renderHeader();
+        if (page) openSection(page);
+        else renderChild();
+    }
+
+    function setPair(id) {
+        var pair = pairById(id);
+        if (!pair) return false;
+        choosePair(pair);
+        return true;
+    }
+
+    function setReducedMotion(on) {
+        reduced = !!on;
+        status.reducedMotion = reduced;
+        if (!surface) return;
+        try {
+            if (reduced) surface.AddClass("ReducedMotion");
+            else surface.RemoveClass("ReducedMotion");
+        } catch (e) {}
     }
 
     globalThis.OpenlockPopit = {
         show: show,
         close: close,
-        setFrame: setFrame,
-        // The dashboard editor reads the legal range from the module instead of duplicating it.
-        layout: function () {
-            return {
-                columns: currentLayout.columns, width: currentLayout.width, frame: currentLayout.frame,
-                mode: currentLayout.mode, order: currentLayout.order.slice(0),
-                columnsMin: 1, columnsMax: 4, widthMin: MIN_WIDTH, widthMax: MAX_WIDTH,
-                maxRows: MAX_ROWS, maxOrder: 32
-            };
-        },
-        normalizeLayout: normalizeLayout,
+        setTarget: setTarget,
+        setPage: setPage,
+        openSection: openSection,
+        closeSection: closeSection,
+        setPair: setPair,
+        setClassic: setClassic,
+        setReducedMotion: setReducedMotion,
+        state: function () { return normalizeState(state); },
+        normalizeState: normalizeState,
+        defaultState: defaultState,
+        hasEdit: hasEdit,
+        encodeState: encodeState,
+        decodeState: decodeState,
+        targets: function () { return targets.slice(0); },
         status: function () { return status; },
-        frames: function () {
-            var ids = [];
-            for (var i = 0; i < FRAMES.length; i++) ids.push(FRAMES[i].id);
-            return ids;
-        },
-        // The dashboard's frame control reads the same list the badge cycles, so a form added
-        // here appears in the editor without a second copy of the family.
-        frameList: function () {
+        pair: function () { return pairId; },
+        classic: function () { return classic; },
+        pairs: function () { return pairList().slice(0); },
+        frames: function () { return [FRAME]; },
+        frameList: function () { return [{ id: FRAME, label: "LBP3" }]; },
+        pages: function () {
             var out = [];
-            for (var i = 0; i < FRAMES.length; i++) out.push({ id: FRAMES[i].id, label: FRAMES[i].label });
+            for (var i = 0; i < PAGES.length; i++) out.push({ id: PAGES[i].id, title: PAGES[i].title });
             return out;
+        },
+        items: function (page) {
+            if (page === "goodies") return MATERIALS.slice(0);
+            if (page === "stickers") return DECORATIONS.slice(0);
+            if (page === "color") return COLORS.slice(0);
+            if (page === "palette") return pairList().slice(0);
+            if (page === "tools") return { radius: RADII.slice(0), border: BORDERS.slice(0), opacity: OPACITIES.slice(0) };
+            return [];
         }
     };
 })();

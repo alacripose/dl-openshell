@@ -1,7 +1,7 @@
 namespace Openlock;
 
 /// <summary>
-/// Reads a <c>shploingus.recipe/3</c> patch recipe: a tab-separated header line
+/// Reads a <c>shploingus.recipe/30444cad3419800564faba6d4e252431</c> patch recipe: a tab-separated header line
 /// (<c>kind&#9;name</c>), its fields indented below it, and a <c>record-id</c> closing each record.
 ///
 /// <para>

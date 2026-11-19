@@ -139,10 +139,15 @@ def main() -> int:
                      "record.chrome = chrome", "var placed = layoutPlace",
                      "var dispX = placed.x", "var dispY = placed.y",
                      "var scaleX = clamp(g.w / nat.w", "var scaleY = clamp(g.h / nat.h",
-                     "frameRecord.rect", "frameRect.y + chrome"):
+                     "var anchor = layoutPlace", "var startX = anchor.x",
+                     "var startY = anchor.y", "grip.hittest = true"):
         if required not in script:
             errors.append(f"script: missing window-chrome path '{required}'")
-    for retired in ("startShiftAnimation", "record.targetShiftY", "record.shiftY",
+    # The frame rect is clipped to the screen and carries the layout inset. Starting a gesture
+    # from it fed that inset back into the next apply, which is the stretch/compress defect this
+    # pass retired; keep the assertion so the old path cannot return.
+    for retired in ("frameRecord.rect", "frameRect.y + chrome",
+                    "startShiftAnimation", "record.targetShiftY", "record.shiftY",
                     "if (!win || !at)"):
         if retired in script:
             errors.append(f"script: retired window-chrome path '{retired}' is back")

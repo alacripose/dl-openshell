@@ -1,6 +1,8 @@
-# Picker order. Popit is the default shell package; the game's own palette stays available as an
-# option. Extensions are applied to their base by load-order, not by this file. Each scheme
-# carries colour slots only; its geometry comes from forms/<form>.form.
+# Picker order. The family register is the default shell palette; Popit is the LBP3 form and
+# an optional palette, not the shell's default colour. Extensions are applied to their base by
+# load-order, not by this file. Each scheme carries colour slots only; its geometry comes from
+# forms/<form>.form.
+family
 popit
 deadlock
 alpha

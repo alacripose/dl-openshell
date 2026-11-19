@@ -82,6 +82,11 @@ SOURCE_DIGEST_FILES = (
 # Markers the delivery gate must find in the installed shell script. They are deliberately
 # capability names, not a version string: an archive from an older commit can carry the same
 # commit and still lack the code the player was promised.
+RECIPE_FORMAT = "shploingus.recipe/30444cad3419800564faba6d4e252431"
+CELLS_FORMAT = "shploingus.cells/f6306ccc4ce664c4fe78a6fad235d513"
+CELLFRAME_FORMAT = "shploingus.cellframe/3424d7cb9aa673dc7d5c9da7e0c9e1e7"
+GAME_FORMAT = "openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27"
+
 DELIVERY_FEATURES = {
     "popit": ("PopitSurface", "showPopit", "runPopitAction"),
     "picker": ("PickerOverlay", "startPicker", "renderPicker", "pickerApply"),
@@ -90,7 +95,7 @@ DELIVERY_FEATURES = {
     "live-packages": ("OpenlockDelivery", "offerAddons", "renderTree"),
     # The running client's own window/cell packages go through the same streamer surface as an
     # addon package: a delivered shell without these markers cannot frame the game's windows.
-    "game-stream": ("OpenlockStream", "OpenlockStreamPackage", "openlock.game/1", "StreamedXml"),
+    "game-stream": ("OpenlockStream", "OpenlockStreamPackage", GAME_FORMAT, "StreamedXml"),
     "palette": ("renderPalette", "PaletteRow", "cyclePalette"),
     "popit-renderer": ("rendererFor", "RendererPopit", "applyPalettePaint"),
     # Wishes are the plan beside the refusals: a delivered shell that lost the wish surface would
@@ -159,10 +164,13 @@ def read_recipe(path: Path):
         return data
 
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    data["format"] = lines[0] if lines else ""
-    if not data["format"].startswith("shploingus.recipe/"):
+    declared = lines[0] if lines else ""
+    data["format"] = RECIPE_FORMAT
+    if declared != RECIPE_FORMAT and not re.match(r"^shploingus\.recipe/[0-9]+$", declared):
+        hash_shaped = re.match(r"^shploingus\.recipe/[0-9a-f]{32}$", declared)
+        why = "format-hash-mismatch" if hash_shaped else "unknown recipe header"
         data["refusals"].append(
-            {"file": path.name, "line": 1, "subject": lines[0] if lines else "<empty>", "why": "unknown recipe header"}
+            {"file": path.name, "line": 1, "subject": declared or "<empty>", "why": why}
         )
         return data
 
@@ -423,8 +431,10 @@ def read_cells(path: Path):
 
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     header = lines[0] if lines else ""
-    if header != "shploingus.cells/1":
-        refusals.append({"file": path.name, "line": 1, "subject": header, "why": "unknown cells header"})
+    if header != CELLS_FORMAT and not re.match(r"^shploingus\.cells/[0-9]+$", header):
+        why = ("format-hash-mismatch" if re.match(r"^shploingus\.cells/[0-9a-f]{32}$", header)
+               else "unknown cells header")
+        refusals.append({"file": path.name, "line": 1, "subject": header, "why": why})
         return header, -1, refusals
 
     for index, raw in enumerate(lines[1:], start=2):
@@ -519,8 +529,11 @@ def read_frames(directory: Path):
     for frame in sorted(directory.glob("*.frame")):
         lines = frame.read_text(encoding="utf-8", errors="replace").splitlines()
         header = lines[0] if lines else ""
-        if header != "shploingus.cellframe/1":
-            refusals.append({"file": f"frames/{frame.name}", "line": 1, "subject": header, "why": "unknown cellframe header"})
+        if header != CELLFRAME_FORMAT and not re.match(r"^shploingus\.cellframe/[0-9]+$", header):
+            why = ("format-hash-mismatch"
+                   if re.match(r"^shploingus\.cellframe/[0-9a-f]{32}$", header)
+                   else "unknown cellframe header")
+            refusals.append({"file": f"frames/{frame.name}", "line": 1, "subject": header, "why": why})
             continue
 
         frame_id = ""
@@ -1191,7 +1204,9 @@ def main():
     frame_refusals = read_frames(PACKAGE_DIR / "frames")
     recipe["refusals"] = (envelope_refusals + content_refusals + cells_refusals +
                           frame_refusals + recipe["refusals"])
-    recipe["cellsFormat"] = cells_format
+    recipe["cellsFormat"] = CELLS_FORMAT if (
+        cells_format == CELLS_FORMAT or re.match(r"^shploingus\.cells/[0-9]+$", cells_format)
+    ) else cells_format
     recipe["cellsVersion"] = cells_version
     recipe["envelopes"] = envelopes
 

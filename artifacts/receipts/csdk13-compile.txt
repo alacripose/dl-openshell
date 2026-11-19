@@ -1,0 +1,6 @@
+CSDK13 compile receipt — 2026-11-19
+compiler: C:\Users\ala\Downloads\Reduced_CSDK_13\game\bin\win64\resourcecompiler.exe
+command: -f -nop4 -DANGER_MODE_ignore_schema_mismatches -game <sdk>/game/citadel -i <scratch addon>/panorama/{layout/openlock_shell.xml,scripts/openlock_popit.js,scripts/openlock_pairs.js,scripts/openlock_shell.js,styles/openlock_popit.css,styles/openlock_pairs.css,styles/openlock_schemes.css,styles/openlock_shell.css}
+result: OK: 8 compiled, 0 failed, 0 skipped, 0m:00s
+outputs: openlock_shell.vxml_c, openlock_popit.vjs_c, openlock_pairs.vjs_c, openlock_shell.vjs_c, openlock_popit.vcss_c, openlock_pairs.vcss_c, openlock_schemes.vcss_c, openlock_shell.vcss_c
+note: compiled in a scratch addon (openlock_compilecheck) inside the reduced CSDK; not a game install and not a VPK pack.

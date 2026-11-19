@@ -6,7 +6,16 @@
 // package or a long observer XML cannot hold the poll frame. The module owns delivery state; the
 // shell owns the panel chrome and supplies the hooks in configure().
 (function () {
-    var FORMAT = "openlock.addons/2";
+    var FORMAT = "openlock.addons/a5d7cf25e0a40c0a06b836992556491d";
+    var LEGACY_FORMAT = /^openlock\.addons\/([0-9]+)$/;
+
+    function isLegacyFormat(value) {
+        var match = LEGACY_FORMAT.exec(String(value || ""));
+        if (!match) return false;
+        // A 32-character lowercase-hex suffix is the hash shape, even when every digit happens
+        // to be numeric; it is a foreign hash, not a legacy counter.
+        return !(match[1].length === 32 && /^[0-9a-f]+$/.test(match[1]));
+    }
     var MAX_PAYLOAD = 4 * 1024 * 1024;
     var MAX_NODES = 512;
     var MAX_DEPTH = 24;
@@ -131,10 +140,14 @@
             return null;
         }
 
-        if (!payload || payload.format !== FORMAT) {
-            reject("Package payload refused", "payload format is not " + FORMAT);
+        // A numeric suffix is a legacy counter, not a grammar: read it and normalize the parsed
+        // payload to the hashed family id. A hash from another family is still refused.
+        var declaredFormat = payload && payload.format ? String(payload.format) : "";
+        if (declaredFormat !== FORMAT && !isLegacyFormat(declaredFormat)) {
+            reject("Package payload refused", "payload format is not " + FORMAT + " or its numeric legacy id");
             return null;
         }
+        payload.format = FORMAT;
 
         var revision = Number(payload.revision);
         if (!isFinite(revision)) revision = -1;

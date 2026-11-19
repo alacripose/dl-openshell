@@ -1,0 +1,18 @@
+Using breakpad crash handler
+Setting breakpad minidump AppID = 1422450
+Forcing breakpad minidump interfaces to load
+Looking up breakpad interfaces from steamclient
+Calling BreakpadMiniDumpSystemInit
+Looking up breakpad interfaces from steamclient
+Calling BreakpadMiniDumpSystemInit
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561198120458376 [API loaded yes]
+SteamInternal_SetMinidumpSteamID:  Setting Steam ID:  76561198120458376
+Fossilize ERROR: Failed to parse ApplicationInfoFilter, letting recording go through.
+Fossilize INFO: Overriding serialization path: "D:\SteamLibrary\steamapps\shadercache\1422450\fozpipelinesv6\steamapprun_pipeline_cache".
+
+
+---------------------------------------------------------
+Encountered error.
+Wrote minidump to .\deadlock_2026_1111_182415_0_error.mdmp
+---------------------------------------------------------
+

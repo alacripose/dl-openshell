@@ -254,34 +254,49 @@ const vertical16 = dashboardBody().FindChildrenWithClassTraverse('DashGridLine')
     .filter(l => l.classes.has('Vertical'));
 check(vertical16.length === 320 / 16 + 1, '16 dp grid: 21 vertical seams (' + vertical16.length + ')');
 
-// POPIT: the arrangement editor edits the surface's own layout and the surface takes it.
+// POPIT: the dashboard page describes the cell editor and opens the same cursor surface.
 const popitSlot = rail.FindChildrenWithClassTraverse('DashRailSlot')
     .find(s => texts(s).includes('POPIT'));
 popitSlot.events.onmouseactivate();
 const popitText = texts(dashboardBody().FindChildrenWithClassTraverse('DashPanel')[0]).join('\n');
-check(popitText.includes('4 column(s)'), 'the popit editor opens on the default arrangement: ' + popitText.slice(0, 60));
-buttons(dashboardBody(), '2 column(s)')[0].events.onmouseactivate();
-const afterColumns = texts(dashboardBody().FindChildrenWithClassTraverse('DashPanel')[0]).join('\n');
-check(afterColumns.includes('2 column(s)'), 'the editor took two columns: ' + afterColumns.split('\n')[1]);
-check(afterColumns.includes('Only 8 tiles fit this frame'), 'two columns cannot fit nine tiles and says so');
-buttons(dashboardBody(), 'Preview on the dashboard')[0].events.onmouseactivate();
-check(!root.FindChildrenWithClassTraverse('PopitSurface').length,
-    'a surface that cannot show every tile is refused, not drawn clipped');
-
-buttons(dashboardBody(), '3 column(s)')[0].events.onmouseactivate();
-buttons(dashboardBody(), 'Preview on the dashboard')[0].events.onmouseactivate();
+check(popitText.includes('successor to a declared XML window'),
+    'the popit page starts from the cell-editor model: ' + popitText.slice(0, 60));
+check(popitText.includes('CURSOR  select the live cell') &&
+    popitText.includes('PALETTE  all 37 LBP player colours') &&
+    popitText.includes('GOODIES  materials'),
+    'the popit page names the root sections, including the pair palette');
+check(!popitText.includes('two CREATE/PLAY cards') && !popitText.includes('Play cards'),
+    'the popit page no longer describes a CREATE/PLAY launcher');
+buttons(dashboardBody(), 'Open the Popit cursor')[0].events.onmouseactivate();
 const surface = root.FindChildrenWithClassTraverse('PopitSurface')[0];
-check(!!surface, 'the preview draws the popit surface at three columns');
-check(globalThis.OpenlockPopit.status().columns === 3, 'the preview is laid out with three columns');
-check(surface.style.width === '356px', 'the default surface width is applied to the frame');
+check(!!surface, 'the dashboard draws the cursor surface');
+check(surface.FindChildrenWithClassTraverse('PopitRootRow').length === 6,
+    'the surface carries the six-section root');
+check(surface.FindChildrenWithClassTraverse('PopitChild').length === 1 && surface.HasClass('ChildOpen'),
+    'the surface reveals its contextual child beside the root');
+check(surface.FindChildrenWithClassTraverse('PopitCard').length === 0,
+    'the surface has no CREATE/PLAY cards');
+check(globalThis.OpenlockPopit.status().page === 'cursor',
+    'the dashboard opens the Popit on the Cursor page');
 
-// The preview's tiles are the shell's own surfaces, and pressing one opens that window.
-const tiles = surface.FindChildrenWithClassTraverse('PopitTile');
-check(tiles.length === 9, 'every dashboard surface is a tile (' + tiles.length + ')');
-const allWindowsTile = tiles.find(t => texts(t).some(x => x.indexOf('All windows') >= 0));
-check(!!allWindowsTile, 'the menu offers the window browser');
-allWindowsTile.events.onmouseactivate();
-check(root.FindChildrenWithClassTraverse('PopitSurface').length === 0, 'pressing a tile closes the surface');
+// Selecting the live Abilities panel takes the surface to Goodies, and a material writes the
+// style on the actual fake HUD panel.
+const popitTargets = surface.FindChildrenWithClassTraverse('PopitTarget');
+check(popitTargets.length >= 1, 'the cursor lists the live panel');
+popitTargets[0].events.onmouseactivate();
+const materialSurface = root.FindChildrenWithClassTraverse('PopitSurface')[0];
+check(!!materialSurface && globalThis.OpenlockPopit.status().page === 'goodies',
+    'selecting a target opens its Goodies Bag');
+const cardMaterial = materialSurface.FindChildrenWithClassTraverse('PopitItem')
+    .find(item => texts(item).includes('Card'));
+check(!!cardMaterial, 'the Goodies Bag offers Card');
+const beforePaint = hudAbilities.style.backgroundColor || '';
+cardMaterial.events.onmouseactivate();
+check(!!hudAbilities.style.backgroundColor && hudAbilities.style.backgroundColor !== beforePaint,
+    'a material paints the live cell, not a separate platform');
+globalThis.OpenlockPopit.close();
+check(root.FindChildrenWithClassTraverse('PopitSurface').length === 0,
+    'closing the cursor removes the surface');
 
 // An intermediate save proves the edited arrangement reaches the profile line.
 layoutRail.events.onmouseactivate();
@@ -323,8 +338,10 @@ const layoutDispatch = dispatched.filter(d => d[0] === 'CitadelConCommand' &&
     String(d[1]).indexOf('openlock-shell|layout:') >= 0).pop();
 check(!!layoutDispatch, 'save dispatches a layout snapshot to the host');
 const snapshot = String(layoutDispatch[1]).split('|')[1].slice('layout:'.length);
-check(/@popit=columns:3;width:356;frame:lbp3;mode:create;order:/.test(snapshot),
-    'the snapshot carries the edited popit arrangement: ' + snapshot.slice(0, 120));
+check(/@popit=columns:4;width:356;frame:lbp3;mode:create;order:/.test(snapshot),
+    'the legacy popit profile row is still emitted for older readers: ' + snapshot.slice(0, 120));
+check(/@abilities,12,46,420,140,m[0-6]c[0-6]d[0-4]r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)(?:@|$)/.test(snapshot),
+    'the painted cell carries its Popit style in the saved row: ' + snapshot.slice(0, 180));
 
 // Closing releases the reservation. The next placement asks the pass while it is closed and gets
 // the pre-shell rect back, which is what the game's own UI fits into again.

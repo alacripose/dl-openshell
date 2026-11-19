@@ -42,7 +42,8 @@ GAMEINFO = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(
 )
 OUTPUT = ROOT / "clientaddon" / "panorama" / "styles" / "openlock_schemes.css"
 
-HEADER = "shploingus.theme/1"
+HEADER = "shploingus.theme/339926f6b1b54ebb89810d4c6238d523"
+LEGACY_HEADER = re.compile(r"^shploingus\.theme/[0-9]+$")
 
 REQUIRED = [
     "body",
@@ -123,8 +124,8 @@ def parse_theme_text(
 ) -> ThemeFile:
     theme = ThemeFile(display)
     lines = text.splitlines()
-    if not lines or lines[0].strip() != HEADER:
-        raise ValueError(f"{display}:1: expected {HEADER}, not {lines[0] if lines else '<empty>'!r}")
+    if not lines or (lines[0].strip() != HEADER and not LEGACY_HEADER.match(lines[0].strip())):
+        raise ValueError(f"{display}:1: expected {HEADER} or its numeric legacy id, not {lines[0] if lines else '<empty>'!r}")
 
     for index, raw in enumerate(lines[1:], start=2):
         if not raw.strip() or raw.lstrip().startswith("#"):
@@ -415,6 +416,13 @@ def resolve_theme(theme: ThemeFile, defines: dict[str, str]) -> tuple[dict[str, 
         roles["accentSoft"] = with_alpha(roles["accent"], "22")
         roles["accentStrong"] = with_alpha(roles["accent"], "55")
         roles["borderSoft"] = with_alpha(roles["border"], "66")
+        # The Popit tray is an overlay over other windows, unlike a shell window. Its background
+        # is derived from body without the alpha channel, so text from the window underneath
+        # cannot ghost through the editor. This is a derived role, not another required slot.
+        roles["solid"] = roles["body"][:7]
+        # The Popit dims the windows it is editing. The scrim reuses the body hue so it belongs to
+        # the scheme; its alpha is enough to read the tray without erasing the surface underneath.
+        roles["scrim"] = with_alpha(roles["body"], "B8")
     return roles, refusals
 
 
@@ -505,27 +513,61 @@ RULES: list[tuple[str, list[tuple[str, str]]]] = [
     (".SchemeButton", [("background-color", "panel"), ("border-color", "border")]),
     (".SchemeButton:hover", [("border-color", "borderStrong")]),
     (".SchemeLabel", [("color", "accent")]),
-    # The Popit contextual tool surface: the tools belong to the window, so they paint with the
-    # same roles as its chrome. Shape rules live in forms/popit.form; these are colour only, so a
-    # frame variant can change its silhouette without a theme being able to override it.
-    (".PopitDismiss", [("background-color", "borderStrong")]),
-    (".PopitPlate", [("background-color", "body"), ("border-color", "border")]),
-    (".PopitTail", [("background-color", "body"), ("border-color", "borderStrong")]),
-    (".PopitHexEdge", [("background-color", "border")]),
-    (".PopitHeaderTitle", [("color", "ink")]),
-    (".PopitFrameBadge", [("background-color", "panel"), ("border-color", "border")]),
-    (".PopitFrameBadge Label", [("color", "muted")]),
-    (".PopitModePill", [("background-color", "panel"), ("border-color", "border")]),
-    (".PopitMode", [("color", "muted")]),
-    (".PopitMode.Active", [("background-color", "accent"), ("color", "ink")]),
-    (".PopitTile", [("background-color", "panel"), ("border-color", "border")]),
-    (".PopitTile.Hover", [("background-color", "title"), ("border-color", "borderStrong")]),
-    (".PopitTile.Selected", [("background-color", "title"), ("border-color", "accent")]),
-    (".PopitTileLabel", [("color", "ink")]),
-    (".PopitTile.Selected .PopitTileLabel", [("color", "accent")]),
-    (".PopitDetail", [("color", "ink")]),
-    (".PopitHint", [("color", "muted")]),
-    (".PopitBeam", [("background-color", "accent")]),
+    # The Popit surface: a spine of page tools beside a tool tray, the cursor halo around the
+    # selected cell, and the target/material/decor/tweak rows. Shape rules live in
+    # forms/popit.form; these are colour only, so every tool, item and row follows the active
+    # scheme instead of carrying a literal from the module.
+    (".PopitDismiss", [("background-color", "scrim")]),
+    (".PopitCursorHalo", [("border-color", "accent")]),
+    (".PopitSpine", [("background-color", "solid"), ("border-color", "border")]),
+    (".PopitTool", [("background-color", "solid"), ("border-color", "border")]),
+    (".PopitTool.Hover", [("background-color", "title"), ("border-color", "borderStrong")]),
+    (".PopitTool.Active", [("background-color", "accent"), ("border-color", "borderStrong")]),
+    (".PopitToolLabel", [("color", "ink")]),
+    (".PopitTool.Active .PopitToolLabel", [("color", "meta")]),
+    (".PopitTray", [("background-color", "solid"), ("border-color", "borderStrong")]),
+    (".PopitHeaderTitle", [("color", "accent")]),
+    (".PopitTargetLabel", [("color", "muted")]),
+    (".PopitItem", [("background-color", "solid"), ("border-color", "border")]),
+    (".PopitItem.Hover", [("background-color", "title"), ("border-color", "borderStrong")]),
+    (".PopitItem.Selected", [("background-color", "title"), ("border-color", "accent")]),
+    (".PopitSwatch", [("border-color", "border")]),
+    (".PopitItemLabel", [("color", "ink")]),
+    (".PopitTarget", [("background-color", "solid"), ("border-color", "border")]),
+    (".PopitTarget.Hover", [("background-color", "title"), ("border-color", "borderStrong")]),
+    (".PopitTarget.Selected", [("background-color", "title"), ("border-color", "accent")]),
+    (".PopitTargetName", [("color", "ink")]),
+    (".PopitTargetKind", [("color", "muted")]),
+    (".PopitGroupLabel", [("color", "muted")]),
+    (".PopitOption", [("background-color", "solid"), ("border-color", "border")]),
+    (".PopitOption.Hover", [("border-color", "borderStrong")]),
+    (".PopitOption.Selected", [("background-color", "accent"), ("border-color", "borderStrong")]),
+    (".PopitOptionLabel", [("color", "ink")]),
+    (".PopitOption.Selected .PopitOptionLabel", [("color", "meta")]),
+    (".PopitReset", [("background-color", "panel"), ("border-color", "alert")]),
+    (".PopitReset.Hover", [("background-color", "alertBody"), ("border-color", "alert")]),
+    (".PopitResetLabel", [("color", "alert")]),
+    # The Popit Forge slab grammar: header band, page dots, section labellers and the two chips.
+    # The pair rules in openlock_pairs.css load after this sheet and override only the slab,
+    # while a scheme with no pair chosen remains the complete default.
+    (".PopitWordmark", [("color", "ink")]),
+    (".PopitHeader", [("border-bottom-color", "border")]),
+    (".PopitSectionLabel", [("color", "accent")]),
+    (".PopitSectionRule", [("border-bottom-color", "border")]),
+    (".PopitPageDot", [("background-color", "border")]),
+    (".PopitPageDot.On", [("background-color", "accent")]),
+    (".PopitPairChip", [("background-color", "panel"), ("border-color", "border")]),
+    (".PopitPairChipLabel", [("color", "ink")]),
+    (".PopitPairDot", [("border-color", "borderStrong")]),
+    (".PopitClassicChip", [("background-color", "panel"), ("border-color", "border")]),
+    (".PopitClassicChipLabel", [("color", "ink")]),
+    (".PopitClassicChip.On", [("background-color", "accent"), ("border-color", "borderStrong")]),
+    (".PopitClassicChip.On .PopitClassicChipLabel", [("color", "meta")]),
+    (".PopitPairSwatch", [("border-color", "borderStrong")]),
+    (".PopitPairGame", [("color", "muted")]),
+    (".PopitPairNote", [("color", "muted")]),
+    (".PopitEmpty", [("color", "muted")]),
+    (".PopitDetail", [("color", "muted")]),
     (".IconPopitDot", [("background-color", "accent")]),
     (".PerfGraph", [("background-color", "meta"), ("border-color", "border")]),
     (".PerfBar", [("background-color", "accent")]),
@@ -644,11 +686,11 @@ FORM_CSS: dict[str, list[str]] = {
         ".FormTouchwiz .PickerBadge { border-radius: 4px; }",
         ".FormTouchwiz .PickerCancel { border-radius: 4px; }",
     ],
-    # Popit: LBP3's rounded slab (the shape people call the Nexus 5 window), 10 dp corners,
+    # Popit: LBP3's rounded slab (the shape people call the Nexus 5 window), 18 dp corners,
     # a 2 dp card edge and circular tool buttons. The proportions are the suite's; the
     # pointer-sized 30 dp chrome is this shell's translation and is named as such.
     "popit": [
-        ".FormPopit.RendererPopit .WindowFrame { border-radius: 34px 34px 12px 12px; border-width: 2px; }",
+        ".FormPopit.RendererPopit .WindowFrame { border-radius: 18px 18px 18px 18px; border-width: 2px; }",
         ".FormPopit .WindowFrame { border-radius: 10px; border-width: 2px; }",
         ".FormPopit .WindowTitle { height: 30px; padding-left: 10px; padding-right: 6px; border-top-left-radius: 8px; border-top-right-radius: 8px; }",
         ".FormPopit .WindowTitleLabel { margin-left: 24px; font-size: 13px; letter-spacing: 0.4px; }",
@@ -678,7 +720,8 @@ FORM_CSS: dict[str, list[str]] = {
 # Window geometry is a schema, not a palette property. A form file declares shape rows only;
 # the .theme file declares colour slots only. Popit is the default form, so its shape can be
 # edited without touching any palette, and a colour scheme can be swapped without changing it.
-FORM_HEADER = "shploingus.form/1"
+FORM_HEADER = "shploingus.form/0c51154398407e2a79127583436d2808"
+LEGACY_FORM_HEADER = re.compile(r"^shploingus\.form/[0-9]+$")
 FORM_SAFE_PROPERTIES = {
     "border-radius", "border-width", "border-top-left-radius", "border-top-right-radius",
     "border-bottom-left-radius", "border-bottom-right-radius", "height", "width",
@@ -709,9 +752,9 @@ def load_forms(directory: Path) -> tuple[dict[str, dict], list[dict]]:
     for path in sorted(directory.glob("*.form")):
         display = f"forms/{path.name}"
         rows = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        if not rows or rows[0].strip() != FORM_HEADER:
+        if not rows or (rows[0].strip() != FORM_HEADER and not LEGACY_FORM_HEADER.match(rows[0].strip())):
             refusals.append({"file": display, "line": 1, "subject": path.stem,
-                             "why": f"expected {FORM_HEADER}"})
+                             "why": f"expected {FORM_HEADER} or its numeric legacy id"})
             continue
         form_id = ""
         label = ""

@@ -35,6 +35,9 @@
 
     function cssValue(name, value) {
         if (value === undefined || value === null) return null;
+        // Panorama's fit-children is CSS fit-content for the browser witness; without it every
+        // Popit tray is forced to its min-height and the Tools page is clipped.
+        if (value === "fit-children") return "fit-content";
         if (name === "visibility" && value === "collapse") return "hidden";
         if (name === "visibility" && value === "visible") return "visible";
         if (name === "overflow" && /clip/.test(String(value))) return "hidden";
@@ -266,7 +269,7 @@
         // sandbox is proving.
 
         // Prove the live-package path in the real shell, not only in the fake tree: offer an
-        // openlock.addons/2 window with a small XML node tree, then open it through the same
+        // openlock.addons/a5d7cf25e0a40c0a06b836992556491d window with a small XML node tree, then open it through the same
         // console route a player uses. The tree exercises a Panel, a Label and a Button so the
         // browser can read the pointer-surface rule back out of the drawn DOM.
         window.setTimeout(function () {
@@ -315,7 +318,7 @@
             try {
                 if (!globalThis.OpenlockDelivery) throw new Error("delivery module is missing");
                 globalThis.OpenlockDelivery.offerAddons(JSON.stringify({
-                    format: "openlock.addons/2",
+                    format: "openlock.addons/a5d7cf25e0a40c0a06b836992556491d",
                     revision: 1,
                     packages: [{ name: "sandbox-proof", version: "1-0-0" }],
                     windows: [proofWindow]

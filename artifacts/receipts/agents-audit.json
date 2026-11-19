@@ -1,0 +1,80 @@
+{
+  "format": "openlock.agents-audit/1",
+  "subject": {
+    "AGENTS.md": "44efcb61a7e8424c0db241eba326bb24f1f2cc521f77e6b3cfd4b1105b391b00",
+    "AGENTS-INDEX.md": "03a83144194deea04620169e31eae7198976320b4c0a42eec93868634fdadd89"
+  },
+  "checker": {
+    "tools/agents_audit.py": "20e772ab9e45f75484bc9a73c41e7b312c5095eb2dfe4f89c4fe01a506367106"
+  },
+  "rows": [
+    {
+      "criterion": "A1",
+      "subject": "duplicates",
+      "ok": true,
+      "detail": "no 3-line block appears twice"
+    },
+    {
+      "criterion": "A2",
+      "subject": "current state",
+      "ok": true,
+      "detail": "first dated section at line 74; 5 undated section(s) before it"
+    },
+    {
+      "criterion": "A3",
+      "subject": "evidence paths",
+      "ok": true,
+      "detail": "every cited artifact path resolves"
+    },
+    {
+      "criterion": "A4",
+      "subject": "supersession",
+      "ok": true,
+      "detail": "no dangling supersession"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 3",
+      "ok": true,
+      "detail": "18 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 21",
+      "ok": true,
+      "detail": "13 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 34",
+      "ok": true,
+      "detail": "19 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 53",
+      "ok": true,
+      "detail": "13 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 66",
+      "ok": true,
+      "detail": "8 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 74",
+      "ok": true,
+      "detail": "20 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 94",
+      "ok": true,
+      "detail": "35 lines, bounded"
+    }
+  ],
+  "refusals": [],
+  "ok": true
+}

@@ -31,9 +31,11 @@ SCRIPT_FILES = (
 )
 STYLE_FILES = (
     "clientaddon/panorama/styles/openlock_shell.css",
-    # Generated palettes are a build artifact; use them when present without making the sandbox
-    # depend on a build. The base sheet carries the layout and the default chrome colours.
-    "dist/openlock_ui/panorama/styles/openlock_schemes.css",
+    "clientaddon/panorama/styles/openlock_popit.css",
+    # The source tree's generated palettes and form geometry. Using the source file (not a
+    # stale dist copy) is what lets the browser witness show the same Popit surface the
+    # generator just built.
+    "clientaddon/panorama/styles/openlock_schemes.css",
 )
 
 ADAPTER_CSS = r"""
@@ -67,6 +69,10 @@ ADAPTER_CSS = r"""
   .WindowDrag { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
   .LauncherBar, .Taskbar, .TaskbarRight, .TabStrip, .PreloadStrip, .ToastStack,
   .ContextMenu, .PopitSurface { box-sizing: border-box; }
+  /* The shell positions the Popit with ignore-parent-flow + alignment + margins. The browser
+     translation uses absolute positioning, so anchor the surface at the root origin before
+     the inline margins move it. This is the adapter's placement, not a product colour/shape. */
+  .PopitSurface { position: absolute; left: 0; top: 0; }
   .LauncherBar, .Taskbar, .TaskbarRight, .TabStrip { display: flex; flex-direction: row;
     align-items: center; }
   /* The real sheet makes the strip flexible and keeps the right cluster in flow. The adapter
@@ -146,12 +152,22 @@ def translate_css(source: str) -> str:
     This changes no colour, size, border or selector. It only maps the flow vocabulary the game
     engine owns onto flexbox, and the visibility spelling.
     """
+    css = source
+    # Panorama's wrapping flows are not one CSS keyword. Without this translation a
+    # `right-wrap` grid becomes block children: every Popit item takes a full row and the
+    # tray balloons past the screen.
+    css = re.sub(
+        r"flow-children:\s*(right-wrap|left-wrap)\s*;",
+        lambda m: ("display: flex; flex-direction: " +
+                   ("row" if m.group(1) == "right-wrap" else "row-reverse") +
+                   "; flex-wrap: wrap;"),
+        css)
     css = re.sub(
         r"flow-children:\s*(down|up|left|right)\s*;",
         lambda match: "display: flex; flex-direction: "
         + {"down": "column", "up": "column-reverse", "left": "row", "right": "row"}[match.group(1)]
         + ";",
-        source,
+        css,
     )
     css = re.sub(r"width:\s*fill-parent-flow\(1\)\s*;", "flex: 1 1 auto; width: auto;", css)
     css = re.sub(r"height:\s*fill-parent-flow\(1\)\s*;", "flex: 1 1 auto; height: auto;", css)
@@ -228,7 +244,7 @@ def measurement_script() -> str:
       streamerFormat = String(globalThis.OpenlockStreamPackage &&
         globalThis.OpenlockStreamPackage.format || "");
     } catch (e) { streamerFormat = ""; }
-    if (streamerFormat !== 'openlock.game/1') {
+    if (streamerFormat !== 'openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27') {
       fail(issues, 'the installer build does not carry the game package streamer format');
     }
     var leaked = (shellData.windows || []).filter(function (win) {

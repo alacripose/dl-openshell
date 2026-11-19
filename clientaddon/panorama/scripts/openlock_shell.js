@@ -79,10 +79,23 @@
     };
     // The Popit surface's arrangement, edited on the dashboard and saved in the layout profile
     // beside the window rectangles. openlock_popit.js owns the legal range and clamps this copy.
-    var popitLayout = { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [] };
+    var popitLayout = { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [], pair: "" };
     function defaultPopitLayout() {
-        return { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [] };
+        return { columns: 4, width: 356, frame: "lbp3", mode: "create", order: [], pair: "" };
     }
+    // Popit cell edits. The key is a window/cell id, the value is the same style object
+    // openlock_popit.js emits. `popitPaints` holds the inline writes for one target so a change
+    // or a restore puts the cell back exactly as it was before the Popit touched it.
+    var popitCellStyles = {};
+    var popitPaints = {};
+    // The Popit colour pair is a persisted choice: it travels in the saved `popit=` layout row
+    // beside the surface arrangement. Classic drops the pair back to the scheme's roles without
+    // discarding which pair was chosen.
+    var popitPair = "";
+    var popitClassic = false;
+    // A real suppression path for the Popit's root/child motion; the host can set it through
+    // OpenlockSetPopitMotion(). State and order do not change when motion is suppressed.
+    var popitReducedMotion = false;
     var WINDOWS_VIEW = {
         id: WINDOWS_ID,
         title: "Windows",
@@ -531,6 +544,7 @@
         applyPalettePaint();
         refreshLiveSkins();
         refreshThemedPanels();
+        refreshPopitCells();
         // Profiles are per scheme. Switching palette restores that scheme's saved arrangement
         // when the host has already published it; a profile that arrives later is applied by the
         // poll. A scheme with no profile clears the marker so switching back restores it again.
@@ -726,7 +740,7 @@
     }
 
     function importThemeText(scheme) {
-        var lines = ["shploingus.theme/1", "theme\t" + scheme.id];
+        var lines = ["shploingus.theme/339926f6b1b54ebb89810d4c6238d523", "theme\t" + scheme.id];
         lines.push("\tlabel\t" + (scheme.label || scheme.id));
         lines.push("\tsource\t" + (scheme.source || "openlock palette editor"));
         // Shape lives in forms/<id>.form; a palette export never carries geometry.
@@ -1627,7 +1641,11 @@
         // so the game keeps its rect and only the composited transform moves.
         var chrome = (win.autoFrame || win.discovered) ? 16 : CHROME_DP;
         record.chrome = chrome;
-        var placed = layoutPlace(win.id, { x: g.x, y: g.y, w: g.w, h: g.h }, chrome);
+        // A window the player has placed is in shell space already: its gesture anchor was the
+        // placed content rect, not the game's unshifted rect. Asking `place` for it a second time
+        // added the bar height again on every apply. `placeShell` arbitrates the same rectangle
+        // without re-adding the reserved top strip.
+        var placed = layoutPlace(win.id, { x: g.x, y: g.y, w: g.w, h: g.h }, chrome, !!g.userSet);
         // The placement result is the only position. A top-row shift is part of `placed.y`,
         // never a second offset applied to the frame alone.
         var dispX = placed.x;
@@ -2133,7 +2151,7 @@
         // The frame is the shell's chrome: it exists only while the bar is open. A pinned game
         // window keeps its placement (the transform on the live panel) while the chrome is gone,
         // which is what the player keeps when the shell is closed.
-        setFrameVisible(f, expanded && !minimized[win.id]);
+        setFrameVisible(f, expanded && !!open[win.id] && !minimized[win.id]);
         // A panel window's frame is transparent and sits above the live panel. It must not take
         // the pointer over the panel: only its title bar and grip are interactive.
         f.frame.hittest = !!expanded && !framePanel;
@@ -2150,6 +2168,15 @@
             } else {
                 releasePanel(win.id);
             }
+            updateCost(f, win.id);
+            return;
+        }
+
+        // A preloaded frame is warmed, not shown. Visibility follows the open set, not frame
+        // existence: startPreload() materializes tab frames before the player has chosen a tab,
+        // and the old `expanded` test made the first few of those appear as boot windows.
+        if (!open[win.id]) {
+            if (!pinned[win.id]) releasePanel(win.id);
             updateCost(f, win.id);
             return;
         }
@@ -2172,19 +2199,12 @@
                 return;
             }
             if (!resolved) {
-                // A refusal card is still a window. On a narrow viewport its default 360 dp and
-                // stored x can put the close control outside the screen; clamp the card itself,
-                // not only the game panel it failed to find.
-                var refusalW = Math.min(360, screenW);
-                var refusalH = Math.min(CHROME_DP + 34, Math.max(TITLE_DP, screenH - SHELL_TOP_DP));
-                var refusalX = clamp(g.x, 0, Math.max(0, screenW - refusalW));
-                var refusalY = clamp(g.y, SHELL_TOP_DP, Math.max(SHELL_TOP_DP, screenH - refusalH));
-                setRect(f, refusalX, refusalY, refusalW, refusalH);
-                setMetaText(f, (win.panelCandidates[0].name || win.panelCandidates[0].kind) + "  ·  not on screen");
-                f.refusal.text = "This game panel is not on screen right now. Open it in the game and the window will frame it.";
-                setChildVisibility(f, "refusal", f.refusal, true);
+                // Never invent a panel or a refusal card. A window whose game panel has gone
+                // away is hidden until the panel is drawn again; choosing it from the catalog
+                // opens its mounted layout instead (see openWindow/hookWindow).
+                setFrameVisible(f, false);
+                setChildVisibility(f, "refusal", f.refusal, false);
                 setChildVisibility(f, "body", f.body, false);
-                setFrameBackground(f, "transparent");
                 updateCost(f, win.id);
                 return;
             }
@@ -2193,6 +2213,16 @@
             // element painted, not for one particular native panel object.
             if (win.cellWindow && win.themed && bound[win.id] && !isThemedPanel(bound[win.id].panel)) {
                 themePanel(bound[win.id].panel, win.title || win.id);
+            }
+            // Popit edits belong to the cell, not to the native panel object. The HUD rebuilds
+            // its panels, so a style is re-written on the new binding instead of being lost.
+            if (bound[win.id] && popitCellStyles[win.id]) {
+                var popitBound = popitPaints[win.id];
+                if (!popitBound || popitBound.panel !== bound[win.id].panel) {
+                    if (popitBound) restoreStyles(popitBound.writes);
+                    popitPaints[win.id] = { panel: bound[win.id].panel, writes: [] };
+                }
+                paintPopitCell(win.id);
             }
             // A skin belongs to the element it was written on. If the game rebuilt the panel, the
             // old writes are gone with it and the new one is painted once, not on every poll.
@@ -2678,6 +2708,28 @@
         return null;
     }
 
+    // Split cells are measured from the tree the game laid out, not from the composited transform
+    // the shell wrote onto their parent. If the parent was moved or scaled before the split, its
+    // children's GetPositionWithinWindow answers carry that transform; the cells then inherit the
+    // same offset/scale and the first drag compounds it. Clear the transform before measuring and
+    // invalidate the cached natural rect so the next bind reads the untransformed layout.
+    function resetPanelTransform(id) {
+        var b = bound[id];
+        if (!b || !b.panel) return false;
+        try { b.panel.style.transform = ""; } catch (e) { return false; }
+        b.lastTransform = "";
+        var fresh = naturalOf(b.panel);
+        if (fresh) {
+            b.natural = fresh;
+            b.content = fresh;
+            b.contentMeasured = false;
+            b.childCount = childCountOf(b.panel);
+            b.sampledRect = { x: fresh.x, y: fresh.y, w: fresh.w, h: fresh.h };
+            b.sampledAt = 0;
+        }
+        return true;
+    }
+
     function releasePanel(id) {
         clearLiveSkin(id);
         var b = bound[id];
@@ -2957,8 +3009,12 @@
             globalThis.OpenlockToast("Split refused", "The live panel is not on screen yet.", "", true);
             return false;
         }
+        resetPanelTransform(win.id);
         var parts = componentParts(b.panel);
         if (parts.length < 2) {
+            // The transform was cleared to measure the children. Put the frame back before the
+            // refusal so a split that finds one component leaves the window where it was.
+            applyWindow(win);
             globalThis.OpenlockToast("Split refused",
                 (win.title || win.id) + " is already one component; there is nothing to separate.", "", true);
             return false;
@@ -3097,6 +3153,7 @@
 
             var b = bound[hit.id];
             if (!b || !b.panel) continue;
+            resetPanelTransform(hit.id);
             var parts = componentParts(b.panel);
             var used = {};
             for (var p = 0; p < parts.length; p++) {
@@ -3481,11 +3538,14 @@
             var natural = naturalOf(entry.panel);
             if (!natural) continue;
             if (panelAlreadyFramed(entry.panel)) continue;
-            var key = "popup:" + (entry.panel.id || classesOf(entry.panel) || f).replace(/[^A-Za-z0-9_]/g, "_") +
+            // `id` is not guaranteed to be a string on the live client; one popup root returns a
+            // panel object here. Coerce before the key's replace, or the scan aborts on that one
+            // entry and every later popup in the same pass is skipped.
+            var popupName = String(entry.panel.id || classesOf(entry.panel) || f);
+            var key = "popup:" + popupName.replace(/[^A-Za-z0-9_]/g, "_") +
                 ":" + Math.round(natural.w) + "x" + Math.round(natural.h);
-            if (popupFramed[key] || dismissed[key]) continue;
-            popupFramed[key] = true;
-            var label = classesOf(entry.panel) || entry.panel.id || "Popup";
+            if (dismissed[key]) continue;
+            var label = classesOf(entry.panel) || popupName;
             frameLive({ id: entry.panel.id || classesOf(entry.panel) || ("popup_" + f),
                 cls: classesOf(entry.panel), panel: entry.panel,
                 x: natural.x, y: natural.y, w: natural.w, h: natural.h, inPopup: true,
@@ -3507,20 +3567,32 @@
     // scan. A full walk only pays off when this changes; the old code walked 130-170 panels every
     // four seconds while the HUD was idle and then framed nothing new.
     function hudStructureSignature(container) {
+        // A direct-child signature misses a popup, shop or modal nested under an unchanged HUD
+        // wrapper, which is exactly the case where the game drew a new window and the manager
+        // kept the old frame set. Walk a bounded branch so a new nested surface changes the
+        // signature without paying for the full surface scan every poll.
         var parts = [];
-        var count = 0;
-        try { count = container.GetChildCount(); } catch (e) { return ""; }
-        parts.push(count);
-        for (var i = 0; i < count; i++) {
-            var child = null;
-            try { child = container.GetChild(i); } catch (e) { child = null; }
-            if (!child || isShellPanel(child)) continue;
-            var id = "";
-            try { id = child.id || ""; } catch (e) { id = ""; }
-            var cls = classesOf(child);
-            if (isTransientHud(id, cls)) continue;
-            parts.push((panelVisible(child) ? "v" : "h") + id + "/" + String(cls).split(" ")[0]);
+        var seen = 0;
+        function walk(parent, depth) {
+            if (!parent || depth > 4 || seen > 240) return;
+            var count = 0;
+            try { count = parent.GetChildCount(); } catch (e) { return; }
+            seen += count;
+            parts.push(depth + ":" + count);
+            for (var i = 0; i < count; i++) {
+                var child = null;
+                try { child = parent.GetChild(i); } catch (e) { child = null; }
+                if (!child || isShellPanel(child)) continue;
+                var id = "";
+                try { id = child.id || ""; } catch (e) { id = ""; }
+                var cls = classesOf(child);
+                if (isTransientHud(id, cls)) continue;
+                parts.push((panelVisible(child) ? "v" : "h") + id + "/" +
+                    String(cls).split(" ")[0] + "/" + depth);
+                walk(child, depth + 1);
+            }
         }
+        walk(container, 0);
         return parts.join(":");
     }
 
@@ -3554,7 +3626,7 @@
             if (area > screenW * screenH * 0.45 && !screenish) return false;
             return hasReadableName(id, cls) && isHudSurface(id, cls, false) &&
                 !isTransientHud(id, cls);
-        }).slice(0, 40);
+        }).slice(0, 80);
         var at = 0;
 
         function step() {
@@ -3743,89 +3815,354 @@
         return item;
     }
 
-    // --- popit contextual tool surface ---------------------------------------
-    // The package declares the tools; the shell owns the window geometry, the open-window
-    // rectangles and the action route. The surface itself is openlock_popit.js: version frame,
-    // Deadlock-art icon tiles, hover/selection and the overlap refusal live in that module.
+    // --- popit cell editor ---------------------------------------------------
+    // The Popit edits the cell the player selected, not a second shell menu. The selected cell
+    // keeps its own style object; this module writes that style on the actual panel and restores
+    // it when the edit changes or the player asks for the game's rendering back.
+    function popitPalette() {
+        var scheme = schemeById(currentScheme);
+        var out = {};
+        var roles = ["body", "panel", "title", "meta", "border", "borderStrong", "ink", "muted", "accent", "alert"];
+        for (var i = 0; i < roles.length; i++) out[roles[i]] = paletteValue(scheme, roles[i]);
+        return out;
+    }
+
+    function popitStateFor(id) {
+        var raw = popitCellStyles[id];
+        return globalThis.OpenlockPopit
+            ? globalThis.OpenlockPopit.normalizeState(raw)
+            : raw;
+    }
+
+    function popitStyleActive(style) {
+        if (!style) return false;
+        if (globalThis.OpenlockPopit && globalThis.OpenlockPopit.hasEdit) {
+            return globalThis.OpenlockPopit.hasEdit(style);
+        }
+        return (style.material && style.material !== "none") ||
+            (style.decoration && style.decoration !== "none") ||
+            !!style.color || Number(style.radius) >= 0 || Number(style.border) >= 0 ||
+            Number(style.opacity) >= 0;
+    }
+
+    function popitCodeFor(id) {
+        var style = popitCellStyles[id];
+        if (!style || !globalThis.OpenlockPopit || !globalThis.OpenlockPopit.encodeState) return "";
+        return globalThis.OpenlockPopit.encodeState(style);
+    }
+
+    function popitStyleFromCode(code) {
+        if (!code || !globalThis.OpenlockPopit || !globalThis.OpenlockPopit.decodeState) return null;
+        return globalThis.OpenlockPopit.decodeState(code);
+    }
+
+    function popitPanelFor(target) {
+        if (!target || !target.id) return null;
+        var b = bound[target.id];
+        if (b && b.panel && alive(b.panel)) return b.panel;
+        var win = windowById(target.id);
+        if (win && win.panelCandidates && win.panelCandidates[0]) {
+            var p = win.panelCandidates[0].panel;
+            if (p && alive(p)) return p;
+        }
+        return null;
+    }
+
+    function popitNowWrites(id, panel) {
+        var rec = popitPaints[id];
+        if (!rec || rec.panel !== panel) {
+            if (rec) restoreStyles(rec.writes);
+            rec = { panel: panel, writes: [] };
+            popitPaints[id] = rec;
+        }
+        restoreStyles(rec.writes);
+        rec.writes = [];
+        return rec;
+    }
+
+    function paintPopitCell(id) {
+        var rec = popitPaints[id];
+        if (!rec) return false;
+        var panel = rec.panel;
+        if (!panel || !alive(panel)) {
+            restoreStyles(rec.writes);
+            rec.writes = [];
+            return false;
+        }
+        rec = popitNowWrites(id, panel);
+        var state = popitCellStyles[id];
+        if (!state || !popitStyleActive(state)) return true;
+        var scheme = schemeById(currentScheme);
+        if (!scheme) return false;
+        var color = state.color ? paletteValue(scheme, state.color) : paletteValue(scheme, "accent");
+        if (!color) color = paletteValue(scheme, "accent");
+        var isText = false;
+        try { isText = typeof panel.text === "string" && !!panel.text; } catch (e) { isText = false; }
+
+        // A label carries ink only. A background behind a stat would turn it into a slab, which
+        // is the same rule the scheme's per-cell paint follows.
+        if (isText) {
+            if (state.color) writeStyle(rec.writes, panel, "color", color);
+            if (Number(state.opacity) >= 0) writeStyle(rec.writes, panel, "opacity", String(Number(state.opacity) / 100));
+            return true;
+        }
+
+        if (state.material === "paper") writeStyle(rec.writes, panel, "background-color", paletteValue(scheme, "panel"));
+        else if (state.material === "card") writeStyle(rec.writes, panel, "background-color", paletteValue(scheme, "title"));
+        else if (state.material === "glass") writeStyle(rec.writes, panel, "background-color", paletteValue(scheme, "meta"));
+        else if (state.material === "tint") writeStyle(rec.writes, panel, "background-color", color);
+        else if (state.material === "ink") writeStyle(rec.writes, panel, "background-color", paletteValue(scheme, "ink"));
+        else if (state.material === "accent") writeStyle(rec.writes, panel, "background-color", paletteValue(scheme, "accent"));
+
+        if (state.decoration === "edge" || state.decoration === "stitch") {
+            writeStyle(rec.writes, panel, "border-style", state.decoration === "stitch" ? "dashed" : "solid");
+            writeStyle(rec.writes, panel, "border-color", color);
+            writeStyle(rec.writes, panel, "border-width",
+                (Number(state.border) >= 0 ? Number(state.border) : 2) + "px");
+        } else if (state.decoration === "tag") {
+            writeStyle(rec.writes, panel, "border-style", "solid");
+            writeStyle(rec.writes, panel, "border-left-color", color);
+            writeStyle(rec.writes, panel, "border-left-width", "4px");
+        } else if (state.decoration === "corners") {
+            writeStyle(rec.writes, panel, "border-top-color", color);
+            writeStyle(rec.writes, panel, "border-left-color", color);
+            writeStyle(rec.writes, panel, "border-top-width", "2px");
+            writeStyle(rec.writes, panel, "border-left-width", "2px");
+            writeStyle(rec.writes, panel, "border-top-left-radius", "18px");
+        } else if (state.color || Number(state.border) >= 0) {
+            writeStyle(rec.writes, panel, "border-color", color);
+            writeStyle(rec.writes, panel, "border-style", "solid");
+        }
+
+        if (Number(state.radius) >= 0) writeStyle(rec.writes, panel, "border-radius", Number(state.radius) + "px");
+        if (Number(state.border) >= 0) writeStyle(rec.writes, panel, "border-width", Number(state.border) + "px");
+        if (Number(state.opacity) >= 0) writeStyle(rec.writes, panel, "opacity", String(Number(state.opacity) / 100));
+        return true;
+    }
+
+    function applyPopitState(target, state) {
+        if (!target || !target.id) return false;
+        var panel = popitPanelFor(target);
+        if (!panel) return false;
+        var normalized = globalThis.OpenlockPopit
+            ? globalThis.OpenlockPopit.normalizeState(state)
+            : state;
+        if (!popitStyleActive(normalized)) {
+            return resetPopitCell(target);
+        }
+        popitCellStyles[target.id] = normalized;
+        var prior = popitPaints[target.id];
+        if (prior && prior.panel !== panel) {
+            restoreStyles(prior.writes);
+            prior = null;
+        }
+        popitPaints[target.id] = prior || { panel: panel, writes: [] };
+        popitPaints[target.id].panel = panel;
+        paintPopitCell(target.id);
+        return true;
+    }
+
+    function resetPopitCell(target) {
+        if (!target || !target.id) return false;
+        var rec = popitPaints[target.id];
+        if (rec) {
+            restoreStyles(rec.writes);
+            delete popitPaints[target.id];
+        }
+        delete popitCellStyles[target.id];
+        var win = windowById(target.id);
+        if (win) win.popit = null;
+        return true;
+    }
+
+    function refreshPopitCells() {
+        for (var id in popitPaints) {
+            if (popitPaints.hasOwnProperty(id)) paintPopitCell(id);
+        }
+    }
+
+    function clearAllPopitCells() {
+        for (var id in popitPaints) {
+            if (!popitPaints.hasOwnProperty(id)) continue;
+            restoreStyles(popitPaints[id].writes);
+        }
+        popitPaints = {};
+        popitCellStyles = {};
+    }
+
+    function popitRectFor(win) {
+        if (!win) return null;
+        var b = bound[win.id];
+        if (b && b.panel && alive(b.panel)) {
+            var natural = naturalOf(b.panel);
+            if (natural) return natural;
+        }
+        var g = geometry[win.id];
+        if (g) return { x: g.x, y: g.y, w: g.w, h: g.h };
+        return null;
+    }
+
+    function popitTargetForWindow(win) {
+        if (!win) return null;
+        var panel = popitPanelFor({ id: win.id });
+        var rect = popitRectFor(win);
+        if (!rect && !panel) return null;
+        return {
+            id: win.id,
+            title: win.title || win.id,
+            kind: win.cellWindow ? "cell" : "window",
+            detail: win.cellWindow ? "" : String(win.id).split(":")[0],
+            rect: rect
+        };
+    }
+
+    // Cursor targets are what the game is actually drawing: split cells first, then live panel
+    // windows. A window that is only a shell frame is not a Popit target.
+    function popitTargets() {
+        var out = [];
+        for (var id in open) {
+            if (!open.hasOwnProperty(id) || !open[id] || minimized[id]) continue;
+            var win = windowById(id);
+            if (!win || win.id === DASHBOARD_ID || win.id === WINDOWS_ID) continue;
+            if (splitCells[id] && splitCells[id].length) continue;
+            if (!win.cellWindow && !isPanelWindow(win)) continue;
+            var target = popitTargetForWindow(win);
+            if (target) out.push(target);
+        }
+        out.sort(function (a, b) {
+            if (a.kind !== b.kind) return a.kind === "cell" ? -1 : 1;
+            return String(a.title).localeCompare(String(b.title));
+        });
+        return out;
+    }
+
+    function popitTargetById(id) {
+        for (var i = 0; i < popitTargetsCache.length; i++) {
+            if (popitTargetsCache[i].id === id) return popitTargetsCache[i];
+        }
+        var win = windowById(id);
+        return win ? popitTargetForWindow(win) : null;
+    }
+
+    var popitTargetsCache = [];
+
+    function showPopitSurface(target, page) {
+        closePopit();
+        if (!globalThis.OpenlockPopit || typeof globalThis.OpenlockPopit.show !== "function") {
+            refuseFeature("Popit refused", "the surface module is not in this build");
+            return false;
+        }
+        popitTargetsCache = popitTargets();
+        var wanted = target ? popitTargetById(target.id) || target : null;
+        var selected = wanted || null;
+        measureScreen();
+        var openRects = [];
+        for (var oid in open) {
+            if (!open.hasOwnProperty(oid) || !open[oid] || minimized[oid]) continue;
+            if (selected && oid === selected.id) continue;
+            var og = geometry[oid];
+            if (!og) continue;
+            openRects.push({ id: oid, x: og.x, y: og.y, w: og.w, h: og.h });
+        }
+        var result = globalThis.OpenlockPopit.show({
+            root: root,
+            screen: { w: screenW, h: screenH, top: SHELL_TOP_DP },
+            openRects: openRects,
+            form: currentForm,
+            palette: popitPalette(),
+            targets: popitTargetsCache,
+            target: selected,
+            state: selected ? popitStateFor(selected.id) : null,
+            pair: popitPair || (globalThis.OpenlockPopitPairs && globalThis.OpenlockPopitPairs.default) || "",
+            classic: popitClassic,
+            reducedMotion: popitReducedMotion,
+            page: page || (selected ? "goodies" : "cursor"),
+            autoSelect: false,
+            onPair: function (pair) {
+                popitPair = pair.id;
+                popitLayout.pair = pair.id;
+                popitClassic = false;
+                cue("place");
+                logPerf("info", "popit pair " + pair.id);
+                globalThis.OpenlockToast("Popit palette", pair.name, "", false);
+            },
+            onClassic: function (on) {
+                popitClassic = !!on;
+                cue("select");
+                logPerf("info", "popit classic " + popitClassic);
+            },
+            onSelect: function (next) {
+                showPopitSurface(next, "goodies");
+            },
+            onApply: function (state) {
+                if (!selected) return;
+                if (!applyPopitState(selected, state)) {
+                    globalThis.OpenlockToast("Popit", "the selected cell is no longer on screen", "", true);
+                }
+            },
+            onReset: function () {
+                if (selected) resetPopitCell(selected);
+                cue("place");
+            },
+            onHover: function (panel, label, body) {
+                try { dwellAt(label, body, panel); } catch (e) {}
+                if (selected) { try { enterFrame(selected.id, "dwell"); } catch (e) {} }
+            },
+            onHoverEnd: function () {
+                hideDwell();
+                if (selected) { try { leaveFrame(selected.id, "dwell"); } catch (e) {} }
+            },
+            onClose: function () {
+                hideDwell();
+            }
+        });
+        if (result && result.ok) {
+            logPerf("info", "popit open " + (selected ? selected.id : "cursor") + " page " + result.page);
+        }
+        return !!(result && result.ok);
+    }
+
+    // Package layers are tool actions declared beside a window, not the Popit. Keeping them on
+    // the context menu preserves the server route without turning the cell editor into a
+    // launcher: `layer:<window>:<action>` still reaches the host.
+    function runLayerAction(win, action) {
+        if (!win || !action) return;
+        if (action.window && windowById(action.window)) openWindow(action.window);
+        else send("layer", win.id + ":" + action.id);
+        cue("place");
+        logPerf("info", "layer " + win.id + "/" + action.id);
+        globalThis.OpenlockToast("Tool", (win.title || win.id) + "  ·  " +
+            (action.label || action.id), "", false);
+    }
+
+    function showPopit(win) {
+        if (win && win.cellWindow) {
+            showPopitSurface(popitTargetForWindow(win), "goodies");
+            cue("select");
+            return;
+        }
+        if (win && isPanelWindow(win)) {
+            showPopitSurface(popitTargetForWindow(win), "goodies");
+            cue("select");
+            return;
+        }
+        showPopitSurface(null, "cursor");
+        cue("select");
+    }
+
     function closePopit() {
         if (globalThis.OpenlockPopit) globalThis.OpenlockPopit.close();
     }
 
-    function runPopitAction(win, action) {
-        closePopit();
-        // A skin action is package-declared like every other layer action, but it is a local
-        // surface change: the live panel is painted inline, not sent to the server.
-        if (action.id === "skin") {
-            toggleLiveSkin(win);
-            cue("place");
-            return;
+    // The bible's reduced-motion rule is a real suppression path, not a decorative switch. The
+    // host calls this; the Popit keeps its state and order and only stops transitioning.
+    globalThis.OpenlockSetPopitMotion = function (on) {
+        popitReducedMotion = !on;
+        if (globalThis.OpenlockPopit && globalThis.OpenlockPopit.setReducedMotion) {
+            globalThis.OpenlockPopit.setReducedMotion(popitReducedMotion);
         }
-        if (action.window && windowById(action.window)) openWindow(action.window);
-        else cue("place");
-        send("layer", win.id + ":" + action.id);
-        logPerf("info", "popit " + win.id + "/" + action.id);
-        globalThis.OpenlockToast("Popit", win.title + "  ·  " + action.label, "", false);
-    }
-
-    function showPopit(win) {
-        closePopit();
-        var layer = win.layers && win.layers[0];
-        if (!layer && isPanelWindow(win)) {
-            // A live panel has no package layer unless one was declared. The Popit surface still
-            // exists for it: its one action skins the actual drawable cells inside that panel.
-            layer = {
-                title: "Popit surface",
-                surface: "grid",
-                hint: "Theme the actual drawable cells in this window; the game keeps its layout.",
-                actions: [{ id: "skin", label: "Theme drawable cells" }]
-            };
-        }
-        if (!layer) {
-            refuseFeature("Popit refused", "this window declares no tool layer");
-            return;
-        }
-        if (!globalThis.OpenlockPopit || typeof globalThis.OpenlockPopit.show !== "function") {
-            refuseFeature("Popit refused", "the surface module is not in this build");
-            return;
-        }
-
-        cue("select");
-        var g = ensureGeometry(win);
-        measureScreen();
-        var openRects = [];
-        for (var id in open) {
-            if (!open.hasOwnProperty(id) || id === win.id || minimized[id]) continue;
-            var other = geometry[id];
-            if (!other) continue;
-            openRects.push({
-                id: id,
-                title: (windowById(id) || {}).title || id,
-                x: other.x, y: other.y, w: other.w, h: other.h
-            });
-        }
-
-        var result = globalThis.OpenlockPopit.show({
-            root: root,
-            window: { id: win.id, title: win.title || win.id },
-            geometry: { x: g.x, y: g.y, w: g.w, h: g.h },
-            screen: { w: screenW, h: screenH, top: SHELL_TOP_DP },
-            openRects: openRects,
-            form: currentForm,
-            layer: layer,
-            actions: layer.actions || [],
-            onAction: function (action) { runPopitAction(win, action); },
-            onRefusal: function (title, why) { refuseFeature(title, why); },
-            onHover: function (panel, label, body) {
-                try { dwellAt(label, body, panel); } catch (e) {}
-                try { enterFrame(win.id, "dwell"); } catch (e) {}
-            },
-            onHoverEnd: function () {
-                hideDwell();
-                try { leaveFrame(win.id, "dwell"); } catch (e) {}
-            }
-        });
-        if (result && result.ok) logPerf("info", "popit open " + win.id + " " + result.frame);
-    }
+        return popitReducedMotion;
+    };
 
     function showContextMenu(win, x, y) {
         closeContextMenu();
@@ -3858,7 +4195,15 @@
 
         contextAction(contextMenu, "Open", function () { openWindow(win.id); });
         if (win.layers && win.layers.length) {
-            contextAction(contextMenu, win.layers[0].title || "Tools", function () { showPopit(win); });
+            var layer = win.layers[0];
+            var layerActions = layer.actions || [];
+            for (var la = 0; la < layerActions.length; la++) {
+                (function (action) {
+                    contextAction(contextMenu, action.label || action.id, function () {
+                        runLayerAction(win, action);
+                    });
+                })(layerActions[la]);
+            }
         }
         contextAction(contextMenu, "Minimize", function () { minimizeWindow(win.id); });
         contextAction(contextMenu, maximized[win.id] ? "Restore" : "Maximize", function () { toggleMaximize(win.id); });
@@ -3874,12 +4219,16 @@
         if (isPanelWindow(win) && !(splitCells[win.id] && splitCells[win.id].length)) {
             contextAction(contextMenu, "Split into cells", function () { splitWindow(win); });
         }
-        if (win.cellWindow) {
-            var cellPanel = (bound[win.id] && bound[win.id].panel) ||
-                (win.panelCandidates && win.panelCandidates[0] && win.panelCandidates[0].panel) || null;
-            contextAction(contextMenu,
-                (cellPanel && isThemedPanel(cellPanel) ? "Stop theming this cell" : "Theme this cell"),
-                function () { togglePanelTheme(cellPanel, win.title || win.id); });
+        if (win.cellWindow || isPanelWindow(win)) {
+            contextAction(contextMenu, win.cellWindow ? "Edit cell with Popit" : "Open Popit on this window",
+                function () { showPopit(win); });
+            if (popitStyleActive(popitCellStyles[win.id])) {
+                contextAction(contextMenu, "Restore cell from Popit", function () {
+                    resetPopitCell({ id: win.id });
+                    refreshDashboard();
+                    globalThis.OpenlockToast("Popit", "Restored " + (win.title || win.id) + " to the game's rendering.", "", false);
+                });
+            }
         }
         contextAction(contextMenu, "Inspect in UI tree", function () {
             uiSelected = win.id;
@@ -4220,6 +4569,11 @@
             var grip = $.CreatePanel("Panel", frame, "");
             grip.AddClass("ResizeGrip");
             grip.AddClass("Grip" + gripSpecs[gi][0]);
+            // The frame itself is pointer-transparent over a live game panel. The grip must opt
+            // back in explicitly; without this it draws its corner but never receives a press on
+            // the release client, which is why the corner handles did nothing there.
+            grip.hittest = true;
+            grip.hittestchildren = false;
             bindDwell(grip, "Resize " + gripSpecs[gi][0],
                 "Drag this corner. Shell windows resize freely; game panels scale from their own width.", win.id);
             makeDraggable(grip, win.id, gripSpecs[gi][1]);
@@ -4300,6 +4654,28 @@
             focusWindow(activeId);
             if (!quiet) cue("select");
             return;
+        }
+
+        // A game window that is not currently drawn cannot be framed. Do not build a fake
+        // frame around it: open the declared mounted layout, which is the same source the game
+        // uses, or say why no mounted layout exists. The player can still bring up any catalog
+        // window from the dashboard/UI tree this way.
+        if (isPanelWindow(win)) {
+            if (bound[id] && (!alive(bound[id].panel) || !panelVisible(bound[id].panel))) bound[id] = null;
+            if (!bound[id] && !ensureBound(win)) {
+                var mounted = layoutForWindow(win);
+                if (mounted) {
+                    var mountedId = openLayout(mounted);
+                    if (mountedId) {
+                        globalThis.OpenlockToast("Mounted layout",
+                            win.title + " is not drawing; opened " + layoutFont(mounted), "", false);
+                        return;
+                    }
+                }
+                globalThis.OpenlockToast("Not open",
+                    win.title + " is not drawing and has no mounted layout", "", true);
+                return;
+            }
         }
 
         var hidden = hiddenPanels[id];
@@ -4663,14 +5039,10 @@
         if (expanded) cue("select");
         freeCursor(expanded);
         if (expanded && !activeId) {
-            // The dashboard is the shell's own screen and the only one that is guaranteed to
-            // exist: the game's dashboard sits behind the pause menu in release. So a shell that
-            // opens while no declared game panel is on screen opens its dashboard, not a tab that
-            // would frame a panel the game is not drawing.
-            activeId = presenceReading().live
-                ? (data.tabs.length ? data.tabs[0] : WINDOWS_ID)
-                : DASHBOARD_ID;
-            if (activeId === DASHBOARD_ID) openWindow(DASHBOARD_ID, true);
+            // Do not choose a tab for the player. The bar is the menu; the live HUD is already
+            // being framed by discovery. Only when the game is drawing nothing does the shell
+            // fall back to its dashboard, which is a real surface rather than a guessed window.
+            if (!presenceReading().live) openWindow(DASHBOARD_ID, true);
         }
         render();
     };
@@ -4934,24 +5306,23 @@
             return;
         }
         var g = ensureGeometry(win);
-        // Start from the rect the player sees, not the unshifted request. For a panel window the
-        // frame's chrome is above that rect; normalising `g` to the visible frame here means the
-        // first pointer delta moves both axes one-to-one instead of being eaten by the top inset.
+        // Anchor on the content rect the layout pass actually placed, never on the clipped frame.
+        // The old frame rect carried the screen-edge clip and the chrome inset; writing it back
+        // into g both shrank the window and made the next apply add the inset again. The size
+        // comes from g unchanged, only the position is converted from game space to shell space
+        // once, and `placeShell` keeps it there for the rest of the gesture.
         var frameRecord = frames[id];
-        var frameRect = frameRecord && frameRecord.rect;
         var chrome = frameRecord && num(frameRecord.chrome) || 0;
-        var startX = frameRect ? frameRect.x : g.x;
-        var startY = frameRect ? frameRect.y + chrome : g.y;
-        var startW = frameRect ? frameRect.w : g.w;
-        var startH = frameRect ? Math.max(1, frameRect.h - chrome) : g.h;
-        if (frameRect) {
-            g.x = startX;
-            g.y = startY;
-            g.w = startW;
-            g.h = startH;
-            g.init = true;
-            g.userSet = true;
-        }
+        var shellSpace = !isPanelWindow(win) || !!g.userSet;
+        var anchor = layoutPlace(id, { x: g.x, y: g.y, w: g.w, h: g.h }, chrome, shellSpace);
+        var startX = anchor.x;
+        var startY = anchor.y;
+        var startW = Math.max(1, g.w);
+        var startH = Math.max(1, g.h);
+        g.x = startX;
+        g.y = startY;
+        g.init = true;
+        g.userSet = true;
         pointerDrag = {
             id: id,
             mode: mode,
@@ -5187,17 +5558,20 @@
 
         if (bound[id] && (!alive(bound[id].panel) || !panelVisible(bound[id].panel))) bound[id] = null;
         if (!ensureBound(win)) {
-            // Do not BLoadLayout a guessed stock layout here. A live panel can be absent from this
-            // reduced build (hero select in CSDK10 has no citadel_hero_grid resource), and an
-            // unreadable layout asserts the whole client. "Launch layout" in the UI tree stays an
-            // explicit choice; hooking a panel that is not on screen frames its declared window
-            // and refuses the hook instead of guessing a file.
-            var f = createFrame(win);
-            f.auto = false;
-            open[id] = true;
-            delete dismissed[id];
-            applyWindow(win);
-            globalThis.OpenlockToast("Hook refused", win.title + " is not on screen in this build", "", true);
+            // A live panel can be absent from this reduced build. Open its declared/mounted
+            // layout instead of refusing the catalog row: the dashboard exists so the player
+            // can bring up any window, not only the ones the game happens to have drawn.
+            var mounted = layoutForWindow(win);
+            if (mounted) {
+                var opened = openLayout(mounted);
+                if (opened) {
+                    globalThis.OpenlockToast("Mounted layout",
+                        win.title + " is not drawing; opened " + layoutFont(mounted), "", false);
+                    return true;
+                }
+            }
+            globalThis.OpenlockToast("Not open",
+                win.title + " is not drawing and has no mounted layout", "", true);
             return false;
         }
 
@@ -5722,15 +6096,17 @@
     // the XML source; each row is opened on the same streamer surface a package window uses, at
     // the rect the row declared, with the bar's entrance curve. A row with no readable source is
     // refused by id and opens nothing, so a package is never half-drawn without a record.
-    var GAME_PACKAGE_FORMAT = "openlock.game/1";
+    var GAME_PACKAGE_FORMAT = "openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27";
+    var GAME_PACKAGE_LEGACY = /^openlock\.game\/[0-9]+$/;
     globalThis.OpenlockStreamPackage = function (raw) {
         var payload = raw;
         if (typeof raw === "string") {
             try { payload = JSON.parse(raw); } catch (e) { payload = null; }
         }
-        if (!payload || payload.format !== GAME_PACKAGE_FORMAT) {
+        var declaredGameFormat = payload && payload.format ? String(payload.format) : "";
+        if (declaredGameFormat !== GAME_PACKAGE_FORMAT && !GAME_PACKAGE_LEGACY.test(declaredGameFormat)) {
             refuseFeature("game package refused",
-                "the payload format is not " + GAME_PACKAGE_FORMAT);
+                "the payload format is not " + GAME_PACKAGE_FORMAT + " or its numeric legacy id");
             return { opened: [], refused: [] };
         }
         if (!payload.windows || !payload.windows.length) {
@@ -6429,15 +6805,6 @@
         return out;
     }
 
-    function dashboardPopitActions() {
-        var entries = dashboardEntries();
-        var actions = [];
-        for (var i = 0; i < entries.length; i++) {
-            actions.push({ id: entries[i].id, label: entries[i].title, window: entries[i].win });
-        }
-        return actions;
-    }
-
     // Presence is read from the live panel tree, never from the package: a declared window exists
     // when the game is drawing its panel, and on the dashboard none of them are.
     function panelOnScreen(win) {
@@ -6464,100 +6831,48 @@
         if (f) renderOwn(f.win || DASHBOARD_VIEW, f.body);
     }
 
-    function popitLayoutNow() {
-        if (globalThis.OpenlockPopit) popitLayout = globalThis.OpenlockPopit.normalizeLayout(popitLayout);
-        return popitLayout;
-    }
-
-    // One edit path: clamp through the module, repaint the editor, and re-place the open surface
-    // so the player sees the arrangement they are editing instead of a stale menu.
-    function setPopitLayout(patch) {
-        var next = {
-            columns: popitLayout.columns, width: popitLayout.width, frame: popitLayout.frame,
-            mode: popitLayout.mode, order: popitLayout.order.slice(0)
-        };
-        for (var key in patch) if (patch.hasOwnProperty(key)) next[key] = patch[key];
-        popitLayout = globalThis.OpenlockPopit
-            ? globalThis.OpenlockPopit.normalizeLayout(next)
-            : next;
-        refreshDashboard();
-        var st = globalThis.OpenlockPopit ? globalThis.OpenlockPopit.status() : null;
-        if (st && st.visible) showDashboardPopit();
-    }
-
-    function movePopitTile(id, delta) {
-        var actions = dashboardPopitActions();
-        var order = popitLayout.order.slice(0);
-        // The first move starts from what is on screen, so a fresh profile reorders in place
-        // instead of jumping to a list that has only the tile the player pressed.
-        for (var i = 0; i < actions.length; i++) {
-            if (order.indexOf(actions[i].id) < 0) order.push(actions[i].id);
-        }
-        var at = order.indexOf(id);
-        var to = at + delta;
-        if (at < 0 || to < 0 || to >= order.length) return;
-        order[at] = order[to];
-        order[to] = id;
-        setPopitLayout({ order: order });
-    }
-
-    function showDashboardPopit() {
-        closePopit();
-        if (!globalThis.OpenlockPopit || typeof globalThis.OpenlockPopit.show !== "function") {
-            refuseFeature("Popit refused", "the surface module is not in this build");
-            return;
-        }
-        var win = DASHBOARD_VIEW;
-        var g = ensureGeometry(win);
-        measureScreen();
-        var openRects = [];
-        for (var id in open) {
-            if (!open.hasOwnProperty(id) || id === win.id || minimized[id]) continue;
-            var other = geometry[id];
-            if (!other) continue;
-            openRects.push({
-                id: id,
-                title: (windowById(id) || {}).title || id,
-                x: other.x, y: other.y, w: other.w, h: other.h
-            });
-        }
-        var actions = dashboardPopitActions();
-        cue("select");
-        var result = globalThis.OpenlockPopit.show({
-            root: root,
-            window: { id: win.id, title: win.title },
-            geometry: { x: g.x, y: g.y, w: g.w, h: g.h },
-            screen: { w: screenW, h: screenH, top: SHELL_TOP_DP },
-            openRects: openRects,
-            form: currentForm,
-            layout: popitLayoutNow(),
-            layer: {
-                title: "Openlock",
-                hint: "The shell's own menu. Its arrangement is saved with this scheme.",
-                actions: actions
-            },
-            actions: actions,
-            onAction: function (action) {
-                closePopit();
-                if (action.window) openWindow(action.window);
-                else cue("place");
-            },
-            onRefusal: function (title, why) { refuseFeature(title, why); },
-            onHover: function (panel, label, body) {
-                try { dwellAt(label, body, panel); } catch (e) {}
-                try { enterFrame(win.id, "dwell"); } catch (e) {}
-            },
-            onHoverEnd: function () {
-                hideDwell();
-                try { leaveFrame(win.id, "dwell"); } catch (e) {}
+    // The old surface held a rearrangeable row of shell launcher tiles. Those tiles were the
+    // CREATE/PLAY invention. The layout fields remain only so an old `popit=` profile still
+    // parses; the Popit itself no longer has a mode, a card row or a tile order.
+    function normalizePopitLayout(input) {
+        var src = input || {};
+        var columns = parseInt(src.columns, 10);
+        var width = parseInt(src.width, 10);
+        var mode = src.mode === "play" ? "play" : "create";
+        var order = [];
+        if (src.order instanceof Array) {
+            for (var i = 0; i < src.order.length && order.length < 32; i++) {
+                var id = String(src.order[i] || "");
+                if (id && order.indexOf(id) < 0) order.push(id);
             }
-        });
-        if (result && result.ok) {
-            popitLayout = result.layout;
-            logPerf("info", "dashboard popit: " + result.layout.columns + " column(s), " +
-                result.layout.width + " px, " + result.tiles + " tile(s)");
-            refreshDashboard();
         }
+        // The pair is a lowercase slug; a malformed value is dropped rather than written back.
+        var pair = typeof src.pair === "string" ? src.pair : "";
+        if (pair && !/^[a-z0-9][a-z0-9-]{0,47}$/.test(pair)) pair = "";
+        return {
+            columns: isFinite(columns) ? Math.max(1, Math.min(4, columns)) : 4,
+            width: isFinite(width) ? Math.max(240, Math.min(900, width)) : 356,
+            frame: "lbp3", mode: mode, order: order, pair: pair
+        };
+    }
+
+    // The dashboard's Popit page opens the cursor with every live cell as a target. There is no
+    // separate "dashboard menu" any more; the same surface edits the same cells here.
+    function showDashboardPopit() {
+        cue("select");
+        showPopitSurface(null, "cursor");
+        refreshDashboard();
+    }
+
+    function popitStyledTargets() {
+        var out = [];
+        for (var id in popitCellStyles) {
+            if (!popitCellStyles.hasOwnProperty(id) || !popitStyleActive(popitCellStyles[id])) continue;
+            var win = windowById(id);
+            out.push({ id: id, title: win ? (win.title || id) : id, style: popitCellStyles[id] });
+        }
+        out.sort(function (a, b) { return String(a.title).localeCompare(String(b.title)); });
+        return out;
     }
 
     // --- the app shell (planet-shploingus' window model) ---------------------
@@ -6942,85 +7257,63 @@
             })(entries[i]);
         }
         headingXd(body, "popit");
-        actionXd(body, "Open the Popit surface", showDashboardPopit);
-        actionXd(body, "Edit its arrangement", function () {
+        actionXd(body, "Open the Popit cursor", showDashboardPopit);
+        actionXd(body, "Edit this page", function () {
             dashDest = "popit";
             refreshDashboard();
         });
     }
 
-    // --- POPIT: the surface's arrangement -----------------------------------
+    // --- POPIT: edit a live cell -------------------------------------------
     function renderDashPopit(body) {
-        var L = popitLayoutNow();
-        var actions = dashboardPopitActions();
-        rowXd(body, "The Popit surface is the shell's menu: one frame, rows of tiles and a mode. " +
-            "This editor is the layout it was missing; the arrangement is saved with this scheme.",
-            "PaletteNote");
-        rowXd(body, L.columns + " column(s)  ·  " + L.width + " px  ·  frame " +
-            String(L.frame).toUpperCase() + "  ·  " + String(L.mode).toUpperCase() + "  ·  " +
-            actions.length + " tile(s)", "PaletteValue");
-        rowXd(body, actions.length > L.columns * 4
-            ? "Only " + (L.columns * 4) + " tiles fit this frame; widen the surface or use more columns."
-            : "Up to " + (L.columns * 4) + " tiles fit at this column count.",
-            actions.length > L.columns * 4 ? "PaletteNote" : "ViewMuted");
-        actionXd(body, "Preview on the dashboard", showDashboardPopit);
-
-        var columns = [1, 2, 3, 4];
-        for (var c = 0; c < columns.length; c++) {
-            (function (n) {
-                actionXd(body, n + (L.columns === n ? " column  ·  active" : " column(s)"), function () {
-                    setPopitLayout({ columns: n });
-                });
-            })(columns[c]);
+        var targets = popitTargets();
+        var styled = popitStyledTargets();
+        rowXd(body, "The Popit is the successor to a declared XML window: point it at a cell the " +
+            "game is drawing, then change that cell's material, decoration, colour, corners, " +
+            "border or opacity with the Goodies Bag, Stickers & Decorations, Tools Bag and " +
+            "Player Color pages. There is no separate CREATE or PLAY surface.", "PaletteNote");
+        rowXd(body, targets.length + " live target(s)  ·  " + styled.length + " with a Popit edit  ·  " +
+            "cursor target " + (targets.length ? "available" : "none on screen"), "PaletteValue");
+        actionXd(body, "Open the Popit cursor", showDashboardPopit);
+        if (!targets.length) {
+            rowXd(body, "No cell is on screen. Split a game window in the Windows browser, or open " +
+                "a panel window, then press Popit again. The cursor only lists drawables the game " +
+                "has built.", "ViewMuted");
         }
-        actionXd(body, "Narrower  ·  " + (L.width - 24) + " px", function () {
-            setPopitLayout({ width: L.width - 24 });
-        });
-        actionXd(body, "Wider  ·  " + (L.width + 24) + " px", function () {
-            setPopitLayout({ width: L.width + 24 });
-        });
-        var frames = (globalThis.OpenlockPopit && globalThis.OpenlockPopit.frameList)
-            ? globalThis.OpenlockPopit.frameList()
-            : [{ id: "lbp3", label: "LBP3" }];
-        var at = 0;
-        for (var f = 0; f < frames.length; f++) if (frames[f].id === L.frame) at = f;
-        var nextFrame = frames[(at + 1) % frames.length];
-        actionXd(body, "Frame  ·  " + frames[at].label + "  →  " + nextFrame.label, function () {
-            setPopitLayout({ frame: nextFrame.id });
-        });
-        actionXd(body, "Mode  ·  " + String(L.mode).toUpperCase() + "  →  " +
-            (L.mode === "play" ? "CREATE" : "PLAY"), function () {
-            setPopitLayout({ mode: L.mode === "play" ? "create" : "play" });
-        });
 
-        headingXd(body, "tile order");
-        var ordered = [];
-        for (var o = 0; o < L.order.length; o++) {
-            for (var a = 0; a < actions.length; a++) {
-                if (actions[a].id === L.order[o] && ordered.indexOf(actions[a]) < 0) ordered.push(actions[a]);
+        if (styled.length) {
+            headingXd(body, "edited cells");
+            for (var s = 0; s < styled.length; s++) {
+                (function (entry) {
+                    var style = entry.style;
+                    rowXd(body, entry.title + "  ·  " + String(style.material || "bare") +
+                        " / " + String(style.decoration || "none") +
+                        " / " + String(style.color || "form"), "ViewLine");
+                    actionXd(body, "Edit " + entry.title + " with Popit", function () {
+                        showPopitSurface(entry, "goodies");
+                    });
+                })(styled[s]);
             }
-        }
-        for (var r = 0; r < actions.length; r++) {
-            if (ordered.indexOf(actions[r]) < 0) ordered.push(actions[r]);
-        }
-        for (var t = 0; t < ordered.length; t++) {
-            (function (action, index) {
-                var row = $.CreatePanel("Panel", body, "");
-                row.AddClass("ViewOrderRow");
-                var label = $.CreatePanel("Label", row, "");
-                label.AddClass("ViewLine");
-                label.text = (index + 1) + "  " + action.title;
-                addControl(row, "ViewAction", "Up", function () { movePopitTile(action.id, -1); });
-                addControl(row, "ViewAction", "Down", function () { movePopitTile(action.id, 1); });
-            })(ordered[t], t);
+            actionXd(body, "Restore every Popit-edited cell", function () {
+                for (var c = 0; c < styled.length; c++) resetPopitCell({ id: styled[c].id });
+                refreshDashboard();
+                globalThis.OpenlockToast("Popit", "all edited cells restored to the game's rendering", "", false);
+            });
+        } else {
+            rowXd(body, "No cell carries a Popit edit yet.", "ViewMuted");
         }
 
-        actionXd(body, "Reset popit layout", function () {
-            popitLayout = defaultPopitLayout();
-            refreshDashboard();
-            globalThis.OpenlockToast("Popit layout reset",
-                "four columns, 356 px, LBP3 frame, CREATE mode, package order", "", false);
-        });
+        headingXd(body, "the root and its child");
+        rowXd(body, "The Popit root stays mounted with its six sections. Opening one reveals a " +
+            "contextual child beside it; Back closes the child and never swaps the root out.", "ViewMuted");
+        rowXd(body, "CURSOR  select the live cell; its hover halo uses your Player Color", "PaletteValue");
+        rowXd(body, "PALETTE  all 37 LBP player colours, grouped by game, plus the Classic opt-out", "PaletteValue");
+        rowXd(body, "GOODIES  materials: paper, card, glass, tint, ink, accent or bare", "PaletteValue");
+        rowXd(body, "STICKERS  edge, stitch, tag or corners, tinted by the Player Color", "PaletteValue");
+        rowXd(body, "TOOLS  corners, border width and opacity, then restore the cell", "PaletteValue");
+        rowXd(body, "COLOR  changes the Popit menu and the cell's decoration colour", "PaletteValue");
+        rowXd(body, "The chosen pair is saved in the layout profile with the surface, so the " +
+            "desktop returns with its colours.", "ViewMuted");
     }
 
     // --- BUILD: presence and the record -------------------------------------
@@ -7498,7 +7791,7 @@
         // `+`-joined because a comma already separates a rectangle row.
         rows.push("popit=columns:" + popitLayout.columns + ";width:" + popitLayout.width +
             ";frame:" + popitLayout.frame + ";mode:" + popitLayout.mode +
-            ";order:" + popitLayout.order.join("+"));
+            ";order:" + popitLayout.order.join("+") + ";pair:" + (popitLayout.pair || ""));
         for (var id in open) {
             if (!open.hasOwnProperty(id) || !open[id] || !windowById(id)) continue;
             var g = geometry[id];
@@ -7516,7 +7809,9 @@
             var h = Math.round(g.h);
             if (cell) { w = Math.max(16, w); h = Math.max(16, h); }
             else { w = Math.max(120, w); h = Math.max(64, h); }
-            rows.push(rowId + "," + Math.round(g.x) + "," + Math.round(g.y) + "," + w + "," + h);
+            var style = popitCodeFor(id);
+            rows.push(rowId + "," + Math.round(g.x) + "," + Math.round(g.y) + "," + w + "," + h +
+                (style ? "," + style : ""));
             windows++;
         }
         if (!windows) return "";
@@ -7545,7 +7840,19 @@
         if (!win) return false;
         if (!open[id]) openWindow(id, true);
         geometry[id] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h, init: true, userSet: true };
+        if (rect.popit) {
+            var style = popitStyleFromCode(rect.popit);
+            if (style) {
+                popitCellStyles[id] = style;
+                win.popit = rect.popit;
+                var b = bound[id];
+                if (b && b.panel && alive(b.panel)) {
+                    popitPaints[id] = { panel: b.panel, writes: (popitPaints[id] || {}).writes || [] };
+                }
+            }
+        }
         if (frames[id]) applyWindow(win);
+        if (popitCellStyles[id]) paintPopitCell(id);
         return true;
     }
 
@@ -7588,6 +7895,10 @@
             }
             return 0;
         }
+        // A profile is the whole desktop for this scheme, including its Popit edits. Clear the
+        // previous scheme's cell styles before restoring this one, or a palette switch would
+        // leave a paper cell from the old profile painted on the new one.
+        clearAllPopitCells();
         var rows = profile.windows || {};
         var applied = 0;
         var cells = 0;
@@ -7636,13 +7947,14 @@
             if (!windowById(mins[m]) || !open[mins[m]]) continue;
             minimized[mins[m]] = true;
         }
-        // The Popit arrangement is part of the scheme, so loading a layout restores the menu the
-        // player laid out for it. A profile written before the surface had an editor has none and
-        // keeps the current arrangement.
+        // A profile written by the old launcher surface carries columns/mode/order. They are
+        // parsed for compatibility but no longer drive the Popit; the surface's arrangement is
+        // the target, not a card grid.
         if (profile.popit) {
-            popitLayout = globalThis.OpenlockPopit
-                ? globalThis.OpenlockPopit.normalizeLayout(profile.popit)
-                : popitLayout;
+            popitLayout = normalizePopitLayout(profile.popit);
+            // A saved desktop returns with its Popit colours; the surface validates the id
+            // against the generated pair table before applying it.
+            popitPair = popitLayout.pair || "";
         }
         if (profile.tab && windowById(profile.tab)) activeTab = profile.tab;
         if (profile.active && splitCells[profile.active] && splitCells[profile.active].length) {
@@ -7712,7 +8024,12 @@
         if (Math.abs(x) > MAX_LAYOUT_RECT || Math.abs(y) > MAX_LAYOUT_RECT ||
             w > MAX_LAYOUT_RECT || h > MAX_LAYOUT_RECT)
             return { why: "the rectangle is outside +/- " + MAX_LAYOUT_RECT + " px" };
-        return { rect: { x: x, y: y, w: w, h: h }, why: "" };
+        var style = "";
+        if (typeof value.popit === "string" && value.popit) {
+            var decoded = popitStyleFromCode(value.popit);
+            if (decoded) style = value.popit;
+        }
+        return { rect: { x: x, y: y, w: w, h: h, popit: style }, why: "" };
     }
 
     function observerLayoutPath(path) {

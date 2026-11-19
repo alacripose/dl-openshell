@@ -223,7 +223,7 @@ def check() -> dict:
         }
     wish_summary = ", ".join(f"{row.get('surface')} {row.get('state')}" for row in game_wishes)
     streamer_format = str(readings[0].get("streamerFormat") or "")
-    if streamer_format != "openlock.game/1":
+    if streamer_format != "openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27":
         return {
             "state": "absent",
             "witness": str(witness),

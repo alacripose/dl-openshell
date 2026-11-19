@@ -1,0 +1,417 @@
+{
+  "format": "openlock.popit-pairs/3080abf5e17bdee04de3bc0b0b5d43ab",
+  "source": "https://wiki.imagisphere.me/Player_Color",
+  "retrieved": "2026-11-18",
+  "copied_from": "F:/Documents/popit-blender/design/popit-pairs.json",
+  "note": "Player colours are data, not a second design language. A pair skins the Popit slab, its title and its emphasis ink; the shell ground, the warm ink and the selection accent do not move.",
+  "default": "popit-blue",
+  "roles": {
+    "primary": "menu backgrounds, slab fill",
+    "secondary": "menu accents, highlights",
+    "tertiary": "secondary highlight / emphasis surfaces",
+    "emphasis": "emphasised text and marks"
+  },
+  "counts": {
+    "LittleBigPlanet": 13,
+    "LittleBigPlanet 2": 12,
+    "LittleBigPlanet PS Vita": 12,
+    "LittleBigPlanet 3": 24,
+    "note": "LBP1 ships 13 entries (12 selectable + an unused black); LBP2 and Vita share 12; LBP3 carries those 12 (recoloured) plus 12 new ones, 24 total"
+  },
+  "pairs": [
+    {
+      "id": "popit-blue",
+      "name": "Popit Blue",
+      "game": "Popit Forge default",
+      "primary": "#3f8ad7",
+      "secondary": "#d641d6",
+      "tertiary": "#41d641",
+      "emphasis": "#b9d94a",
+      "note": "the classic blue Popit (LittleBigPlanet, Blue & Pink), with the family lime as the emphasis accent"
+    },
+    {
+      "id": "lbp1-yellow-fuchsia",
+      "name": "Yellow & Fuchsia",
+      "game": "LittleBigPlanet",
+      "primary": "#e5e510",
+      "secondary": "#e70f81",
+      "tertiary": "#5656e8",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-navy-blue",
+      "name": "Navy & Blue",
+      "game": "LittleBigPlanet",
+      "primary": "#392853",
+      "secondary": "#3973a8",
+      "tertiary": "#a87139",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-deep-pink-green",
+      "name": "Deep Pink & Green",
+      "game": "LittleBigPlanet",
+      "primary": "#9a2853",
+      "secondary": "#899929",
+      "tertiary": "#5c5699",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-blue-pink",
+      "name": "Blue & Pink",
+      "game": "LittleBigPlanet",
+      "primary": "#3f8ad7",
+      "secondary": "#d641d6",
+      "tertiary": "#41d641",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-violet-deep-pink",
+      "name": "Violet & Deep Pink",
+      "game": "LittleBigPlanet",
+      "primary": "#6a39b5",
+      "secondary": "#b23950",
+      "tertiary": "#3ab29e",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-coral-pale-green",
+      "name": "Coral & Pale Green",
+      "game": "LittleBigPlanet",
+      "primary": "#e76161",
+      "secondary": "#a5e563",
+      "tertiary": "#a363e4",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-red-green",
+      "name": "Red & Green",
+      "game": "LittleBigPlanet",
+      "primary": "#ca0000",
+      "secondary": "#67c900",
+      "tertiary": "#7d48c1",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-orange-green",
+      "name": "Orange & Green",
+      "game": "LittleBigPlanet",
+      "primary": "#e44311",
+      "secondary": "#46e213",
+      "tertiary": "#bf13e2",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-flesh-pink-leaf-green",
+      "name": "Flesh Pink & Leaf Green",
+      "game": "LittleBigPlanet",
+      "primary": "#b59d81",
+      "secondary": "#678c67",
+      "tertiary": "#ca9acc",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-green-pale-blue",
+      "name": "Green & Pale Blue",
+      "game": "LittleBigPlanet",
+      "primary": "#8acb2e",
+      "secondary": "#2fc9c9",
+      "tertiary": "#c92f4c",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-aqua-blue",
+      "name": "Aqua & Blue",
+      "game": "LittleBigPlanet",
+      "primary": "#2ecba8",
+      "secondary": "#655cbf",
+      "tertiary": "#b3c92f",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp1-pale-blue-purple",
+      "name": "Pale Blue & Purple",
+      "game": "LittleBigPlanet",
+      "primary": "#2ea8cb",
+      "secondary": "#932fc9",
+      "tertiary": "#64c92f",
+      "emphasis": "#b9d94a"
+    },
+    {
+      "id": "lbp3-cool-island",
+      "name": "Cool Island",
+      "game": "LittleBigPlanet 3",
+      "primary": "#92ba19",
+      "secondary": "#2569cc",
+      "tertiary": "#1ddccd",
+      "emphasis": "#8800ff",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-ice-cream-sprinkles",
+      "name": "Ice Cream Sprinkles",
+      "game": "LittleBigPlanet 3",
+      "primary": "#ceb424",
+      "secondary": "#c331a0",
+      "tertiary": "#3bcfc1",
+      "emphasis": "#8800ff",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-candy-jar",
+      "name": "Candy Jar",
+      "game": "LittleBigPlanet 3",
+      "primary": "#cc0a1d",
+      "secondary": "#2f0514",
+      "tertiary": "#fff600",
+      "emphasis": "#e6d71e",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-forest-surprise",
+      "name": "Forest Surprise",
+      "game": "LittleBigPlanet 3",
+      "primary": "#c800cc",
+      "secondary": "#000000",
+      "tertiary": "#ffc600",
+      "emphasis": "#e6d764",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-sliced-bread",
+      "name": "Sliced Bread",
+      "game": "LittleBigPlanet 3",
+      "primary": "#f5d7d7",
+      "secondary": "#aab95a",
+      "tertiary": "#64c8e6",
+      "emphasis": "#e60f64",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-moonlight",
+      "name": "Moonlight",
+      "game": "LittleBigPlanet 3",
+      "primary": "#0b60ff",
+      "secondary": "#a09687",
+      "tertiary": "#e1e1e6",
+      "emphasis": "#e60f64",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-meditation",
+      "name": "Meditation",
+      "game": "LittleBigPlanet 3",
+      "primary": "#755f1c",
+      "secondary": "#200202",
+      "tertiary": "#ffb400",
+      "emphasis": "#e6d71e",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-rack-attack",
+      "name": "Rack Attack",
+      "game": "LittleBigPlanet 3",
+      "primary": "#ff871d",
+      "secondary": "#48b24f",
+      "tertiary": "#fff000",
+      "emphasis": "#e60f64",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-tennis-elbow",
+      "name": "Tennis Elbow",
+      "game": "LittleBigPlanet 3",
+      "primary": "#9142b2",
+      "secondary": "#10cc75",
+      "tertiary": "#ffea87",
+      "emphasis": "#e60f64",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-volcanic-glacier",
+      "name": "Volcanic Glacier",
+      "game": "LittleBigPlanet 3",
+      "primary": "#fa8228",
+      "secondary": "#8291d7",
+      "tertiary": "#c8cde6",
+      "emphasis": "#e60f64",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-dylans-jalopy",
+      "name": "Dylan's Jalopy",
+      "game": "LittleBigPlanet 3",
+      "primary": "#13f5ff",
+      "secondary": "#ccb300",
+      "tertiary": "#ff1db1",
+      "emphasis": "#e6d71e",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-funkian",
+      "name": "Funkian",
+      "game": "LittleBigPlanet 3",
+      "primary": "#be3c96",
+      "secondary": "#000000",
+      "tertiary": "#683dbf",
+      "emphasis": "#e6d71e",
+      "also_in": [
+        "LittleBigPlanet 2",
+        "LittleBigPlanet PS Vita"
+      ]
+    },
+    {
+      "id": "lbp3-night-time-coral",
+      "name": "Night Time Coral",
+      "game": "LittleBigPlanet 3",
+      "primary": "#5fc4c9",
+      "secondary": "#4379c9",
+      "tertiary": "#e63f52",
+      "emphasis": "#8800ff",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-twit-twoo",
+      "name": "Twit Twoo",
+      "game": "LittleBigPlanet 3",
+      "primary": "#424242",
+      "secondary": "#000000",
+      "tertiary": "#0a0a0a",
+      "emphasis": "#e60f64",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-candy-floss",
+      "name": "Candy Floss",
+      "game": "LittleBigPlanet 3",
+      "primary": "#f190ac",
+      "secondary": "#d61880",
+      "tertiary": "#e244c4",
+      "emphasis": "#e6d71e",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-berry-fish-cake",
+      "name": "Berry Fish Cake",
+      "game": "LittleBigPlanet 3",
+      "primary": "#ef4d70",
+      "secondary": "#3b3b3c",
+      "tertiary": "#231f20",
+      "emphasis": "#e6d764",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-crispy-leaf",
+      "name": "Crispy Leaf",
+      "game": "LittleBigPlanet 3",
+      "primary": "#22b573",
+      "secondary": "#c5c5c5",
+      "tertiary": "#e6e6e6",
+      "emphasis": "#e60f64",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-brittle-thistle",
+      "name": "Brittle Thistle",
+      "game": "LittleBigPlanet 3",
+      "primary": "#00bbbb",
+      "secondary": "#bf1d4f",
+      "tertiary": "#eb2c3b",
+      "emphasis": "#e6d764",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-mint-choc",
+      "name": "Mint-Choc",
+      "game": "LittleBigPlanet 3",
+      "primary": "#aed180",
+      "secondary": "#3a2228",
+      "tertiary": "#684050",
+      "emphasis": "#e6d71e",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-orchid-agent",
+      "name": "Orchid Agent",
+      "game": "LittleBigPlanet 3",
+      "primary": "#ff4399",
+      "secondary": "#341e5f",
+      "tertiary": "#683dbf",
+      "emphasis": "#e6d71e",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-bons-bons",
+      "name": "Bon's Bons",
+      "game": "LittleBigPlanet 3",
+      "primary": "#ef8031",
+      "secondary": "#5fae4d",
+      "tertiary": "#abc638",
+      "emphasis": "#e60f64",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-distant-light",
+      "name": "Distant Light",
+      "game": "LittleBigPlanet 3",
+      "primary": "#00a99d",
+      "secondary": "#d31818",
+      "tertiary": "#2e3192",
+      "emphasis": "#e6d71e",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-gingery-ninja",
+      "name": "Gingery Ninja",
+      "game": "LittleBigPlanet 3",
+      "primary": "#e2cc00",
+      "secondary": "#f15a23",
+      "tertiary": "#f76c41",
+      "emphasis": "#e60f64",
+      "also_in": []
+    },
+    {
+      "id": "lbp3-precious-melody",
+      "name": "Precious Melody",
+      "game": "LittleBigPlanet 3",
+      "primary": "#91c1bb",
+      "secondary": "#009599",
+      "tertiary": "#00b2a1",
+      "emphasis": "#e6d71e",
+      "also_in": []
+    }
+  ]
+}

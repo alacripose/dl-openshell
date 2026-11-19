@@ -23,7 +23,7 @@ write to.
 
 ## Outputs
 
-- A `PayloadJson()` document (`openlock.addons/2`) with packages, window records and budgets.
+- A `PayloadJson()` document (`openlock.addons/a5d7cf25e0a40c0a06b836992556491d`) with packages, window records and budgets.
 - Refusal records per package (`result.Refuse(label, source, why)`).
 - A revision counter that advances on every accepted change.
 

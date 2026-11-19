@@ -1,22 +1,47 @@
 {
-  "format": "openlock.popit-elements/1",
-  "surface": "Popit tool surface",
-  "source": "docs/LittleBigPlanet_Popit_and_Pod_Computer_UI_Series_Comparison.pdf",
-  "source_sections": [
-    "6. Element-by-element Popit inventory",
-    "11.1 Surface geometry: the Popit panel itself",
-    "11.2 Geometric symbols inside the Popit",
-    "11.3 Motion: opening, browsing, selecting and manipulating"
+  "format": "openlock.popit-elements/2e5179fe9a5d337f5c0f68914bfa04b7",
+  "surface": "Popit cell editor",
+  "model": "The Popit is the in-game editing layer for the thing under the cursor. In LittleBigPlanet its menu contains the Popit Cursor, Goodies Bag, Tools Bag, Stickers & Decorations, Player Color and the player's colour pairs; selecting an object and opening its Tweak menu changes that object. This surface applies the same model to a shell window or a live HUD cell: it is not a CREATE/PLAY launcher and it does not own a second desktop. The root stays mounted; opening a section reveals a contextual child beside it and Back closes the child.",
+  "sources": [
+    {
+      "title": "Popit Menu",
+      "url": "https://littlebigplanet.fandom.com/wiki/Popit_Menu",
+      "used_for": "Universal features, Create Mode features, Popit Cursor, Goodies Bag, Tools Bag"
+    },
+    {
+      "title": "Goodies Bag",
+      "url": "https://littlebigplanet.fandom.com/wiki/Goodies_Bag",
+      "used_for": "Materials are the leftmost section; choosing a material applies it to the selection"
+    },
+    {
+      "title": "Materials",
+      "url": "https://littlebigplanet.fandom.com/wiki/Materials",
+      "used_for": "Materials are grouped and sorted; the Tweak menu changes colour and brightness"
+    },
+    {
+      "title": "Popit Cursor",
+      "url": "https://wiki.imagisphere.me/Popit_Cursor",
+      "used_for": "Hover highlights an object in the player's Popit colour; selection and tweaking"
+    },
+    {
+      "title": "Create Mode",
+      "url": "https://littlebigplanet.fandom.com/wiki/Create_Mode",
+      "used_for": "The Tweak menu is the settings menu for a selected material, object or tool"
+    },
+    {
+      "title": "POPIT-RE-AUDIT-v5",
+      "url": "attachment:POPIT-RE-AUDIT-v5.pdf",
+      "used_for": "Persistent root plus contextual child, LBP3 role order, 37 pairs, motion timings, reduced motion"
+    }
   ],
   "elements": [
     {
       "id": "popit.surface",
       "kind": "container",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "show: show",
+      "symbol": "show",
       "selector": ".PopitSurface",
-      "source": "11.1",
-      "acceptance": "The surface is created as a root child above the dismiss panel; it is not a ring of text rows."
+      "acceptance": "The surface is a persistent root plus a contextual child anchored beside the selected cell; it never draws CREATE/PLAY cards or a mode tab."
     },
     {
       "id": "popit.dismiss",
@@ -24,283 +49,258 @@
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
       "symbol": "dismiss",
       "selector": ".PopitDismiss",
-      "source": "11.3",
-      "acceptance": "A click outside the frame closes the surface; the dismiss panel is the only full-screen hit-testable child."
+      "acceptance": "A click outside closes the surface; the dismiss panel is the only full-screen hit-testable child."
     },
     {
-      "id": "popit.frame.lbp3",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Lbp3",
-      "source": "11.1",
-      "acceptance": "Default frame; rounded hexagonal outline from six edge panels plus a 53px plate whose corner radius meets the 45-degree chamfers."
+      "id": "popit.cursor.halo",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "paintHalo",
+      "selector": ".PopitCursorHalo",
+      "acceptance": "The selected cell is outlined in the Player Colour; the halo follows the target's measured rectangle and is never hit-testable."
     },
     {
-      "id": "popit.frame.lbp1",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Lbp1",
-      "source": "11.1",
-      "acceptance": "Soft bubble frame with the larger 52px plate and 30px tail."
+      "id": "popit.root",
+      "kind": "container",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "PopitRoot",
+      "selector": ".PopitRoot",
+      "acceptance": "The root is one persistent instrument with six section rows; it stays mounted while a child opens and only shifts aside."
     },
     {
-      "id": "popit.frame.lbp2",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Lbp2",
-      "source": "11.1",
-      "acceptance": "Flat block frame: 4px plate radius, 10px frame padding, no tail."
+      "id": "popit.root.row",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "addRootRow",
+      "selector": ".PopitRootRow",
+      "acceptance": "One hit-testable row per section with its code, name and current hint; the open section carries Active."
     },
     {
-      "id": "popit.frame.psp",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Psp",
-      "source": "11.1",
-      "acceptance": "Compact page frame: 10px padding, 14px plate radius, no tail."
+      "id": "popit.root.dots",
+      "kind": "state",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "addDot",
+      "selector": ".PopitPageDot",
+      "acceptance": "The root foot carries one dot per section and marks the open one On."
     },
     {
-      "id": "popit.frame.vita",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Vita",
-      "source": "11.1",
-      "acceptance": "Tall card frame: 12px padding, 38px plate radius, no tail."
+      "id": "popit.child",
+      "kind": "container",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "openSection",
+      "selector": ".PopitChild",
+      "acceptance": "The child reveals beside the root for one section; opening another section replaces its body only, never the root."
     },
     {
-      "id": "popit.frame.karting",
-      "kind": "shape-schema",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Karting",
-      "source": "11.1",
-      "acceptance": "Dark garage card with a 6px plate, 2px border and the green selection beam."
+      "id": "popit.child.head",
+      "kind": "layout",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "closeSection",
+      "selector": ".PopitChildHead",
+      "acceptance": "The child head carries Back and the section title; Back closes the child and leaves the root mounted."
     },
     {
-      "id": "popit.frame.hex-edges",
-      "kind": "geometry",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitHexEdge.Top",
-      "source": "11.1",
-      "acceptance": "Six edges: top, upper-left, lower-left, bottom, lower-right, upper-right; visible only on the LBP3 frame."
+      "id": "popit.child.back",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "closeSection",
+      "selector": ".PopitBack",
+      "acceptance": "Back is a hit-testable control, not a keyboard-only convention; closing keeps the root's section state."
     },
     {
-      "id": "popit.tail",
-      "kind": "geometry",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitTail",
-      "source": "11.1",
-      "acceptance": "Speech-bubble tail is a rotated filled square painted before the plate; LBP1 and LBP3 show it, later cards do not."
+      "id": "popit.child.title",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "renderHeader",
+      "selector": ".PopitChildTitle",
+      "acceptance": "The child title names the open section in uppercase, not a launcher mode."
     },
     {
-      "id": "popit.beam",
-      "kind": "geometry",
-      "file": "shell/alpha-shell/forms/popit.form",
-      "selector": ".FormPopit .PopitFrame.Karting .PopitBeam",
-      "source": "11.3",
-      "acceptance": "Karting frame draws the green beam from the card into the world selection."
+      "id": "popit.section",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "function section",
+      "selector": ".PopitSectionHead",
+      "acceptance": "Every group carries one uppercase labeller and one dashed rule, so the child reads as a list of groups."
+    },
+    {
+      "id": "popit.page.cursor",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildCursorPage",
+      "selector": ".PopitTargetList",
+      "acceptance": "The Cursor section lists only targets the shell can bind to a live panel or cell; choosing one retargets the editor."
+    },
+    {
+      "id": "popit.page.palette",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildPairPage",
+      "selector": ".PopitPairGrid",
+      "acceptance": "The Palette section lists all 37 player colours grouped by game and marks the chosen one; picking one is reported to the shell for the saved profile."
+    },
+    {
+      "id": "popit.page.goodies",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildGrid",
+      "selector": ".PopitGrid",
+      "acceptance": "The Goodies Bag lists paper, card, glass, tint, ink, accent and bare; picking one emits a material edit for the selected cell."
+    },
+    {
+      "id": "popit.page.stickers",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildGrid",
+      "selector": ".PopitGrid",
+      "acceptance": "Stickers & Decorations lists edge, stitch, tag, corners and none; the treatment is tinted by the Player Colour."
+    },
+    {
+      "id": "popit.page.tools",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildToolsPage",
+      "selector": ".PopitOptionRow",
+      "acceptance": "The Tools Bag exposes the cell's Tweak values: corners, border width and opacity."
+    },
+    {
+      "id": "popit.page.color",
+      "kind": "page",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildGrid",
+      "selector": ".PopitGrid",
+      "acceptance": "Player Color lists the scheme roles plus Default; the chosen role recolours the cursor halo, decoration and tool accent."
+    },
+    {
+      "id": "popit.pair.chip",
+      "kind": "display",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "renderHeader",
+      "selector": ".PopitPairChip",
+      "acceptance": "The root header carries the chosen pair's three-colour band and its name, opening the Palette section."
+    },
+    {
+      "id": "popit.pair.tile",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "addPairItem",
+      "selector": ".PopitItemPair",
+      "acceptance": "One hit-testable tile per pair with a three-band swatch, the game name and the chosen state."
+    },
+    {
+      "id": "popit.classic",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "renderHeader",
+      "selector": ".PopitClassicChip",
+      "acceptance": "Classic is the opt-out: it removes the pair class and restores the scheme's own roles without discarding the chosen pair."
+    },
+    {
+      "id": "popit.target",
+      "kind": "control",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "buildCursorPage",
+      "selector": ".PopitTarget",
+      "acceptance": "One target row per live window/cell with its title, kind and detail; the current target carries Selected."
     },
     {
       "id": "popit.header",
       "kind": "display",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "header",
-      "selector": ".PopitHeader",
-      "source": "11.1",
-      "acceptance": "Layer title and the frame badge share the header row."
-    },
-    {
-      "id": "popit.header.title",
-      "kind": "display",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "title",
+      "symbol": "renderHeader",
       "selector": ".PopitHeaderTitle",
-      "source": "6",
-      "acceptance": "Shows the declaring layer's title, not a generic window title."
+      "acceptance": "The root header names the surface, not a launcher mode."
     },
     {
-      "id": "popit.frame-badge",
-      "kind": "interaction",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "cycleFrame",
-      "selector": ".PopitFrameBadge",
-      "source": "11.1",
-      "acceptance": "Cycles LBP3/LBP1/LBP2/PSP/Vita/Karting; shape only, no palette change."
-    },
-    {
-      "id": "popit.mode-pill",
+      "id": "popit.target-label",
       "kind": "display",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "addMode",
-      "selector": ".PopitModePill",
-      "source": "11.2",
-      "acceptance": "CREATE and PLAY are one pill with one active segment."
+      "symbol": "targetLabel",
+      "selector": ".PopitTargetLabel",
+      "acceptance": "The root names the selected cell and whether it is a cell, a live panel or a window."
     },
     {
-      "id": "popit.mode.create",
-      "kind": "state",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "setMode",
-      "selector": ".PopitMode.Active",
-      "source": "7.3",
-      "acceptance": "CREATE is the default active segment; selecting it changes only the local surface state."
-    },
-    {
-      "id": "popit.mode.play",
-      "kind": "state",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "setMode",
-      "selector": ".PopitMode.Active",
-      "source": "7.3",
-      "acceptance": "PLAY can be selected locally; the module does not send a game mode or change the level."
-    },
-    {
-      "id": "popit.tool-grid",
-      "kind": "layout",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "grid",
-      "selector": ".PopitGrid",
-      "source": "11.1",
-      "acceptance": "Declared actions are laid out four per row; the grid grows by row, never a text list."
-    },
-    {
-      "id": "popit.tool-tile",
+      "id": "popit.item",
       "kind": "control",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "makeTile",
-      "selector": ".PopitTile",
-      "source": "11.1",
-      "acceptance": "One hit-testable tile per action with an image and a label."
+      "symbol": "addGridItem",
+      "selector": ".PopitItem",
+      "acceptance": "One hit-testable material, decoration or colour item with a palette-derived swatch and Hover/Selected states."
     },
     {
-      "id": "popit.tool-icon",
-      "kind": "asset",
+      "id": "popit.option",
+      "kind": "control",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "iconFor",
-      "selector": ".PopitTileIcon",
-      "source": "11.2",
-      "acceptance": "Icons are Deadlock panorama textures under s2r://panorama/images, resolved by action id and then label."
+      "symbol": "optionGroup",
+      "selector": ".PopitOption",
+      "acceptance": "Each Tweak value is a separate hit-testable button; the current value carries Selected."
     },
     {
-      "id": "popit.tool-tile.hover",
-      "kind": "state",
+      "id": "popit.reset",
+      "kind": "control",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "onmouseover",
-      "selector": ".PopitTile.Hover",
-      "source": "11.3",
-      "acceptance": "Pointer hover adds Hover, writes the dwell line and updates the detail label."
-    },
-    {
-      "id": "popit.tool-tile.selected",
-      "kind": "state",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "refreshSelection",
-      "selector": ".PopitTile.Selected",
-      "source": "11.3",
-      "acceptance": "Exactly one tile carries Selected; the initial selected tile is the first action."
+      "symbol": "buildToolsPage",
+      "selector": ".PopitReset",
+      "acceptance": "Restore this cell clears every Popit write and returns the native panel to the values captured before the edit."
     },
     {
       "id": "popit.detail",
       "kind": "display",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "updateDetail",
+      "symbol": "detailLabel",
       "selector": ".PopitDetail",
-      "source": "11.3",
-      "acceptance": "Detail names the mode, action label and whether the action opens a window or sends a layer command."
+      "acceptance": "The footer names the selected cell or the edit that just landed."
     },
     {
-      "id": "popit.hint",
-      "kind": "display",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "hint",
-      "selector": ".PopitHint",
-      "source": "6",
-      "acceptance": "The layer's declared hint is shown below the grid when present."
-    },
-    {
-      "id": "popit.action.route",
+      "id": "popit.apply",
       "kind": "behavior",
       "file": "clientaddon/panorama/scripts/openlock_shell.js",
-      "symbol": "showPopit",
-      "source": "11.3",
-      "acceptance": "A tile calls back into the shell's existing runPopitAction path; the module owns no server channel."
+      "symbol": "applyPopitState",
+      "acceptance": "An edit writes the material, decoration, colour, radius, border and opacity on the actual bound panel through recorded inline writes."
     },
     {
-      "id": "popit.refusal.overlap",
+      "id": "popit.restore",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_shell.js",
+      "symbol": "resetPopitCell",
+      "acceptance": "The recorded writes are restored in reverse order; a dead panel is not touched."
+    },
+    {
+      "id": "popit.persistence.encode",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "encodeState",
+      "selector": "m[0-6]c[0-6]d0-4...",
+      "acceptance": "A style travels in the cell's own layout row as a fixed alphabet, never as free-form CSS or a second stylesheet."
+    },
+    {
+      "id": "popit.persistence.style",
+      "kind": "behavior",
+      "file": "src/Openlock/Shell/LayoutProfiles.cs",
+      "symbol": "PopitStylePattern",
+      "acceptance": "The host accepts a fifth comma field only when it matches the same alphabet and rejects an unknown material, colour, decoration or value."
+    },
+    {
+      "id": "popit.persistence.pair",
+      "kind": "behavior",
+      "file": "src/Openlock/Shell/LayoutProfiles.cs",
+      "symbol": "PopitPairPattern",
+      "acceptance": "The chosen pair travels as pair:<slug> in the popit row; the host validates the slug and the client drops an unknown one instead of painting a wrong palette."
+    },
+    {
+      "id": "popit.motion",
+      "kind": "behavior",
+      "file": "clientaddon/panorama/scripts/openlock_popit.js",
+      "symbol": "setReducedMotion",
+      "selector": ".ReducedMotion",
+      "acceptance": "Reduced motion is a real suppression path set by the host; the same state and order remain and only the transitions stop."
+    },
+    {
+      "id": "popit.placement",
       "kind": "behavior",
       "file": "clientaddon/panorama/scripts/openlock_popit.js",
       "symbol": "place",
-      "source": "11.1",
-      "acceptance": "The surface tests every clamped candidate against open floating-window rects; when all overlap it calls onRefusal instead of drawing over another window."
-    },
-    {
-      "id": "popit.refusal.no-layer",
-      "kind": "behavior",
-      "file": "clientaddon/panorama/scripts/openlock_shell.js",
-      "symbol": "showPopit",
-      "source": "6",
-      "acceptance": "A window with neither a declared layer nor a live panel is refused through the shell's normal refusal path."
-    },
-    {
-      "id": "popit.icon.trees",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/expand_collapse_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.picker",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/star_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.settings",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/icon_auto_style_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.performance",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/history_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.map",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/getting_started/map_lanes_icon_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.abilities",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/mod_track_tech_psd.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.icon.warning",
-      "kind": "asset",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "asset": "s2r://panorama/images/control_icons/warning_alt_png.vtex",
-      "source": "11.2"
-    },
-    {
-      "id": "popit.styles.layout",
-      "kind": "stylesheet",
-      "file": "clientaddon/panorama/styles/openlock_popit.css",
-      "source": "11.1"
-    },
-    {
-      "id": "popit.entry",
-      "kind": "module",
-      "file": "clientaddon/panorama/scripts/openlock_popit.js",
-      "symbol": "OpenlockPopit",
-      "source": "11.3"
+      "acceptance": "The surface prefers a side that does not cover the target, clamps to the screen and falls back beside or over the target rather than refusing to open."
     }
   ]
 }

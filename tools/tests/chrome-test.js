@@ -148,6 +148,7 @@ load('clientaddon/panorama/scripts/openlock_shell_data.js');
 load('clientaddon/panorama/scripts/openlock_audio.js');
 load('clientaddon/panorama/scripts/openlock_popit.js');
 load('clientaddon/panorama/scripts/openlock_layout.js');
+load('clientaddon/panorama/scripts/openlock_split.js');
 // Delivery owns the observer/addon attribute validators; without it pollObserver is a no-op and
 // the server-authored paths below would never run.
 load('clientaddon/panorama/scripts/openlock_delivery.js');
@@ -210,6 +211,10 @@ check(frame.classes.has('Focused'), 'focusing Abilities promotes the frame');
 const buttons = frame.FindChildrenWithClassTraverse('WindowButton');
 check(buttons.length >= 6, 'the narrow frame still owns all controls (' + buttons.length + ')');
 check(buttons.every(b => b.hittest !== false), 'every narrow control remains hit-testable');
+const grips = frame.FindChildrenWithClassTraverse('ResizeGrip');
+check(grips.length === 4, 'the frame owns four corner grips (' + grips.length + ')');
+check(grips.every(g => g.hittest === true && g.hittestchildren === false),
+    'every corner grip opts back into hit-testing over a pointer-transparent frame');
 
 // The controls are shapes, not codepoints in a font. A non-empty label would be the Unicode
 // regression; the shape classes are the contract the pointer actually sees.
@@ -244,6 +249,8 @@ check(!!dragStrip && typeof dragStrip.events.onmousedown === 'function',
     'the title strip owns a drag handler');
 const dragLeft = parseFloat(frame.style.marginLeft) || 0;
 const dragTop = parseFloat(frame.style.marginTop) || 0;
+const dragWidth = parseFloat(frame.style.width) || 0;
+const dragHeight = parseFloat(frame.style.height) || 0;
 cursor = { x: 30, y: 30 };
 mouseDown = true;
 dragStrip.events.onmousedown();
@@ -260,6 +267,10 @@ check(Math.abs(dragLeftAfter - (dragLeft + 120)) < 1,
     'a drag survives null probes and lands at the pointer x: ' + dragLeft + ' -> ' + dragLeftAfter);
 check(Math.abs(dragTopAfter - (dragTop + 40)) < 1,
     'a drag survives null probes and lands at the pointer y: ' + dragTop + ' -> ' + dragTopAfter);
+check(Math.abs((parseFloat(frame.style.width) || 0) - dragWidth) < 1 &&
+    Math.abs((parseFloat(frame.style.height) || 0) - dragHeight) < 1,
+    'moving a window does not change its size: ' + dragWidth + 'x' + dragHeight +
+    ' -> ' + frame.style.width + 'x' + frame.style.height);
 
 // Resizing writes both axes. SE grows width and height by the pointer delta; NW pins the
 // opposite corner by moving the origin and shrinking both axes.
@@ -346,15 +357,15 @@ const streamTree = [{
     ]
 }];
 const wrongFormat = globalThis.OpenlockStreamPackage({
-    format: 'openlock.addons/2',
+    format: 'openlock.addons/a5d7cf25e0a40c0a06b836992556491d',
     windows: [{ id: 'game-hud_wrong_format', title: 'Wrong Format', tree: streamTree }]
 });
 check(wrongFormat.opened.length === 0,
     'a payload in another format is refused, not streamed');
-check(globalThis.OpenlockStreamPackage.format === 'openlock.game/1',
+check(globalThis.OpenlockStreamPackage.format === 'openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27',
     'the shell publishes the game package streamer format');
 const streamReceipt = globalThis.OpenlockStreamPackage({
-    format: 'openlock.game/1',
+    format: 'openlock.game/05b2d815a8a5f1006596d6b0d9e0fa27',
     windows: [
         { id: 'game-hud_stream_proof', title: 'Hud Stream Proof', tree: streamTree,
           geometry: [140, 96, 360, 220] },
@@ -454,6 +465,7 @@ check(!!observerSurface && observerSurface.loaded === true,
 // refuse the whole profile, so the legacy shape must skip exactly those keys and still load its
 // real rows. This payload runs while `popit` is the active scheme, so it also restores geometry.
 const cleanPrototype = Object.getPrototypeOf({});
+globalThis.OpenlockScheme('popit');
 let layoutMark = msgs.length;
 hostPanel.attrs.dwv_layout = JSON.stringify({
     profiles: {
@@ -568,5 +580,53 @@ check(!!menu && !!dismiss, 'the menu and its dismiss surface are paired');
 dismiss.events.onmouseactivate();
 check(!root.FindChildTraverse('OpenlockContextMenu'),
     'clicking the dismiss surface closes the menu');
+
+// Splitting measures the children after removing the parent's composited transform. Without the
+// reset the cells inherit the old offset/scale and the first drag compounds it. The fake tree
+// cannot apply CSS transforms, so the assertion is on the property the runtime write owns.
+const childA = new FakePanel('Panel', hudAbilities, 'ChildA');
+childA.AddClass('AbilitySlot');
+childA.actuallayoutwidth = 40;
+childA.actuallayoutheight = 30;
+const childB = new FakePanel('Panel', hudAbilities, 'ChildB');
+childB.AddClass('AbilitySlot');
+childB.actuallayoutwidth = 50;
+childB.actuallayoutheight = 30;
+hudAbilities.actuallayoutwidth = 200;
+hudAbilities.actuallayoutheight = 60;
+hudAbilities.style.transform = 'translate3d(37px,19px,0px) scale3d(1.4,1.4,1)';
+titleBar.events.oncontextmenu();
+const splitAction = root.FindChildrenWithClassTraverse('ViewAction')
+    .find(b => texts(b).some(t => t.indexOf('Split into cells') >= 0));
+check(!!splitAction, 'the context menu offers Split into cells');
+splitAction.events.onmouseactivate();
+check(hudAbilities.style.transform === '',
+    'the split clears the parent transform before measuring its components');
+
+const splitCellFrame = root.FindChildTraverse('OpenlockFrame_cell_abilities_ChildA');
+check(!!splitCellFrame, 'the split creates a frame for the first component');
+const cellLeft = parseFloat(splitCellFrame.style.marginLeft) || 0;
+const cellTop = parseFloat(splitCellFrame.style.marginTop) || 0;
+const cellWidth = parseFloat(splitCellFrame.style.width) || 0;
+const cellHeight = parseFloat(splitCellFrame.style.height) || 0;
+const cellDrag = splitCellFrame.FindChildrenWithClassTraverse('WindowDrag')[0];
+check(!!cellDrag && typeof cellDrag.events.onmousedown === 'function',
+    'a split cell owns a move handle');
+cursor = { x: 600, y: 600 };
+mouseDown = true;
+cellDrag.events.onmousedown();
+advance(16);
+cursor = { x: 640, y: 620 };
+advance(16);
+mouseDown = false;
+advance(16);
+check(Math.abs((parseFloat(splitCellFrame.style.marginLeft) || 0) - (cellLeft + 40)) < 1 &&
+    Math.abs((parseFloat(splitCellFrame.style.marginTop) || 0) - (cellTop + 20)) < 1,
+    'moving a cell lands one-to-one at the pointer: ' + cellLeft + ',' + cellTop +
+    ' -> ' + splitCellFrame.style.marginLeft + ',' + splitCellFrame.style.marginTop);
+check(Math.abs((parseFloat(splitCellFrame.style.width) || 0) - cellWidth) < 1 &&
+    Math.abs((parseFloat(splitCellFrame.style.height) || 0) - cellHeight) < 1,
+    'moving a cell does not stretch it: ' + cellWidth + 'x' + cellHeight +
+    ' -> ' + splitCellFrame.style.width + 'x' + splitCellFrame.style.height);
 
 console.log('chrome-test OK ' + checks + ' checks');

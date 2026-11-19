@@ -100,9 +100,11 @@ function node(version) {
     };
 }
 
+const FORMAT = "openlock.addons/a5d7cf25e0a40c0a06b836992556491d";
+
 function payload(revision, version, windows) {
     return JSON.stringify({
-        format: "openlock.addons/2",
+        format: FORMAT,
         revision,
         packages: [{ name: "proof-ui", version: `${version}-0-0` }],
         windows
@@ -244,7 +246,7 @@ assert(logs.some((line) => line.includes("hidden=1")), "render log records hidde
 // A package record with no windows is a valid payload shape (the server records such a package
 // when a delivery carries rows but no window). It must apply, add nothing, and invent no window.
 context.OpenlockDelivery.offerAddons(JSON.stringify({
-    format: "openlock.addons/2",
+    format: FORMAT,
     revision: 7,
     packages: [
         { name: "proof-ui", version: "2-0-0" },
@@ -258,11 +260,30 @@ assert.strictEqual(host.lastApplied.packages, 2, "the zero-window package is rec
 assert.strictEqual(host.lastApplied.added, 0, "the zero-window package reports no added windows");
 assert(logs.some((line) => line.includes("applied revision 7")), "the zero-window payload was applied");
 
+// A numeric counter in the addon family is a legacy input; it is read and normalized to the
+// hashed id. A hash from a foreign family is still refused.
+const legacy = JSON.parse(payload(8, 2, windowFor(8, 2)));
+legacy.format = "openlock.addons/9";
+context.OpenlockDelivery.offerAddons(JSON.stringify(legacy));
+drain();
+assert.strictEqual(host.lastApplied.updated, 0, "legacy addon id is accepted without a spurious update");
+assert(logs.some((line) => line.includes("applied revision 8")), "legacy addon revision was applied");
+let foreignRejected = "";
+const foreignRefuse = host.refuse;
+host.refuse = (title, why) => { foreignRejected = `${title}: ${why}`; };
+const foreign = JSON.parse(payload(9, 2, windowFor(9, 2)));
+foreign.format = "openlock.addons/00000000000000000000000000000000";
+context.OpenlockDelivery.offerAddons(JSON.stringify(foreign));
+drain();
+host.refuse = foreignRefuse;
+assert(foreignRejected.includes("payload format is not"), "a foreign addon hash is refused");
+assert.strictEqual(host.windows[0].liveTree[0].children[0].text, "v2 · replaced in place", "foreign refusal leaves the window set unchanged");
+
 // The refusal ceiling and the server's zero-window success signal are C# state, not JS. Run the
 // server harness from here so one command covers both halves of the delivery path.
 const { spawnSync } = require("child_process");
 const server = spawnSync("dotnet", [
-    "run", "--project", ".scratch/deliverytest/deliverytest.csproj", "-c", "Release"
+    "run", "--project", "tools/tests/deliverytest/deliverytest.csproj", "-c", "Release"
 ], { encoding: "utf8" });
 if (server.status !== 0) {
     console.error(server.stdout || "");
