@@ -1,0 +1,36 @@
+VPK boot receipt - 2026-11-19
+
+archive: dist/vpk-candidate/openlock-shell-candidate.vpk
+archive bytes: 1427929
+archive sha256: f100647fffc6ec5b4fb6971b84848a1f30645eff9e7c85167ca959aff95f512c
+mounted at: game/citadel/addons/pak97_dir.vpk
+mounted sha256: f100647fffc6ec5b4fb6971b84848a1f30645eff9e7c85167ca959aff95f512c
+toolchain: C:/Users/ala/Downloads/Reduced_CSDK_13 (resourcecompiler: 4 wav, 1 soundevents, 23 panorama = 28 compiled, 0 failed)
+client: D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe -windowed -noborder -condebug
+
+Observed in the running client (console.log, 11/19 17:54-17:56):
+  11/19 17:56:37 [PanoramaScript] [Openlock] preload done: 6 module(s) in 2630 ms
+  11/19 17:56:37 [PanoramaScript] [Openlock] preload done: 6 module(s) in 2269 ms
+
+  (the 17:54 session also logged `chrome frame: minimap controls=6 grips=4 compact=true`,
+  `hud walk: 2 surface(s) of 107 panel(s)` and, after the HUD rebuilt, `hud walk: 10 surface(s) of
+  233 panel(s)` with `status_bars 850x240` and `TopBarPlayer0 88x238`; console.log rotates on each
+  launch, so those lines are no longer in the file, only in this record)
+  screenshot: artifacts/screenshots/client-boot.jpg (taskbar, frames, palette window on screen)
+
+Defect found and fixed in this pass:
+  localeCompare threw 'RangeError: Internal error. Icu error.' on a live HUD title, aborting
+  popitTargets -> showPopitSurface, so the Popit could not open. compareTitles now uses a
+  code-unit comparison; the relaunched client logged 0 JS exceptions.
+
+What this proves:
+- the CSDK13 archive mounts from citadel/addons and the shell boots: six preload modules,
+- live HUD surfaces are discovered and framed (status_bars 850x240, TopBarPlayer0 88x238 in the
+  17:54 session; the 17:56 relaunch logs no layout refusals or exceptions),
+- the shell's own taskbar, frames and palette window render in the client.
+
+What this does not prove:
+- a pointer-driven pair switch in the client; the pair class is proven in chrome-test (83
+  checks) and the DOM harness, not by a click in game;
+- that the Popit surface opens or renders in the client after the sort fix;
+- the per-corner crown vs the bibles' single Bezier contour (still an approximation).
