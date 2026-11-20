@@ -9,8 +9,8 @@ compiler: game/bin/win64/resourcecompiler.exe
 compiler result: OK: 19 compiled, 0 failed, 0 skipped (0m:01s)
 packer: tools/pack_vpk.py (this CSDK has no CSDKCfgVPK.exe, so the built-in writer packed it)
 
-inputs, 19 source files: 3 layouts from clientaddon/panorama/layout, base_hud.xml and
-openlock_boot.js from clientaddon/standalone/panorama, 13 scripts, 4 styles
+inputs, 19 source files: 4 layouts (3 from clientaddon/panorama/layout plus base_hud.xml from
+clientaddon/standalone/panorama), 11 scripts (10 plus openlock_boot.js), 4 styles
 compile staging root: content/citadel_addons/openlock_vpktest/panorama
 compiled output root: game/citadel_addons/openlock_vpktest/panorama
 
