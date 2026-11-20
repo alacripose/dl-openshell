@@ -350,8 +350,15 @@ check(Math.abs((parseFloat(frame.style.width) || 0) - frozen.width) < 1 &&
 // is refused by id rather than opening an empty frame. The package arrives while the shell is
 // already running, so the preloader has handed the strip its final tabs first.
 for (let i = 0; i < 8; i++) advance(400);
-check(root.FindChildrenWithClassTraverse('ShellTab').length > 0,
-    'the taskbar strip owns its final tabs before a game package arrives');
+// The taskbar is retired; the lower cloud band is the only rail and it carries the Popit's own
+// interface controls. A package arriving must not put a window entry back on it.
+const cloudBar = root.FindChildTraverse('CloudBar');
+const cloudControls = cloudBar ? cloudBar.FindChildrenWithClassTraverse('CloudControl') : [];
+check(!!cloudBar && cloudControls.length === 6,
+    'the cloud rail carries the Popit interface controls: ' + cloudControls.length);
+check(cloudControls.length === 0 || root.FindChildrenWithClassTraverse('ShellTab')
+    .filter(t => t.GetParent() === cloudBar).length === 0,
+    'no window entry is drawn on the cloud rail');
 const streamTree = [{
     tag: 'Panel', id: 'StreamProof', class: 'StreamProof', children: [
         { tag: 'Label', id: 'StreamProofLabel', text: 'streamed package proof', children: [] }
@@ -385,7 +392,7 @@ const cellFrame = root.FindChildTraverse('OpenlockFrame_cell_stream_proof');
 check(!!cellFrame, 'the streamed cell has a shell frame');
 const streamTab = root.FindChildrenWithClassTraverse('ShellTab')
     .find(t => texts(t).some(t => t.indexOf('Hud Stream Proof') >= 0));
-check(!!streamTab, 'the streamed game window has a taskbar entry');
+check(!streamTab, 'a streamed window no longer gets a taskbar entry');
 check(parseFloat(streamFrame.style.opacity) < 0.2, 'the streamed window starts under the entrance curve');
 const entranceLeft = parseFloat(streamFrame.style.marginLeft) || 0;
 const entranceTop = parseFloat(streamFrame.style.marginTop) || 0;
@@ -672,9 +679,12 @@ check(typeof schema === 'function' && schema({ id: 'undressed', discovered: true
     'an undressed game cell stays in the Deadlock schema');
 check(typeof schema === 'function' && schema({ id: 'owned', title: 'Owned' }) === 'shell',
     'a shell window is a shell cell');
-check(/\.WindowFrame\.DeadlockCell\s*\{[^}]*border:\s*0px/.test(sheet) &&
+check(/\.ShellRoot \.WindowFrame\.DeadlockCell[\s\S]{0,200}?border:\s*0px/.test(sheet) &&
     /\.WindowFrame\.DeadlockCell \.WindowTitle/.test(sheet),
     'the Deadlock schema draws no frame chrome over the game HUD');
+check(/\.ShellRoot \.WindowFrame\.DeadlockCell\.Focused/.test(sheet) &&
+    /\.ShellRoot \.WindowFrame\.DeadlockCell\.Pinned/.test(sheet),
+    'a focused or pinned Deadlock cell still draws no boundary');
 check(/\.CloudControl\s*\{/.test(sheet), 'the rail styles the cloud controls');
 
 console.log('chrome-test OK ' + checks + ' checks');

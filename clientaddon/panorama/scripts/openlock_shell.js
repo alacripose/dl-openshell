@@ -1213,64 +1213,114 @@
         $.Schedule(delay, easeIn);
     }
 
-    // The rail is the cloud surface layer: it carries the Popit's own controls, not a catalog of
-    // shell windows. Each control opens the Popit on its section for the focused target; a game
-    // cell still in the Deadlock schema can be dressed from here, which is what promotes it to a
-    // shell cell. Windows that the player has explicitly promoted are the only other entries.
+    // The cloud rail: the Popit's own interface controls on the lower edge. REV06 keeps the
+    // in-world rail and the Popit as separate owners, and the owner's ruling here is that the
+    // rail carries the Popit's interface - page arrows, cell arrows, the section reveal and the
+    // open control - not a window catalog and not camera or undo. The brief still lists the
+    // silhouette as open ("needs a better reference capture"), so the band is a rounded shelf,
+    // not a claimed canonical cloud shape.
+    var cloudBar = null;
+
+    function ensureCloudBar() {
+        if (cloudBar) {
+            try { if (!cloudBar.IsValid || cloudBar.IsValid()) return cloudBar; } catch (e) { return cloudBar; }
+        }
+        cloudBar = $.CreatePanel("Panel", root, "CloudBar");
+        cloudBar.AddClass("CloudBar");
+        return cloudBar;
+    }
+
     var CLOUD_CONTROLS = [
-        { id: "cursor", label: "Cursor" },
-        { id: "palette", label: "Palette" },
-        { id: "goodies", label: "Goodies" },
-        { id: "stickers", label: "Stickers" },
-        { id: "tools", label: "Tools" },
-        { id: "color", label: "Color" }
+        { id: "prev-page", label: "<", title: "Previous Popit page", run: function () { cyclePopitPage(-1); } },
+        { id: "next-page", label: ">", title: "Next Popit page", run: function () { cyclePopitPage(1); } },
+        { id: "prev-cell", label: "^", title: "Previous cell", run: function () { cyclePopitTarget(-1); } },
+        { id: "next-cell", label: "v", title: "Next cell", run: function () { cyclePopitTarget(1); } },
+        { id: "section", label: "Section", title: "Open or close this page's section", run: function () { togglePopitSection(); } },
+        { id: "popit", label: "Popit", title: "Open the Popit", run: function () { openCloudPopit(); } }
     ];
 
+    function popitStatusNow() {
+        return (globalThis.OpenlockPopit && globalThis.OpenlockPopit.status)
+            ? globalThis.OpenlockPopit.status() : null;
+    }
+
+    function popitIsOpen() {
+        var s = popitStatusNow();
+        return !!(s && s.visible);
+    }
+
+    function popitCurrentPage() {
+        var s = popitStatusNow();
+        return (s && s.page) || "cursor";
+    }
+
+    function openCloudPopit() {
+        showPopitSurface(focused ? popitTargetById(focused) : null, popitCurrentPage());
+    }
+
+    function ensureCloudPopit() {
+        if (!popitIsOpen()) openCloudPopit();
+        return popitIsOpen();
+    }
+
+    // A page arrow walks the Popit's own section list and calls the module's setPage, so the rail
+    // and the root rows move the same surface through the same API.
+    function cyclePopitPage(step) {
+        if (!ensureCloudPopit()) return;
+        var pages = (globalThis.OpenlockPopit.pages && globalThis.OpenlockPopit.pages()) || [];
+        if (!pages.length) return;
+        var cur = popitCurrentPage(), at = 0;
+        for (var i = 0; i < pages.length; i++) if (pages[i].id === cur) at = i;
+        var next = pages[(at + step + pages.length) % pages.length];
+        if (globalThis.OpenlockPopit.setPage) globalThis.OpenlockPopit.setPage(next.id);
+        logPerf("info", "popit page " + next.id);
+    }
+
+    // A cell arrow moves the Popit's target, which is the same list the cursor page draws. When no
+    // cell is focused the first arrow selects the first target rather than refusing.
+    function cyclePopitTarget(step) {
+        popitTargetsCache = popitTargets();
+        if (!popitTargetsCache.length) {
+            ensureCloudPopit();
+            return;
+        }
+        var at = -1;
+        for (var i = 0; i < popitTargetsCache.length; i++) {
+            if (popitTargetsCache[i].id === (focused || "")) at = i;
+        }
+        var next = popitTargetsCache[(at + step + popitTargetsCache.length) % popitTargetsCache.length];
+        showPopitSurface(next, popitCurrentPage());
+        logPerf("info", "popit cell " + next.id);
+    }
+
+    function togglePopitSection() {
+        if (!ensureCloudPopit()) return;
+        var s = popitStatusNow();
+        if (s && s.child && globalThis.OpenlockPopit.closeSection) {
+            globalThis.OpenlockPopit.closeSection();
+            logPerf("info", "popit section closed");
+            return;
+        }
+        if (globalThis.OpenlockPopit.openSection) {
+            globalThis.OpenlockPopit.openSection(popitCurrentPage());
+            logPerf("info", "popit section opened");
+        }
+    }
+
     function renderBar() {
-        if (!strip) return;
         if (preloadActive) return;
-        strip.RemoveAndDeleteChildren();
-        var listed = {};
-        var entranceIndex = 0;
+        var bar = ensureCloudBar();
+        bar.RemoveAndDeleteChildren();
 
         for (var c = 0; c < CLOUD_CONTROLS.length; c++) {
             (function (control) {
-                var button = addControl(strip, "CloudControl", control.label, function () {
-                    showPopitSurface(focused ? popitTargetById(focused) : null, control.id);
+                var button = addControl(bar, "CloudControl", control.label, function () {
+                    control.run();
                     cue("select");
                 });
                 button.AddClass("Cloud_" + control.id);
-                bindDwell(button, "Popit " + control.label,
-                    "Cloud control. Opens the Popit on " + control.label + " for the focused cell.", focused || "");
+                bindDwell(button, control.title, "Cloud rail. " + control.title + ".", "");
             })(CLOUD_CONTROLS[c]);
-        }
-
-        // A split container has cells instead of a frame. Its tab stays the way back to the
-        // whole set; the cells themselves are listed only when focused, pinned or minimized so
-        // six ability cells do not turn the bar into a second row.
-        for (var splitId in splitCells) {
-            if (!splitCells.hasOwnProperty(splitId) || !open[splitId] || listed[splitId]) continue;
-            var splitWin = windowById(splitId);
-            addTab(splitId, "[" + splitCells[splitId].length + "] " + ((splitWin && splitWin.title) || splitId), null, entranceIndex++);
-            listed[splitId] = true;
-        }
-
-        // Every open frame owns a taskbar entry, including a discovered panel and a minimized
-        // window. Without this row a minimize from the title bar had no way back.
-        for (var id in frames) {
-            if (!frames.hasOwnProperty(id) || !open[id] || listed[id]) continue;
-            var win = windowById(id);
-            // A discovered HUD control still owns a frame and a Windows row, but forty of them
-            // must not turn the bar into a second row. Minimized and focused ones stay in reach.
-            if (win && (win.live || win.cellWindow) && !minimized[id] && focused !== id && !pinned[id]) continue;
-            addTab(id, (minimized[id] ? "_ " : "") + ((win && win.title) || id), null, entranceIndex++);
-            listed[id] = true;
-        }
-
-        // A tab that leaves the strip may animate again when it comes back; one that is still
-        // listed keeps its seen mark and does not restart on the next rebuild.
-        for (var seenId in tabEntranceSeen) {
-            if (tabEntranceSeen.hasOwnProperty(seenId) && !listed[seenId]) delete tabEntranceSeen[seenId];
         }
 
         if (versionLabel) {
@@ -1728,8 +1778,11 @@
         // for: the cell keeps its declared contour, the shell draws around it.
         // Only a frame around the game's own cell steps outside it. A window the player placed
         // keeps exactly the rect the profile saved, and a split cell is the shell's own surface.
-        var outline = (win.discovered || win.autoFrame) && !g.userSet && !win.cellWindow
-            ? OUTLINE_DP : 0;
+        // A Deadlock cell draws no outline at all: the shell's boundary is chrome, and the game's
+        // own panorama already draws its panel edge. Only a cell the Popit has dressed (the shell
+        // schema) gets the one-pixel outside outline the frame rules describe.
+        var outline = (win.discovered || win.autoFrame) && schema === "shell" &&
+            !g.userSet && !win.cellWindow ? OUTLINE_DP : 0;
         var left = Math.max(0, contentLeft - outline);
         var top = Math.max(0, contentTop);
         var right = Math.min(screenW, contentLeft + contentW + outline);
@@ -5049,11 +5102,13 @@
     // launcher brings it back. The frames own the longer idle curve below.
     var taskbarHiding = false;
 
+    // The taskbar is retired. It keeps its node for the preloader and older packages, but no
+    // code path brings it back: the lower cloud band is the shell's only rail.
     function showTaskbar() {
         if (!taskbar) return;
         taskbarHiding = false;
-        taskbar.style.opacity = "1";
-        taskbar.style.visibility = "visible";
+        taskbar.style.opacity = "0";
+        taskbar.style.visibility = "collapse";
     }
 
     function hideTaskbar() {
@@ -5159,10 +5214,13 @@
         if (expanded) cue("select");
         freeCursor(expanded);
         if (expanded && !activeId) {
-            // Do not choose a tab for the player. The bar is the menu; the live HUD is already
-            // being framed by discovery. Only when the game is drawing nothing does the shell
-            // fall back to its dashboard, which is a real surface rather than a guessed window.
-            if (!presenceReading().live) openWindow(DASHBOARD_ID, true);
+            // Do not choose a tab for the player, and do not draw a shell window either. At boot
+            // the game has not drawn its HUD yet, so the old fallback opened the dashboard and
+            // left a fake window sitting over the HUD once it appeared. The shell's surfaces are
+            // the game's own windows; the dashboard stays reachable from the window browser.
+            if (!presenceReading().live && typeof globalThis.OpenlockToast === "function") {
+                globalThis.OpenlockToast("OpenLock", "waiting for a game window to frame", "", false);
+            }
         }
         render();
     };
