@@ -1,0 +1,60 @@
+VPK pack receipt - 2026-11-19
+
+Scope: a local test archive. Nothing was installed, copied into the game's addons folder,
+or launched. The archive lives under dist/, which git ignores; only this receipt is tracked.
+
+commit: dd410627b78d73856375e8830bec97d62d5fad9e
+toolchain: C:/Users/ala/Downloads/Reduced_CSDK_13
+compiler: game/bin/win64/resourcecompiler.exe
+compiler result: OK: 19 compiled, 0 failed, 0 skipped (0m:01s)
+packer: tools/pack_vpk.py (this CSDK has no CSDKCfgVPK.exe, so the built-in writer packed it)
+
+inputs, 19 source files: 3 layouts from clientaddon/panorama/layout, base_hud.xml and
+openlock_boot.js from clientaddon/standalone/panorama, 13 scripts, 4 styles
+compile staging root: content/citadel_addons/openlock_vpktest/panorama
+compiled output root: game/citadel_addons/openlock_vpktest/panorama
+
+archive: dist/vpk-preview/openlock-shell-test.vpk
+archive bytes: 1280851
+archive sha256: b3124559384409e59b1406e2847eebc660c35e2539d8d39b3e287dd271098a3c
+staged payload bytes: 1280122
+header: sig 0x55AA1234, version 1, tree 717 bytes
+entries: 19, all inline, preload 0
+
+entry sha256:
+  1d7751c47578df8f606ab318b24df2b0505d95a2365b94a2cbfa4aef30c1fd0a  panorama/layout/base_hud.vxml_c
+  4f48b969b6739a875660168eb0d014346c49ba019dfcdf745c76c97a0c93d12f  panorama/layout/openlock_hud.vxml_c
+  d0e9dcc3ebbd8525be547d4df5075328c4cf04d5f02a28e60374507173eea6ce  panorama/layout/openlock_shell.vxml_c
+  4caf3aafca0479ff4eeaac325c2cb4bceb1e01f01e3a3424943cf8d0998b5a82  panorama/layout/openlock_shell_server.vxml_c
+  d98b6e93244104acb1f155a6aa3a74dcb5c475b9f78e979e9b554a055debb807  panorama/scripts/openlock_audio.vjs_c
+  aebc11c58a633fee8fdcf1c5ebfa4d9c6fdd8f82e4e941cceaa7ec288881ab99  panorama/scripts/openlock_boot.vjs_c
+  f88b053d4ab55f826033cb570b0cc77e5a954c3adf68f27b14de091b214e0b54  panorama/scripts/openlock_delivery.vjs_c
+  6eb3edbf6a9e5fe0b56df7224ece51568c820a33bd528315309ca71c6a28336e  panorama/scripts/openlock_hud.vjs_c
+  813768460018ccd50ec29caeb70fa1492be17e18fd2bf557f4376eade2c6e6c4  panorama/scripts/openlock_layout.vjs_c
+  ec7f579169a2118fa5fa86d125b7dbeda694aa736308e8c8f3a7ca00d61436f3  panorama/scripts/openlock_pairs.vjs_c
+  5eff09891f6507a69a368a11c04673e58cab1ffabc8487671a600ab325c38154  panorama/scripts/openlock_popit.vjs_c
+  eca35b5eb2298c1be401517711ba26921cb6647346a8a7c8d63368a78c4b4c06  panorama/scripts/openlock_server_mount.vjs_c
+  2ad76506e084e3cd6dc6289a6835ce314e05f2825a42d183216433b3d605465e  panorama/scripts/openlock_shell.vjs_c
+  ab3676618f780a21ac9389d2e4a831d1db8127b4a2e94154875d6d307da117d9  panorama/scripts/openlock_shell_data.vjs_c
+  d4010763479ca02fcdb9b1655021feb7532985161ed7cb41dfa64c4fc6c4b791  panorama/scripts/openlock_split.vjs_c
+  78f3db36d4c6f981400e73b12383b69da2e503ca1575e4da1d84c2601dd69be3  panorama/styles/openlock_pairs.vcss_c
+  86779199e3e1b6daffdfa07c9b0dcf97ea05161458a18f4cb07cd01cd91d1b5e  panorama/styles/openlock_popit.vcss_c
+  8ac321c3d24681e7e5234512e7cc00302bcbcc5ecbb255e44a76f33ffd4a3774  panorama/styles/openlock_schemes.vcss_c
+  9b7b7f53899583325a1352dfdff288de5e152fd7e782a3103017a3ebd6de479c  panorama/styles/openlock_shell.vcss_c
+
+verification: 19 staged files, 19 archive entries, 19 extracted, byte-for-byte match
+checks: v1 header, inline-only tree, no preload, entry set equals staged set, per-entry
+CRC and SHA-256, extract-and-recompare round trip
+
+What this proves:
+- the current shell sources compile with this CSDK13 resourcecompiler, 19 of 19;
+- tools/pack_vpk.py writes a readable VPK v1 whose entry bytes equal the compiled files;
+- the archive has a fixed size and digest another machine can re-check.
+
+What this does not prove:
+- that the client mounts the archive or renders any of it; nothing loaded it;
+- that the shell boots in game: no sound set, no soundevents manifest, no legacy
+  dashboard resources, and no base_hud mount was exercised;
+- that the layout trees are correct beyond compiling, or that the popit crown looks
+  as designed; no person has seen this in game.
+
