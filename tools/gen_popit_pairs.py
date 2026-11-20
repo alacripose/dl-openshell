@@ -84,6 +84,25 @@ def contrast_ink(colour: str) -> str:
     return "#10131a" if luminance > 0.55 else "#f4f2ea"
 
 
+def _channels(colour: str) -> tuple[int, int, int]:
+    value = colour.lstrip("#")
+    return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+def shade(colour: str, factor: float) -> str:
+    """`_shade` from the Popit Forge prototype's `popit_ui/theme.py`."""
+    return "".join(f"{max(0, min(255, round(c * factor))):02x}" for c in _channels(colour)).upper()
+
+
+def mix(colour: str, other: str, amount: float) -> str:
+    """`_mix` from the Popit Forge prototype's `popit_ui/theme.py`."""
+    a = _channels(colour)
+    b = _channels(other)
+    return "".join(
+        f"{max(0, min(255, round(x + (y - x) * amount))):02x}" for x, y in zip(a, b)
+    ).upper()
+
+
 def pair_class(pair_id: str) -> str:
     """Keep this identical to pairClass() in openlock_popit.js."""
     words = re.split(r"[-_]", pair_id)
@@ -123,6 +142,26 @@ def css(data: dict) -> str:
         lines.append(f".{klass} .PopitItem.Selected {{ border-color: {primary}; }}")
         lines.append(f".{klass} .PopitTarget.Selected {{ border-color: {primary}; }}")
         lines.append(f".{klass} .PopitDetail {{ color: {emphasis}; }}")
+        # The live shell uses the same slot map the Popit Forge prototype writes into a live
+        # theme (`popit_ui/theme.py: pair_slots`): the primary shades the surface, the secondary
+        # carries the header and the outline, the tertiary is the title ink, and a quarter-white
+        # mix of the primary is the cell edge. The transforms are copied, not re-chosen, so one
+        # selection mechanism paints both the Popit and the window manager.
+        lines.append(
+            f".{klass} .WindowFrame {{ background-color: #{shade(primary, 0.42)}; "
+            f"border-color: {secondary}; }}"
+        )
+        lines.append(
+            f".{klass} .WindowFrame.CompactHud {{ background-color: transparent; "
+            f"border-color: {secondary}; }}"
+        )
+        lines.append(
+            f".{klass} .WindowFrame .WindowTitle {{ background-color: #{shade(secondary, 0.60)}; }}"
+        )
+        lines.append(f".{klass} .WindowFrame .WindowTitleLabel {{ color: {tertiary}; }}")
+        lines.append(
+            f".{klass} .ThemedCell {{ border-color: #{mix(primary, '#ffffff', 0.25)}59; }}"
+        )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

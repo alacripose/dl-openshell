@@ -18,6 +18,11 @@
 .PairPopitBlue .PopitItem.Selected { border-color: #3f8ad7; }
 .PairPopitBlue .PopitTarget.Selected { border-color: #3f8ad7; }
 .PairPopitBlue .PopitDetail { color: #b9d94a; }
+.PairPopitBlue .WindowFrame { background-color: #1A3A5A; border-color: #d641d6; }
+.PairPopitBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #d641d6; }
+.PairPopitBlue .WindowFrame .WindowTitle { background-color: #802780; }
+.PairPopitBlue .WindowFrame .WindowTitleLabel { color: #41d641; }
+.PairPopitBlue .ThemedCell { border-color: #6FA7E159; }
 
 /* Yellow & Fuchsia — LittleBigPlanet */
 .PairLbp1YellowFuchsia .PopitRoot { background-color: #e70f81E6; border-color: #e5e510; }
@@ -33,6 +38,11 @@
 .PairLbp1YellowFuchsia .PopitItem.Selected { border-color: #e5e510; }
 .PairLbp1YellowFuchsia .PopitTarget.Selected { border-color: #e5e510; }
 .PairLbp1YellowFuchsia .PopitDetail { color: #b9d94a; }
+.PairLbp1YellowFuchsia .WindowFrame { background-color: #606007; border-color: #e70f81; }
+.PairLbp1YellowFuchsia .WindowFrame.CompactHud { background-color: transparent; border-color: #e70f81; }
+.PairLbp1YellowFuchsia .WindowFrame .WindowTitle { background-color: #8B094D; }
+.PairLbp1YellowFuchsia .WindowFrame .WindowTitleLabel { color: #5656e8; }
+.PairLbp1YellowFuchsia .ThemedCell { border-color: #ECEC4C59; }
 
 /* Navy & Blue — LittleBigPlanet */
 .PairLbp1NavyBlue .PopitRoot { background-color: #3973a8E6; border-color: #392853; }
@@ -48,6 +58,11 @@
 .PairLbp1NavyBlue .PopitItem.Selected { border-color: #392853; }
 .PairLbp1NavyBlue .PopitTarget.Selected { border-color: #392853; }
 .PairLbp1NavyBlue .PopitDetail { color: #b9d94a; }
+.PairLbp1NavyBlue .WindowFrame { background-color: #181123; border-color: #3973a8; }
+.PairLbp1NavyBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #3973a8; }
+.PairLbp1NavyBlue .WindowFrame .WindowTitle { background-color: #224565; }
+.PairLbp1NavyBlue .WindowFrame .WindowTitleLabel { color: #a87139; }
+.PairLbp1NavyBlue .ThemedCell { border-color: #6A5E7E59; }
 
 /* Deep Pink & Green — LittleBigPlanet */
 .PairLbp1DeepPinkGreen .PopitRoot { background-color: #899929E6; border-color: #9a2853; }
@@ -63,6 +78,11 @@
 .PairLbp1DeepPinkGreen .PopitItem.Selected { border-color: #9a2853; }
 .PairLbp1DeepPinkGreen .PopitTarget.Selected { border-color: #9a2853; }
 .PairLbp1DeepPinkGreen .PopitDetail { color: #b9d94a; }
+.PairLbp1DeepPinkGreen .WindowFrame { background-color: #411123; border-color: #899929; }
+.PairLbp1DeepPinkGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #899929; }
+.PairLbp1DeepPinkGreen .WindowFrame .WindowTitle { background-color: #525C19; }
+.PairLbp1DeepPinkGreen .WindowFrame .WindowTitleLabel { color: #5c5699; }
+.PairLbp1DeepPinkGreen .ThemedCell { border-color: #B35E7E59; }
 
 /* Blue & Pink — LittleBigPlanet */
 .PairLbp1BluePink .PopitRoot { background-color: #d641d6E6; border-color: #3f8ad7; }
@@ -78,6 +98,11 @@
 .PairLbp1BluePink .PopitItem.Selected { border-color: #3f8ad7; }
 .PairLbp1BluePink .PopitTarget.Selected { border-color: #3f8ad7; }
 .PairLbp1BluePink .PopitDetail { color: #b9d94a; }
+.PairLbp1BluePink .WindowFrame { background-color: #1A3A5A; border-color: #d641d6; }
+.PairLbp1BluePink .WindowFrame.CompactHud { background-color: transparent; border-color: #d641d6; }
+.PairLbp1BluePink .WindowFrame .WindowTitle { background-color: #802780; }
+.PairLbp1BluePink .WindowFrame .WindowTitleLabel { color: #41d641; }
+.PairLbp1BluePink .ThemedCell { border-color: #6FA7E159; }
 
 /* Violet & Deep Pink — LittleBigPlanet */
 .PairLbp1VioletDeepPink .PopitRoot { background-color: #b23950E6; border-color: #6a39b5; }
@@ -93,6 +118,11 @@
 .PairLbp1VioletDeepPink .PopitItem.Selected { border-color: #6a39b5; }
 .PairLbp1VioletDeepPink .PopitTarget.Selected { border-color: #6a39b5; }
 .PairLbp1VioletDeepPink .PopitDetail { color: #b9d94a; }
+.PairLbp1VioletDeepPink .WindowFrame { background-color: #2D184C; border-color: #b23950; }
+.PairLbp1VioletDeepPink .WindowFrame.CompactHud { background-color: transparent; border-color: #b23950; }
+.PairLbp1VioletDeepPink .WindowFrame .WindowTitle { background-color: #6B2230; }
+.PairLbp1VioletDeepPink .WindowFrame .WindowTitleLabel { color: #3ab29e; }
+.PairLbp1VioletDeepPink .ThemedCell { border-color: #8F6AC859; }
 
 /* Coral & Pale Green — LittleBigPlanet */
 .PairLbp1CoralPaleGreen .PopitRoot { background-color: #a5e563E6; border-color: #e76161; }
@@ -108,6 +138,11 @@
 .PairLbp1CoralPaleGreen .PopitItem.Selected { border-color: #e76161; }
 .PairLbp1CoralPaleGreen .PopitTarget.Selected { border-color: #e76161; }
 .PairLbp1CoralPaleGreen .PopitDetail { color: #b9d94a; }
+.PairLbp1CoralPaleGreen .WindowFrame { background-color: #612929; border-color: #a5e563; }
+.PairLbp1CoralPaleGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #a5e563; }
+.PairLbp1CoralPaleGreen .WindowFrame .WindowTitle { background-color: #63893B; }
+.PairLbp1CoralPaleGreen .WindowFrame .WindowTitleLabel { color: #a363e4; }
+.PairLbp1CoralPaleGreen .ThemedCell { border-color: #ED888859; }
 
 /* Red & Green — LittleBigPlanet */
 .PairLbp1RedGreen .PopitRoot { background-color: #67c900E6; border-color: #ca0000; }
@@ -123,6 +158,11 @@
 .PairLbp1RedGreen .PopitItem.Selected { border-color: #ca0000; }
 .PairLbp1RedGreen .PopitTarget.Selected { border-color: #ca0000; }
 .PairLbp1RedGreen .PopitDetail { color: #b9d94a; }
+.PairLbp1RedGreen .WindowFrame { background-color: #550000; border-color: #67c900; }
+.PairLbp1RedGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #67c900; }
+.PairLbp1RedGreen .WindowFrame .WindowTitle { background-color: #3E7900; }
+.PairLbp1RedGreen .WindowFrame .WindowTitleLabel { color: #7d48c1; }
+.PairLbp1RedGreen .ThemedCell { border-color: #D7404059; }
 
 /* Orange & Green — LittleBigPlanet */
 .PairLbp1OrangeGreen .PopitRoot { background-color: #46e213E6; border-color: #e44311; }
@@ -138,6 +178,11 @@
 .PairLbp1OrangeGreen .PopitItem.Selected { border-color: #e44311; }
 .PairLbp1OrangeGreen .PopitTarget.Selected { border-color: #e44311; }
 .PairLbp1OrangeGreen .PopitDetail { color: #b9d94a; }
+.PairLbp1OrangeGreen .WindowFrame { background-color: #601C07; border-color: #46e213; }
+.PairLbp1OrangeGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #46e213; }
+.PairLbp1OrangeGreen .WindowFrame .WindowTitle { background-color: #2A880B; }
+.PairLbp1OrangeGreen .WindowFrame .WindowTitleLabel { color: #bf13e2; }
+.PairLbp1OrangeGreen .ThemedCell { border-color: #EB724C59; }
 
 /* Flesh Pink & Leaf Green — LittleBigPlanet */
 .PairLbp1FleshPinkLeafGreen .PopitRoot { background-color: #678c67E6; border-color: #b59d81; }
@@ -153,6 +198,11 @@
 .PairLbp1FleshPinkLeafGreen .PopitItem.Selected { border-color: #b59d81; }
 .PairLbp1FleshPinkLeafGreen .PopitTarget.Selected { border-color: #b59d81; }
 .PairLbp1FleshPinkLeafGreen .PopitDetail { color: #b9d94a; }
+.PairLbp1FleshPinkLeafGreen .WindowFrame { background-color: #4C4236; border-color: #678c67; }
+.PairLbp1FleshPinkLeafGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #678c67; }
+.PairLbp1FleshPinkLeafGreen .WindowFrame .WindowTitle { background-color: #3E543E; }
+.PairLbp1FleshPinkLeafGreen .WindowFrame .WindowTitleLabel { color: #ca9acc; }
+.PairLbp1FleshPinkLeafGreen .ThemedCell { border-color: #C8B6A059; }
 
 /* Green & Pale Blue — LittleBigPlanet */
 .PairLbp1GreenPaleBlue .PopitRoot { background-color: #2fc9c9E6; border-color: #8acb2e; }
@@ -168,6 +218,11 @@
 .PairLbp1GreenPaleBlue .PopitItem.Selected { border-color: #8acb2e; }
 .PairLbp1GreenPaleBlue .PopitTarget.Selected { border-color: #8acb2e; }
 .PairLbp1GreenPaleBlue .PopitDetail { color: #b9d94a; }
+.PairLbp1GreenPaleBlue .WindowFrame { background-color: #3A5513; border-color: #2fc9c9; }
+.PairLbp1GreenPaleBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #2fc9c9; }
+.PairLbp1GreenPaleBlue .WindowFrame .WindowTitle { background-color: #1C7979; }
+.PairLbp1GreenPaleBlue .WindowFrame .WindowTitleLabel { color: #c92f4c; }
+.PairLbp1GreenPaleBlue .ThemedCell { border-color: #A7D86259; }
 
 /* Aqua & Blue — LittleBigPlanet */
 .PairLbp1AquaBlue .PopitRoot { background-color: #655cbfE6; border-color: #2ecba8; }
@@ -183,6 +238,11 @@
 .PairLbp1AquaBlue .PopitItem.Selected { border-color: #2ecba8; }
 .PairLbp1AquaBlue .PopitTarget.Selected { border-color: #2ecba8; }
 .PairLbp1AquaBlue .PopitDetail { color: #b9d94a; }
+.PairLbp1AquaBlue .WindowFrame { background-color: #135547; border-color: #655cbf; }
+.PairLbp1AquaBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #655cbf; }
+.PairLbp1AquaBlue .WindowFrame .WindowTitle { background-color: #3D3773; }
+.PairLbp1AquaBlue .WindowFrame .WindowTitleLabel { color: #b3c92f; }
+.PairLbp1AquaBlue .ThemedCell { border-color: #62D8BE59; }
 
 /* Pale Blue & Purple — LittleBigPlanet */
 .PairLbp1PaleBluePurple .PopitRoot { background-color: #932fc9E6; border-color: #2ea8cb; }
@@ -198,6 +258,11 @@
 .PairLbp1PaleBluePurple .PopitItem.Selected { border-color: #2ea8cb; }
 .PairLbp1PaleBluePurple .PopitTarget.Selected { border-color: #2ea8cb; }
 .PairLbp1PaleBluePurple .PopitDetail { color: #b9d94a; }
+.PairLbp1PaleBluePurple .WindowFrame { background-color: #134755; border-color: #932fc9; }
+.PairLbp1PaleBluePurple .WindowFrame.CompactHud { background-color: transparent; border-color: #932fc9; }
+.PairLbp1PaleBluePurple .WindowFrame .WindowTitle { background-color: #581C79; }
+.PairLbp1PaleBluePurple .WindowFrame .WindowTitleLabel { color: #64c92f; }
+.PairLbp1PaleBluePurple .ThemedCell { border-color: #62BED859; }
 
 /* Cool Island — LittleBigPlanet 3 */
 .PairLbp3CoolIsland .PopitRoot { background-color: #2569ccE6; border-color: #92ba19; }
@@ -213,6 +278,11 @@
 .PairLbp3CoolIsland .PopitItem.Selected { border-color: #92ba19; }
 .PairLbp3CoolIsland .PopitTarget.Selected { border-color: #92ba19; }
 .PairLbp3CoolIsland .PopitDetail { color: #8800ff; }
+.PairLbp3CoolIsland .WindowFrame { background-color: #3D4E0A; border-color: #2569cc; }
+.PairLbp3CoolIsland .WindowFrame.CompactHud { background-color: transparent; border-color: #2569cc; }
+.PairLbp3CoolIsland .WindowFrame .WindowTitle { background-color: #163F7A; }
+.PairLbp3CoolIsland .WindowFrame .WindowTitleLabel { color: #1ddccd; }
+.PairLbp3CoolIsland .ThemedCell { border-color: #ADCB5259; }
 
 /* Ice Cream Sprinkles — LittleBigPlanet 3 */
 .PairLbp3IceCreamSprinkles .PopitRoot { background-color: #c331a0E6; border-color: #ceb424; }
@@ -228,6 +298,11 @@
 .PairLbp3IceCreamSprinkles .PopitItem.Selected { border-color: #ceb424; }
 .PairLbp3IceCreamSprinkles .PopitTarget.Selected { border-color: #ceb424; }
 .PairLbp3IceCreamSprinkles .PopitDetail { color: #8800ff; }
+.PairLbp3IceCreamSprinkles .WindowFrame { background-color: #574C0F; border-color: #c331a0; }
+.PairLbp3IceCreamSprinkles .WindowFrame.CompactHud { background-color: transparent; border-color: #c331a0; }
+.PairLbp3IceCreamSprinkles .WindowFrame .WindowTitle { background-color: #751D60; }
+.PairLbp3IceCreamSprinkles .WindowFrame .WindowTitleLabel { color: #3bcfc1; }
+.PairLbp3IceCreamSprinkles .ThemedCell { border-color: #DAC75B59; }
 
 /* Candy Jar — LittleBigPlanet 3 */
 .PairLbp3CandyJar .PopitRoot { background-color: #2f0514E6; border-color: #cc0a1d; }
@@ -243,6 +318,11 @@
 .PairLbp3CandyJar .PopitItem.Selected { border-color: #cc0a1d; }
 .PairLbp3CandyJar .PopitTarget.Selected { border-color: #cc0a1d; }
 .PairLbp3CandyJar .PopitDetail { color: #e6d71e; }
+.PairLbp3CandyJar .WindowFrame { background-color: #56040C; border-color: #2f0514; }
+.PairLbp3CandyJar .WindowFrame.CompactHud { background-color: transparent; border-color: #2f0514; }
+.PairLbp3CandyJar .WindowFrame .WindowTitle { background-color: #1C030C; }
+.PairLbp3CandyJar .WindowFrame .WindowTitleLabel { color: #fff600; }
+.PairLbp3CandyJar .ThemedCell { border-color: #D9475659; }
 
 /* Forest Surprise — LittleBigPlanet 3 */
 .PairLbp3ForestSurprise .PopitRoot { background-color: #000000E6; border-color: #c800cc; }
@@ -258,6 +338,11 @@
 .PairLbp3ForestSurprise .PopitItem.Selected { border-color: #c800cc; }
 .PairLbp3ForestSurprise .PopitTarget.Selected { border-color: #c800cc; }
 .PairLbp3ForestSurprise .PopitDetail { color: #e6d764; }
+.PairLbp3ForestSurprise .WindowFrame { background-color: #540056; border-color: #000000; }
+.PairLbp3ForestSurprise .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
+.PairLbp3ForestSurprise .WindowFrame .WindowTitle { background-color: #000000; }
+.PairLbp3ForestSurprise .WindowFrame .WindowTitleLabel { color: #ffc600; }
+.PairLbp3ForestSurprise .ThemedCell { border-color: #D640D959; }
 
 /* Sliced Bread — LittleBigPlanet 3 */
 .PairLbp3SlicedBread .PopitRoot { background-color: #aab95aE6; border-color: #f5d7d7; }
@@ -273,6 +358,11 @@
 .PairLbp3SlicedBread .PopitItem.Selected { border-color: #f5d7d7; }
 .PairLbp3SlicedBread .PopitTarget.Selected { border-color: #f5d7d7; }
 .PairLbp3SlicedBread .PopitDetail { color: #e60f64; }
+.PairLbp3SlicedBread .WindowFrame { background-color: #675A5A; border-color: #aab95a; }
+.PairLbp3SlicedBread .WindowFrame.CompactHud { background-color: transparent; border-color: #aab95a; }
+.PairLbp3SlicedBread .WindowFrame .WindowTitle { background-color: #666F36; }
+.PairLbp3SlicedBread .WindowFrame .WindowTitleLabel { color: #64c8e6; }
+.PairLbp3SlicedBread .ThemedCell { border-color: #F8E1E159; }
 
 /* Moonlight — LittleBigPlanet 3 */
 .PairLbp3Moonlight .PopitRoot { background-color: #a09687E6; border-color: #0b60ff; }
@@ -288,6 +378,11 @@
 .PairLbp3Moonlight .PopitItem.Selected { border-color: #0b60ff; }
 .PairLbp3Moonlight .PopitTarget.Selected { border-color: #0b60ff; }
 .PairLbp3Moonlight .PopitDetail { color: #e60f64; }
+.PairLbp3Moonlight .WindowFrame { background-color: #05286B; border-color: #a09687; }
+.PairLbp3Moonlight .WindowFrame.CompactHud { background-color: transparent; border-color: #a09687; }
+.PairLbp3Moonlight .WindowFrame .WindowTitle { background-color: #605A51; }
+.PairLbp3Moonlight .WindowFrame .WindowTitleLabel { color: #e1e1e6; }
+.PairLbp3Moonlight .ThemedCell { border-color: #4888FF59; }
 
 /* Meditation — LittleBigPlanet 3 */
 .PairLbp3Meditation .PopitRoot { background-color: #200202E6; border-color: #755f1c; }
@@ -303,6 +398,11 @@
 .PairLbp3Meditation .PopitItem.Selected { border-color: #755f1c; }
 .PairLbp3Meditation .PopitTarget.Selected { border-color: #755f1c; }
 .PairLbp3Meditation .PopitDetail { color: #e6d71e; }
+.PairLbp3Meditation .WindowFrame { background-color: #31280C; border-color: #200202; }
+.PairLbp3Meditation .WindowFrame.CompactHud { background-color: transparent; border-color: #200202; }
+.PairLbp3Meditation .WindowFrame .WindowTitle { background-color: #130101; }
+.PairLbp3Meditation .WindowFrame .WindowTitleLabel { color: #ffb400; }
+.PairLbp3Meditation .ThemedCell { border-color: #98875559; }
 
 /* Rack Attack — LittleBigPlanet 3 */
 .PairLbp3RackAttack .PopitRoot { background-color: #48b24fE6; border-color: #ff871d; }
@@ -318,6 +418,11 @@
 .PairLbp3RackAttack .PopitItem.Selected { border-color: #ff871d; }
 .PairLbp3RackAttack .PopitTarget.Selected { border-color: #ff871d; }
 .PairLbp3RackAttack .PopitDetail { color: #e60f64; }
+.PairLbp3RackAttack .WindowFrame { background-color: #6B390C; border-color: #48b24f; }
+.PairLbp3RackAttack .WindowFrame.CompactHud { background-color: transparent; border-color: #48b24f; }
+.PairLbp3RackAttack .WindowFrame .WindowTitle { background-color: #2B6B2F; }
+.PairLbp3RackAttack .WindowFrame .WindowTitleLabel { color: #fff000; }
+.PairLbp3RackAttack .ThemedCell { border-color: #FFA55659; }
 
 /* Tennis Elbow — LittleBigPlanet 3 */
 .PairLbp3TennisElbow .PopitRoot { background-color: #10cc75E6; border-color: #9142b2; }
@@ -333,6 +438,11 @@
 .PairLbp3TennisElbow .PopitItem.Selected { border-color: #9142b2; }
 .PairLbp3TennisElbow .PopitTarget.Selected { border-color: #9142b2; }
 .PairLbp3TennisElbow .PopitDetail { color: #e60f64; }
+.PairLbp3TennisElbow .WindowFrame { background-color: #3D1C4B; border-color: #10cc75; }
+.PairLbp3TennisElbow .WindowFrame.CompactHud { background-color: transparent; border-color: #10cc75; }
+.PairLbp3TennisElbow .WindowFrame .WindowTitle { background-color: #0A7A46; }
+.PairLbp3TennisElbow .WindowFrame .WindowTitleLabel { color: #ffea87; }
+.PairLbp3TennisElbow .ThemedCell { border-color: #AC71C559; }
 
 /* Volcanic Glacier — LittleBigPlanet 3 */
 .PairLbp3VolcanicGlacier .PopitRoot { background-color: #8291d7E6; border-color: #fa8228; }
@@ -348,6 +458,11 @@
 .PairLbp3VolcanicGlacier .PopitItem.Selected { border-color: #fa8228; }
 .PairLbp3VolcanicGlacier .PopitTarget.Selected { border-color: #fa8228; }
 .PairLbp3VolcanicGlacier .PopitDetail { color: #e60f64; }
+.PairLbp3VolcanicGlacier .WindowFrame { background-color: #693711; border-color: #8291d7; }
+.PairLbp3VolcanicGlacier .WindowFrame.CompactHud { background-color: transparent; border-color: #8291d7; }
+.PairLbp3VolcanicGlacier .WindowFrame .WindowTitle { background-color: #4E5781; }
+.PairLbp3VolcanicGlacier .WindowFrame .WindowTitleLabel { color: #c8cde6; }
+.PairLbp3VolcanicGlacier .ThemedCell { border-color: #FBA15E59; }
 
 /* Dylan's Jalopy — LittleBigPlanet 3 */
 .PairLbp3DylansJalopy .PopitRoot { background-color: #ccb300E6; border-color: #13f5ff; }
@@ -363,6 +478,11 @@
 .PairLbp3DylansJalopy .PopitItem.Selected { border-color: #13f5ff; }
 .PairLbp3DylansJalopy .PopitTarget.Selected { border-color: #13f5ff; }
 .PairLbp3DylansJalopy .PopitDetail { color: #e6d71e; }
+.PairLbp3DylansJalopy .WindowFrame { background-color: #08676B; border-color: #ccb300; }
+.PairLbp3DylansJalopy .WindowFrame.CompactHud { background-color: transparent; border-color: #ccb300; }
+.PairLbp3DylansJalopy .WindowFrame .WindowTitle { background-color: #7A6B00; }
+.PairLbp3DylansJalopy .WindowFrame .WindowTitleLabel { color: #ff1db1; }
+.PairLbp3DylansJalopy .ThemedCell { border-color: #4EF8FF59; }
 
 /* Funkian — LittleBigPlanet 3 */
 .PairLbp3Funkian .PopitRoot { background-color: #000000E6; border-color: #be3c96; }
@@ -378,6 +498,11 @@
 .PairLbp3Funkian .PopitItem.Selected { border-color: #be3c96; }
 .PairLbp3Funkian .PopitTarget.Selected { border-color: #be3c96; }
 .PairLbp3Funkian .PopitDetail { color: #e6d71e; }
+.PairLbp3Funkian .WindowFrame { background-color: #50193F; border-color: #000000; }
+.PairLbp3Funkian .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
+.PairLbp3Funkian .WindowFrame .WindowTitle { background-color: #000000; }
+.PairLbp3Funkian .WindowFrame .WindowTitleLabel { color: #683dbf; }
+.PairLbp3Funkian .ThemedCell { border-color: #CE6DB059; }
 
 /* Night Time Coral — LittleBigPlanet 3 */
 .PairLbp3NightTimeCoral .PopitRoot { background-color: #4379c9E6; border-color: #5fc4c9; }
@@ -393,6 +518,11 @@
 .PairLbp3NightTimeCoral .PopitItem.Selected { border-color: #5fc4c9; }
 .PairLbp3NightTimeCoral .PopitTarget.Selected { border-color: #5fc4c9; }
 .PairLbp3NightTimeCoral .PopitDetail { color: #8800ff; }
+.PairLbp3NightTimeCoral .WindowFrame { background-color: #285254; border-color: #4379c9; }
+.PairLbp3NightTimeCoral .WindowFrame.CompactHud { background-color: transparent; border-color: #4379c9; }
+.PairLbp3NightTimeCoral .WindowFrame .WindowTitle { background-color: #284979; }
+.PairLbp3NightTimeCoral .WindowFrame .WindowTitleLabel { color: #e63f52; }
+.PairLbp3NightTimeCoral .ThemedCell { border-color: #87D3D659; }
 
 /* Twit Twoo — LittleBigPlanet 3 */
 .PairLbp3TwitTwoo .PopitRoot { background-color: #000000E6; border-color: #424242; }
@@ -408,6 +538,11 @@
 .PairLbp3TwitTwoo .PopitItem.Selected { border-color: #424242; }
 .PairLbp3TwitTwoo .PopitTarget.Selected { border-color: #424242; }
 .PairLbp3TwitTwoo .PopitDetail { color: #e60f64; }
+.PairLbp3TwitTwoo .WindowFrame { background-color: #1C1C1C; border-color: #000000; }
+.PairLbp3TwitTwoo .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
+.PairLbp3TwitTwoo .WindowFrame .WindowTitle { background-color: #000000; }
+.PairLbp3TwitTwoo .WindowFrame .WindowTitleLabel { color: #0a0a0a; }
+.PairLbp3TwitTwoo .ThemedCell { border-color: #71717159; }
 
 /* Candy Floss — LittleBigPlanet 3 */
 .PairLbp3CandyFloss .PopitRoot { background-color: #d61880E6; border-color: #f190ac; }
@@ -423,6 +558,11 @@
 .PairLbp3CandyFloss .PopitItem.Selected { border-color: #f190ac; }
 .PairLbp3CandyFloss .PopitTarget.Selected { border-color: #f190ac; }
 .PairLbp3CandyFloss .PopitDetail { color: #e6d71e; }
+.PairLbp3CandyFloss .WindowFrame { background-color: #653C48; border-color: #d61880; }
+.PairLbp3CandyFloss .WindowFrame.CompactHud { background-color: transparent; border-color: #d61880; }
+.PairLbp3CandyFloss .WindowFrame .WindowTitle { background-color: #800E4D; }
+.PairLbp3CandyFloss .WindowFrame .WindowTitleLabel { color: #e244c4; }
+.PairLbp3CandyFloss .ThemedCell { border-color: #F4ACC159; }
 
 /* Berry Fish Cake — LittleBigPlanet 3 */
 .PairLbp3BerryFishCake .PopitRoot { background-color: #3b3b3cE6; border-color: #ef4d70; }
@@ -438,6 +578,11 @@
 .PairLbp3BerryFishCake .PopitItem.Selected { border-color: #ef4d70; }
 .PairLbp3BerryFishCake .PopitTarget.Selected { border-color: #ef4d70; }
 .PairLbp3BerryFishCake .PopitDetail { color: #e6d764; }
+.PairLbp3BerryFishCake .WindowFrame { background-color: #64202F; border-color: #3b3b3c; }
+.PairLbp3BerryFishCake .WindowFrame.CompactHud { background-color: transparent; border-color: #3b3b3c; }
+.PairLbp3BerryFishCake .WindowFrame .WindowTitle { background-color: #232324; }
+.PairLbp3BerryFishCake .WindowFrame .WindowTitleLabel { color: #231f20; }
+.PairLbp3BerryFishCake .ThemedCell { border-color: #F37A9459; }
 
 /* Crispy Leaf — LittleBigPlanet 3 */
 .PairLbp3CrispyLeaf .PopitRoot { background-color: #c5c5c5E6; border-color: #22b573; }
@@ -453,6 +598,11 @@
 .PairLbp3CrispyLeaf .PopitItem.Selected { border-color: #22b573; }
 .PairLbp3CrispyLeaf .PopitTarget.Selected { border-color: #22b573; }
 .PairLbp3CrispyLeaf .PopitDetail { color: #e60f64; }
+.PairLbp3CrispyLeaf .WindowFrame { background-color: #0E4C30; border-color: #c5c5c5; }
+.PairLbp3CrispyLeaf .WindowFrame.CompactHud { background-color: transparent; border-color: #c5c5c5; }
+.PairLbp3CrispyLeaf .WindowFrame .WindowTitle { background-color: #767676; }
+.PairLbp3CrispyLeaf .WindowFrame .WindowTitleLabel { color: #e6e6e6; }
+.PairLbp3CrispyLeaf .ThemedCell { border-color: #59C89659; }
 
 /* Brittle Thistle — LittleBigPlanet 3 */
 .PairLbp3BrittleThistle .PopitRoot { background-color: #bf1d4fE6; border-color: #00bbbb; }
@@ -468,6 +618,11 @@
 .PairLbp3BrittleThistle .PopitItem.Selected { border-color: #00bbbb; }
 .PairLbp3BrittleThistle .PopitTarget.Selected { border-color: #00bbbb; }
 .PairLbp3BrittleThistle .PopitDetail { color: #e6d764; }
+.PairLbp3BrittleThistle .WindowFrame { background-color: #004F4F; border-color: #bf1d4f; }
+.PairLbp3BrittleThistle .WindowFrame.CompactHud { background-color: transparent; border-color: #bf1d4f; }
+.PairLbp3BrittleThistle .WindowFrame .WindowTitle { background-color: #73112F; }
+.PairLbp3BrittleThistle .WindowFrame .WindowTitleLabel { color: #eb2c3b; }
+.PairLbp3BrittleThistle .ThemedCell { border-color: #40CCCC59; }
 
 /* Mint-Choc — LittleBigPlanet 3 */
 .PairLbp3MintChoc .PopitRoot { background-color: #3a2228E6; border-color: #aed180; }
@@ -483,6 +638,11 @@
 .PairLbp3MintChoc .PopitItem.Selected { border-color: #aed180; }
 .PairLbp3MintChoc .PopitTarget.Selected { border-color: #aed180; }
 .PairLbp3MintChoc .PopitDetail { color: #e6d71e; }
+.PairLbp3MintChoc .WindowFrame { background-color: #495836; border-color: #3a2228; }
+.PairLbp3MintChoc .WindowFrame.CompactHud { background-color: transparent; border-color: #3a2228; }
+.PairLbp3MintChoc .WindowFrame .WindowTitle { background-color: #231418; }
+.PairLbp3MintChoc .WindowFrame .WindowTitleLabel { color: #684050; }
+.PairLbp3MintChoc .ThemedCell { border-color: #C2DCA059; }
 
 /* Orchid Agent — LittleBigPlanet 3 */
 .PairLbp3OrchidAgent .PopitRoot { background-color: #341e5fE6; border-color: #ff4399; }
@@ -498,6 +658,11 @@
 .PairLbp3OrchidAgent .PopitItem.Selected { border-color: #ff4399; }
 .PairLbp3OrchidAgent .PopitTarget.Selected { border-color: #ff4399; }
 .PairLbp3OrchidAgent .PopitDetail { color: #e6d71e; }
+.PairLbp3OrchidAgent .WindowFrame { background-color: #6B1C40; border-color: #341e5f; }
+.PairLbp3OrchidAgent .WindowFrame.CompactHud { background-color: transparent; border-color: #341e5f; }
+.PairLbp3OrchidAgent .WindowFrame .WindowTitle { background-color: #1F1239; }
+.PairLbp3OrchidAgent .WindowFrame .WindowTitleLabel { color: #683dbf; }
+.PairLbp3OrchidAgent .ThemedCell { border-color: #FF72B259; }
 
 /* Bon's Bons — LittleBigPlanet 3 */
 .PairLbp3BonsBons .PopitRoot { background-color: #5fae4dE6; border-color: #ef8031; }
@@ -513,6 +678,11 @@
 .PairLbp3BonsBons .PopitItem.Selected { border-color: #ef8031; }
 .PairLbp3BonsBons .PopitTarget.Selected { border-color: #ef8031; }
 .PairLbp3BonsBons .PopitDetail { color: #e60f64; }
+.PairLbp3BonsBons .WindowFrame { background-color: #643615; border-color: #5fae4d; }
+.PairLbp3BonsBons .WindowFrame.CompactHud { background-color: transparent; border-color: #5fae4d; }
+.PairLbp3BonsBons .WindowFrame .WindowTitle { background-color: #39682E; }
+.PairLbp3BonsBons .WindowFrame .WindowTitleLabel { color: #abc638; }
+.PairLbp3BonsBons .ThemedCell { border-color: #F3A06459; }
 
 /* Distant Light — LittleBigPlanet 3 */
 .PairLbp3DistantLight .PopitRoot { background-color: #d31818E6; border-color: #00a99d; }
@@ -528,6 +698,11 @@
 .PairLbp3DistantLight .PopitItem.Selected { border-color: #00a99d; }
 .PairLbp3DistantLight .PopitTarget.Selected { border-color: #00a99d; }
 .PairLbp3DistantLight .PopitDetail { color: #e6d71e; }
+.PairLbp3DistantLight .WindowFrame { background-color: #004742; border-color: #d31818; }
+.PairLbp3DistantLight .WindowFrame.CompactHud { background-color: transparent; border-color: #d31818; }
+.PairLbp3DistantLight .WindowFrame .WindowTitle { background-color: #7F0E0E; }
+.PairLbp3DistantLight .WindowFrame .WindowTitleLabel { color: #2e3192; }
+.PairLbp3DistantLight .ThemedCell { border-color: #40BEB659; }
 
 /* Gingery Ninja — LittleBigPlanet 3 */
 .PairLbp3GingeryNinja .PopitRoot { background-color: #f15a23E6; border-color: #e2cc00; }
@@ -543,6 +718,11 @@
 .PairLbp3GingeryNinja .PopitItem.Selected { border-color: #e2cc00; }
 .PairLbp3GingeryNinja .PopitTarget.Selected { border-color: #e2cc00; }
 .PairLbp3GingeryNinja .PopitDetail { color: #e60f64; }
+.PairLbp3GingeryNinja .WindowFrame { background-color: #5F5600; border-color: #f15a23; }
+.PairLbp3GingeryNinja .WindowFrame.CompactHud { background-color: transparent; border-color: #f15a23; }
+.PairLbp3GingeryNinja .WindowFrame .WindowTitle { background-color: #913615; }
+.PairLbp3GingeryNinja .WindowFrame .WindowTitleLabel { color: #f76c41; }
+.PairLbp3GingeryNinja .ThemedCell { border-color: #E9D94059; }
 
 /* Precious Melody — LittleBigPlanet 3 */
 .PairLbp3PreciousMelody .PopitRoot { background-color: #009599E6; border-color: #91c1bb; }
@@ -558,3 +738,8 @@
 .PairLbp3PreciousMelody .PopitItem.Selected { border-color: #91c1bb; }
 .PairLbp3PreciousMelody .PopitTarget.Selected { border-color: #91c1bb; }
 .PairLbp3PreciousMelody .PopitDetail { color: #e6d71e; }
+.PairLbp3PreciousMelody .WindowFrame { background-color: #3D514F; border-color: #009599; }
+.PairLbp3PreciousMelody .WindowFrame.CompactHud { background-color: transparent; border-color: #009599; }
+.PairLbp3PreciousMelody .WindowFrame .WindowTitle { background-color: #00595C; }
+.PairLbp3PreciousMelody .WindowFrame .WindowTitleLabel { color: #00b2a1; }
+.PairLbp3PreciousMelody .ThemedCell { border-color: #ACD0CC59; }
