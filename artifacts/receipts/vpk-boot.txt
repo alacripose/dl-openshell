@@ -1,10 +1,10 @@
-VPK boot receipt - 2026-11-19
+VPK boot receipt - 2026-11-19 (rev 3: cell schemas + cloud rail)
 
 archive: dist/vpk-candidate/openlock-shell-candidate.vpk
-archive bytes: 1427929
-archive sha256: f100647fffc6ec5b4fb6971b84848a1f30645eff9e7c85167ca959aff95f512c
+archive bytes: 1422413
+archive sha256: 63187dec04a0a63495b7cb654d2df0d4816a20bb58ea30ec8e17adea65bc3834
 mounted at: game/citadel/addons/pak97_dir.vpk
-mounted sha256: f100647fffc6ec5b4fb6971b84848a1f30645eff9e7c85167ca959aff95f512c
+mounted sha256: 63187dec04a0a63495b7cb654d2df0d4816a20bb58ea30ec8e17adea65bc3834
 toolchain: <home>/Downloads/Reduced_CSDK_13 (resourcecompiler: 4 wav, 1 soundevents, 23 panorama = 28 compiled, 0 failed)
 client: D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe -windowed -noborder -condebug
 
@@ -34,3 +34,8 @@ What this does not prove:
   checks) and the DOM harness, not by a click in game;
 - that the Popit surface opens or renders in the client after the sort fix;
 - the per-corner crown vs the bibles' single Bezier contour (still an approximation).
+
+Rev 3 (cell schemas, cloud rail), client 18:01:
+  0 JS exceptions; `preload done: 6 module(s)`; `chrome frame: quickbuy controls=6 grips=4
+  compact=true`; `hud walk: 10 surface(s) of 279 panel(s)`.
+  Not inspected: the rail's cloud controls and the Deadlock-schema cells as drawn on screen.
