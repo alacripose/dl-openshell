@@ -76,6 +76,16 @@ bibles, `POPIT-RE-AUDIT-v5` and `OPENLOCK-CONFLUENT-DREAMS-INTERLINE-REV06`:
   in the module and `OpenlockSetPopitMotion()` in the shell are the real suppression path: the
   same state and order remain and only the transitions stop.
 
+**Cell frames (2026-11-19).** The window manager's frames around live game cells follow the same
+reading as the Popit. A uniform inset of at least 4 dp (spread at most 8 dp) is the cell's own
+padding, so the frame traces the panel's declared boundary instead of the tight box around its
+painted leaves; an uneven inset keeps the paint box. The outline is drawn 1 dp outside that
+boundary, and only for frames around game cells, so a player-placed window or a split cell keeps
+exactly the rect its profile saved. A cell the Popit has dressed carries `CellThemed` and its frame
+drops the outline rather than bordering the cell twice. `chrome-test.js` proves the three boundary
+cases (78 checks); no real HUD cell has been framed in the running client, and the contour is
+still the per-corner approximation.
+
 The old `.PopitFrame`, `.PopitTail`, `.PopitHexEdge`, `.PopitPlate`, `.PopitTile`, mode-pill,
 spine and tray selectors are gone from the module, the form and the theme generator. The form
 declares `.PopitRoot` and `.PopitChild` with a crowned per-corner approximation. Panorama cannot

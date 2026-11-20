@@ -629,4 +629,22 @@ check(Math.abs((parseFloat(splitCellFrame.style.width) || 0) - cellWidth) < 1 &&
     'moving a cell does not stretch it: ' + cellWidth + 'x' + cellHeight +
     ' -> ' + splitCellFrame.style.width + 'x' + splitCellFrame.style.height);
 
+// A Deadlock cell declares its boundary and draws its content inside its own inset. The frame
+// traces the declared cell instead of the tight box around its painted leaves; the outline is
+// drawn one pixel outside that boundary. The fake tree measures every fixture at 0,0, so the
+// boundary rule itself is called through the harness hook rather than through discovery.
+const declared = { x: 600, y: 300, w: 240, h: 160 };
+const padded = { x: 640, y: 340, w: 160, h: 80 };
+const framed = globalThis.OpenlockCellFrame(padded, declared);
+check(framed.x === 600 && framed.y === 300 && framed.w === 240 && framed.h === 160,
+    'a padded cell keeps its declared boundary: ' + JSON.stringify(framed));
+const tight = { x: 602, y: 302, w: 236, h: 156 };
+const tightFrame = globalThis.OpenlockCellFrame(tight, declared);
+check(tightFrame.x === 602 && tightFrame.w === 236,
+    'a cell whose paint fills its edge is framed on the paint, not the wrapper');
+const sliver = { x: 620, y: 340, w: 120, h: 60 };
+const sliverFrame = globalThis.OpenlockCellFrame(sliver, declared);
+check(sliverFrame.x === 620 && sliverFrame.h === 60,
+    'a small inset element inside a big wrapper does not claim the wrapper boundary');
+
 console.log('chrome-test OK ' + checks + ' checks');

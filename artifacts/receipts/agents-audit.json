@@ -1,8 +1,8 @@
 {
   "format": "openlock.agents-audit/1",
   "subject": {
-    "AGENTS.md": "c326dbe1cc2b4f0c79a22babcf46770b5d0be7ed8b7545af629249067541eb59",
-    "AGENTS-INDEX.md": "03a83144194deea04620169e31eae7198976320b4c0a42eec93868634fdadd89"
+    "AGENTS.md": "e323e810c76ecd8a2d1e778e9aac53f1103df07a5e01271cbd334987c14917ea",
+    "AGENTS-INDEX.md": "e06c335820fe91083b1d8e5ea91c77c3474cf132ea38b06053eb5f9e6de45708"
   },
   "checker": {
     "tools/agents_audit.py": "20e772ab9e45f75484bc9a73c41e7b312c5095eb2dfe4f89c4fe01a506367106"
@@ -71,6 +71,12 @@
     {
       "criterion": "A5",
       "subject": "line 94",
+      "ok": true,
+      "detail": "11 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 105",
       "ok": true,
       "detail": "74 lines, bounded"
     }
