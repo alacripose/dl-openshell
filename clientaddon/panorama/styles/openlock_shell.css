@@ -344,6 +344,13 @@
     background-color: transparent;
 }
 
+/* A cell the Popit has dressed owns its own edge. The frame keeps its title strip and grips and
+   drops the outline, so a themed cell is not bordered twice and the game's contour is not
+   painted over by shell chrome. */
+.WindowFrame.CompactHud.CellThemed {
+    border: 0px;
+}
+
 .WindowFrame.CompactHud .WindowTitle {
     height: 16px;
     padding-left: 14px;

@@ -91,6 +91,17 @@ superseded by a dated line beside it.
   If the session's skill catalog omits it, read it from that path.
 - Record the collision in `logs/authority/` in the active project instead of re-litigating it.
 
+## 2026-11-19 — a frame around a game cell traces the cell, not its paint
+
+**Owner instruction, verbatim:** *"I'm going to need to you process the openshell's window manager through the updated popit bibles so the window manager can be more intelligent and properly handle frames around deadlock's panormala xml cells"*
+
+- **Where the rules came from.** The bibles live at `C:/Users/ala/Documents/popit_base/references/`: `POPIT-RE-AUDIT-v5.pdf` and `OPENLOCK-CONFLUENT-DREAMS-INTERLINE-REV06.pdf`, with the REV06 markdown beside them. They ask for one crowned contour with continuous corner transitions, chrome that belongs outside the cell, and the Popit as the editing layer for a live HUD cell. The frame layer follows that reading here; the contour itself is still a per-corner Panorama approximation, named as such in `forms/popit.form`.
+- **A cell keeps its declared boundary.** `cellFrameRect` treats a uniform inset of at least 4 dp on all four sides (spread at most 8 dp) as the cell's own padding and frames the panel's declared rect, so the shell outline no longer cuts through the cell it frames. An uneven inset is real layout, and the paint box stays the frame.
+- **The outline sits outside the cell.** A frame around a game cell (discovered or auto-framed, not player-placed, not a split cell) is drawn `OUTLINE_DP` 1 dp beyond the measured edge, so the game's own border and crown are never painted over. A player-placed window and a split cell keep exactly the rect the profile saved.
+- **A dressed cell is not bordered twice.** When the Popit has already applied a treatment to the framed panel, the frame carries `CellThemed` and `.WindowFrame.CompactHud.CellThemed` drops the outline; the title strip and grips stay.
+- **Measured.** `chrome-test.js` is 78 checks (75 before): a padded cell keeps its declared boundary, an edge-filling cell is framed on the paint, and a small inset element does not claim the wrapper boundary. The boundary rule is reached through `globalThis.OpenlockCellFrame` because the fake tree measures every fixture at 0,0. `node tools/browser_probe.js` still holds 59 checks with 0 local browser errors; Popit 65, dashboard 59, parity 386/386, agents 11/11, `ui_prose --check` 0 hits, `dotnet build` 0 errors, and CSDK13 reports `OK: 2 compiled, 0 failed` for the changed script and sheet.
+- **Not checked.** No real Deadlock HUD cell was framed in the running client; the fake tree has no panel positions, so the outline arithmetic is covered by the existing frame checks rather than a new one. The single Bézier contour remains unimplemented.
+
 ## 2026-11-19 — the Popit follows the two design bibles
 
 **Owner instruction, verbatim:** *"can you update the openlock deadlock live shell to use the new

@@ -112,6 +112,7 @@
     var TITLE_DP = 30;
     var META_DP = 17;
     var CHROME_DP = TITLE_DP + META_DP;
+    var OUTLINE_DP = 1;        // the frame outline's width, drawn outside a cell's own edge
     var TASKBAR_DP = 40;       // the bar's top strip, including its margin
     var SHELL_TOP_DP = 46;     // first row a window's title may occupy
     var CELL_DP = 100;
@@ -1686,15 +1687,24 @@
         var contentH = placed.h;
         if (!g.userSet) {
             var content = b.content || { x: nat.x, y: nat.y, w: nat.w, h: nat.h };
+            content = cellFrameRect(content, nat);
             contentLeft = dispX + (content.x - nat.x) * scaleX;
             contentTop = dispY + (content.y - nat.y) * scaleY;
             contentW = content.w * scaleX;
             contentH = content.h * scaleY;
         }
-        var left = Math.max(0, contentLeft);
+        // The outline is the shell's chrome, not part of the game cell. It sits one pixel outside
+        // the measured edge so the game's own border and corner are never painted over; the
+        // title strip already begins above the content. This is the frame handling the bibles ask
+        // for: the cell keeps its declared contour, the shell draws around it.
+        // Only a frame around the game's own cell steps outside it. A window the player placed
+        // keeps exactly the rect the profile saved, and a split cell is the shell's own surface.
+        var outline = (win.discovered || win.autoFrame) && !g.userSet && !win.cellWindow
+            ? OUTLINE_DP : 0;
+        var left = Math.max(0, contentLeft - outline);
         var top = Math.max(0, contentTop);
-        var right = Math.min(screenW, contentLeft + contentW);
-        var bottom = Math.min(screenH, contentTop + contentH);
+        var right = Math.min(screenW, contentLeft + contentW + outline);
+        var bottom = Math.min(screenH, contentTop + contentH + outline);
         if (right - left < 24 || bottom - top < 20) {
             setFrameVisible(record, false);
             return false;
@@ -1702,6 +1712,9 @@
         setFrameVisible(record, expanded && !minimized[win.id]);
         var titleTop = Math.max(0, top - chrome);
         setFrameClass(record, "Narrow", (right - left) < 260);
+        // A cell the Popit has already dressed owns its edge. The frame keeps the title strip and
+        // the grips and stops drawing a second outline over the cell's own treatment.
+        setFrameClass(record, "CellThemed", isThemedPanel(b.panel));
         setRect(record, left, titleTop, right - left, bottom - titleTop);
         return true;
     }
@@ -2614,6 +2627,30 @@
             h: Math.max(8, Math.min(whole.y + whole.h, job.bottom) - Math.max(whole.y, job.top))
         };
     }
+
+    // A cell's boundary is the panel the game declared, not the tight box around its painted
+    // leaves. Deadlock cells carry their own uniform inset (padding, an edge, a crown), so an
+    // outline on the leaf union would cut through the cell it frames. A uniform inset of at least
+    // 4 dp on all four sides is the cell's own padding: frame the declared boundary and let that
+    // inset read as part of the surface. An uneven inset is real layout, so the content box stays.
+    function cellFrameRect(content, natural) {
+        if (!content || !natural) return content || natural;
+        if (natural.w <= 0 || natural.h <= 0) return content;
+        var padLeft = content.x - natural.x;
+        var padTop = content.y - natural.y;
+        var padRight = (natural.x + natural.w) - (content.x + content.w);
+        var padBottom = (natural.y + natural.h) - (content.y + content.h);
+        var least = Math.min(padLeft, padTop, padRight, padBottom);
+        var most = Math.max(padLeft, padTop, padRight, padBottom);
+        if (least < 4 || most - least > 8) return content;
+        return { x: natural.x, y: natural.y, w: natural.w, h: natural.h };
+    }
+
+    // The harness calls this directly: a cell boundary rule is geometry, not a panel side effect,
+    // and the fake tree cannot place a padded cell (every fixture measures at 0,0).
+    globalThis.OpenlockCellFrame = function (content, natural) {
+        return cellFrameRect(content, natural);
+    };
 
     function contentPump() {
         if (contentPumping) return;
