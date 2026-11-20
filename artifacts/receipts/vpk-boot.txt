@@ -1,10 +1,10 @@
-VPK boot receipt - 2026-11-19 (rev 3: cell schemas + cloud rail)
+VPK boot receipt - 2026-11-19 (rev 4: cloud rail, retired taskbar, role-correct pairs)
 
 archive: dist/vpk-candidate/openlock-shell-candidate.vpk
-archive bytes: 1422413
-archive sha256: 63187dec04a0a63495b7cb654d2df0d4816a20bb58ea30ec8e17adea65bc3834
+archive bytes: 1426648
+archive sha256: e9631ec5d486158650969fc8f18903f70a4fa78ed7801164411e723ac1298871
 mounted at: game/citadel/addons/pak97_dir.vpk
-mounted sha256: 63187dec04a0a63495b7cb654d2df0d4816a20bb58ea30ec8e17adea65bc3834
+mounted sha256: e9631ec5d486158650969fc8f18903f70a4fa78ed7801164411e723ac1298871
 toolchain: <home>/Downloads/Reduced_CSDK_13 (resourcecompiler: 4 wav, 1 soundevents, 23 panorama = 28 compiled, 0 failed)
 client: D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe -windowed -noborder -condebug
 
@@ -39,3 +39,14 @@ Rev 3 (cell schemas, cloud rail), client 18:01:
   0 JS exceptions; `preload done: 6 module(s)`; `chrome frame: quickbuy controls=6 grips=4
   compact=true`; `hud walk: 10 surface(s) of 279 panel(s)`.
   Not inspected: the rail's cloud controls and the Deadlock-schema cells as drawn on screen.
+
+Rev 4 (cloud rail, retired taskbar, role-correct pairs), client 18:14-18:19:
+  Screenshots artifacts/screenshots/deadlock-clean-1.jpg and rail-popit-1.png show the
+  retired taskbar (no Dashboard/Windows cluster), no boundary drawn on live Deadlock panels
+  (INCOMING DAMAGE, ability bar and item value show the game's own edges only) and the lower
+  right cloud band with its page, cell, Section and Popit controls.
+  Not verified: the Popit's colour after the pair role fix. The captured Popit is magenta
+  because it was taken before openlock_pairs.css was recompiled; the rebuilt archive carries
+  the corrected sheet (primary slab) but no screenshot of it was captured.
+  Not verified: a rail control clicked in game (the synthetic click did not reach the client;
+  console.log shows no `popit page` line and 0 exceptions).

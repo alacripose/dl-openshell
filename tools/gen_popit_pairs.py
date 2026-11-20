@@ -126,21 +126,24 @@ def css(data: dict) -> str:
         emphasis = pair["emphasis"]
         ink = contrast_ink(primary)
         lines.append(f"/* {pair['name']} — {pair['game']} */")
-        # LBP3's role map, from the design bible: secondary is the menu background, primary is
-        # the highlight/tooltip/ownership accent, tertiary is the menu accent and emphasis is
-        # emphasised text. Painting the slab from primary would invert the shipped roles.
-        lines.append(f".{klass} .PopitRoot {{ background-color: {secondary}E6; border-color: {primary}; }}")
-        lines.append(f".{klass} .PopitChild {{ background-color: {secondary}E6; border-color: {primary}; }}")
-        lines.append(f".{klass} .PopitHeaderTitle {{ color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitWordmark {{ color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitPairChip {{ background-color: {primary}33; border-color: {primary}; }}")
+        # The pair table carries its own role map and the prototype agrees: primary is the menu
+        # background / slab fill, secondary is the menu accent and highlight, tertiary is the
+        # second highlight, emphasis is the emphasised text. That is LBP1's shipped order. LBP3
+        # inverts it, and applying LBP3's map to these pairs painted a blue Popit magenta - the
+        # role table travels with the data so a pair is never read through another generation's
+        # map. (POPIT-AUDIT: "A port must not assume primary always means panel background.")
+        lines.append(f".{klass} .PopitRoot {{ background-color: {primary}E6; border-color: {secondary}; }}")
+        lines.append(f".{klass} .PopitChild {{ background-color: {primary}E6; border-color: {secondary}; }}")
+        lines.append(f".{klass} .PopitHeaderTitle {{ color: {emphasis}; }}")
+        lines.append(f".{klass} .PopitWordmark {{ color: {emphasis}; }}")
+        lines.append(f".{klass} .PopitPairChip {{ background-color: {secondary}33; border-color: {secondary}; }}")
         lines.append(f".{klass} .PopitPairChipLabel {{ color: {ink}; }}")
-        lines.append(f".{klass} .PopitRootRow.Active {{ background-color: {primary}33; border-color: {primary}; }}")
-        lines.append(f".{klass} .PopitTool.Active {{ background-color: {primary}; border-color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitOption.Selected {{ background-color: {primary}; border-color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitPageDot.On {{ background-color: {primary}; }}")
-        lines.append(f".{klass} .PopitItem.Selected {{ border-color: {primary}; }}")
-        lines.append(f".{klass} .PopitTarget.Selected {{ border-color: {primary}; }}")
+        lines.append(f".{klass} .PopitRootRow.Active {{ background-color: {secondary}33; border-color: {secondary}; }}")
+        lines.append(f".{klass} .PopitTool.Active {{ background-color: {secondary}; border-color: {tertiary}; }}")
+        lines.append(f".{klass} .PopitOption.Selected {{ background-color: {secondary}; border-color: {tertiary}; }}")
+        lines.append(f".{klass} .PopitPageDot.On {{ background-color: {secondary}; }}")
+        lines.append(f".{klass} .PopitItem.Selected {{ border-color: {secondary}; }}")
+        lines.append(f".{klass} .PopitTarget.Selected {{ border-color: {secondary}; }}")
         lines.append(f".{klass} .PopitDetail {{ color: {emphasis}; }}")
         # The live shell uses the same slot map the Popit Forge prototype writes into a live
         # theme (`popit_ui/theme.py: pair_slots`): the primary shades the surface, the secondary

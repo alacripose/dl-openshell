@@ -347,8 +347,14 @@
 /* Two cell schemas. A Deadlock cell keeps the game's own layout: the shell draws the boundary
    and nothing else, so no title strip, cost readout or grips sit over the client's HUD. A shell
    cell is the Brass Meridian themable surface and keeps the Popit frame. */
-.WindowFrame.DeadlockCell {
+/* Three selectors so a generated scheme or pair rule (`.SchemeX .WindowFrame`, `.PairX
+   .WindowFrame`) cannot paint a boundary back onto a Deadlock cell: the game's panel keeps its
+   own edge and the shell draws nothing there. */
+.ShellRoot .WindowFrame.DeadlockCell,
+.ShellRoot .WindowFrame.DeadlockCell.Focused,
+.ShellRoot .WindowFrame.DeadlockCell.Pinned {
     border: 0px;
+    border-top: 0px;
     background-color: transparent;
 }
 
@@ -356,6 +362,72 @@
 .WindowFrame.DeadlockCell .WindowCost,
 .WindowFrame.DeadlockCell .ResizeGrip {
     visibility: collapse;
+}
+
+/* The rail is the cloud surface layer: the Popit's controls, not a catalog of shell windows. */
+.CloudBar {
+    ignore-parent-flow: true;
+    horizontal-align: right;
+    vertical-align: bottom;
+    margin-bottom: 44px;
+    margin-right: 14px;
+    padding: 5px 14px 6px 14px;
+    flow-children: right;
+    border-radius: 30px;
+    border: 1px solid #8fa07a;
+    background-color: #0a1014e8;
+    z-index: 620;
+}
+
+.CloudBar .CloudControl {
+    height: 26px;
+    min-width: 34px;
+    margin-right: 3px;
+    margin-top: 0px;
+    border-radius: 13px;
+    border: 1px solid #8fa07a88;
+    background-color: #131c22;
+}
+
+.CloudBar .CloudControl Label {
+    color: #d9e7c8;
+    font-size: 12px;
+}
+
+.CloudBar .CloudControl:hover {
+    border-color: #d9e7c8;
+    background-color: #1b262e;
+}
+
+/* The taskbar is retired. Its strip stays in the layout so the preloader and the older package
+   schema keep a parent, but it no longer draws: the lower cloud band is the shell's only rail. */
+.Taskbar {
+    visibility: collapse;
+}
+
+/* The window manager is retired. A frame is an anchored page, so its title strip, cost readout
+   and resize grips no longer draw; the boundary and the page surface are what remain. The audit
+   is explicit that minimize/maximize, tiling and geometry memory are not evidence-backed Popit
+   behavior, so they are not drawn over the game either. */
+.WindowFrame .WindowTitle,
+.WindowFrame .WindowCost,
+.WindowFrame .ResizeGrip {
+    visibility: collapse;
+}
+
+/* LBP3 page grammar: a tall translucent page with a highlight edge, not a desktop window chrome
+   stack. The roles are the LBP3 ones from the audit - secondary background, primary highlight,
+   tertiary accent, emphasis text - and this is the anchor page; a pair or scheme rule still wins
+   because it is generated later in the cascade. */
+.WindowFrame {
+    border: 1px solid #3d5a63;
+    border-top: 2px solid #8fc4cf;
+    border-radius: 2px;
+    background-color: #0d1519f2;
+}
+
+.WindowFrame.Focused {
+    border-top: 2px solid #d9e7c8;
 }
 
 /* The rail is the cloud surface layer: the Popit's controls, not a catalog of shell windows. */
