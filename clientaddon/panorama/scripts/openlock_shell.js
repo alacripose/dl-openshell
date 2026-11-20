@@ -1213,6 +1213,19 @@
         $.Schedule(delay, easeIn);
     }
 
+    // The rail is the cloud surface layer: it carries the Popit's own controls, not a catalog of
+    // shell windows. Each control opens the Popit on its section for the focused target; a game
+    // cell still in the Deadlock schema can be dressed from here, which is what promotes it to a
+    // shell cell. Windows that the player has explicitly promoted are the only other entries.
+    var CLOUD_CONTROLS = [
+        { id: "cursor", label: "Cursor" },
+        { id: "palette", label: "Palette" },
+        { id: "goodies", label: "Goodies" },
+        { id: "stickers", label: "Stickers" },
+        { id: "tools", label: "Tools" },
+        { id: "color", label: "Color" }
+    ];
+
     function renderBar() {
         if (!strip) return;
         if (preloadActive) return;
@@ -1220,25 +1233,16 @@
         var listed = {};
         var entranceIndex = 0;
 
-        var tabs = data.tabs || [];
-        for (var i = 0; i < tabs.length; i++) { addTab(tabs[i], null, null, entranceIndex++); listed[tabs[i]] = true; }
-
-        if (data.bar) { addTab(data.bar, null, null, entranceIndex++); listed[data.bar] = true; }
-
-        var filed = data.filed || [];
-        for (var f = 0; f < filed.length; f++) {
-            if (filed[f].tab !== activeTab) continue;
-            var fw = windowById(filed[f].window);
-            addTab(filed[f].window, "› " + ((fw && fw.title) || filed[f].window), null, entranceIndex++);
-            listed[filed[f].window] = true;
-        }
-
-        var pins = data.pins || [];
-        for (var p = 0; p < pins.length; p++) {
-            if (pins[p] === activeTab) continue;
-            var pw = windowById(pins[p]);
-            addTab(pins[p], (pinned[pins[p]] ? "• " : "") + ((pw && pw.title) || pins[p]), null, entranceIndex++);
-            listed[pins[p]] = true;
+        for (var c = 0; c < CLOUD_CONTROLS.length; c++) {
+            (function (control) {
+                var button = addControl(strip, "CloudControl", control.label, function () {
+                    showPopitSurface(focused ? popitTargetById(focused) : null, control.id);
+                    cue("select");
+                });
+                button.AddClass("Cloud_" + control.id);
+                bindDwell(button, "Popit " + control.label,
+                    "Cloud control. Opens the Popit on " + control.label + " for the focused cell.", focused || "");
+            })(CLOUD_CONTROLS[c]);
         }
 
         // A split container has cells instead of a frame. Its tab stays the way back to the
@@ -1554,6 +1558,20 @@
     // A game panel is not reparented. `natural` is its own rect before the shell touches it; the
     // transform's centre-based scale correction keeps the frame's top-left on the declared point
     // without depending on the panel's transform-origin.
+    // A game cell is dressed only when the Popit has actually written a treatment to it (or the
+    // profile restored one). Until then it stays in the Deadlock schema: no shell title strip, no
+    // shell fill, no controls over the game's own HUD.
+    function cellSchema(win) {
+        if (!win) return "shell";
+        if (!(win.discovered || win.autoFrame)) return "shell";
+        var state = popitCellStyles[win.id];
+        if (state && globalThis.OpenlockPopit && globalThis.OpenlockPopit.hasEdit &&
+            globalThis.OpenlockPopit.hasEdit(state)) return "shell";
+        var b = bound[win.id];
+        if (b && b.panel && isThemedPanel(b.panel)) return "shell";
+        return "deadlock";
+    }
+
     function applyPanelRect(win, record, g) {
         var b = bound[win.id];
         if (!b) {
@@ -1640,8 +1658,19 @@
         // The layout pass owns the space, including the bar and this window's chrome. The panel
         // and its frame are shifted by the returned delta; the panel's own layout is untouched,
         // so the game keeps its rect and only the composited transform moves.
-        var chrome = (win.autoFrame || win.discovered) ? 16 : CHROME_DP;
+        // Two cell schemas. A Deadlock cell is the game's own layout: the shell draws the
+        // boundary and nothing else, so the client looks like itself. A shell cell is the Brass
+        // Meridian themable surface and takes the Popit frame, pair slot map and crown.
+        var liveCell = win.discovered || win.autoFrame;
+        var schema = liveCell ? cellSchema(win) : "shell";
+        // The reserved strip stays 16 dp for both schemas: the layout pass and the pinned-panel
+        // contract are built on it. The Deadlock schema hides the title, controls and fill, so the
+        // strip is empty space the game's own HUD reads through, not shell chrome.
+        var chrome = liveCell ? 16 : CHROME_DP;
+        setFrameClass(record, "DeadlockCell", schema === "deadlock");
+        setFrameClass(record, "CellShell", !!liveCell && schema === "shell");
         record.chrome = chrome;
+        record.schema = schema;
         // A window the player has placed is in shell space already: its gesture anchor was the
         // placed content rect, not the game's unshifted rect. Asking `place` for it a second time
         // added the bar height again on every apply. `placeShell` arbitrates the same rectangle
@@ -4243,6 +4272,7 @@
     }
 
     globalThis.OpenlockPair = applyShellPair;
+    globalThis.OpenlockCellSchema = cellSchema;
 
     // The bible's reduced-motion rule is a real suppression path, not a decorative switch. The
     // host calls this; the Popit keeps its state and order and only stops transitioning.

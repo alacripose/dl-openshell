@@ -663,4 +663,18 @@ check(globalThis.OpenlockPair('lbp3-cool-island') === 'PairLbp3CoolIsland' &&
 check(globalThis.OpenlockPair('') === '' && !root.HasClass('PairLbp3CoolIsland'),
     'Classic removes the pair class and the scheme returns');
 
+// Two cell schemas. A game cell the player has not dressed stays in the Deadlock layout; the shell
+// draws its boundary and no title, controls or fill. Dressing it with the Popit promotes it to a
+// Brass Meridian shell cell. The rail itself carries the Popit controls.
+const sheet = read('clientaddon/panorama/styles/openlock_shell.css');
+const schema = globalThis.OpenlockCellSchema;
+check(typeof schema === 'function' && schema({ id: 'undressed', discovered: true }) === 'deadlock',
+    'an undressed game cell stays in the Deadlock schema');
+check(typeof schema === 'function' && schema({ id: 'owned', title: 'Owned' }) === 'shell',
+    'a shell window is a shell cell');
+check(/\.WindowFrame\.DeadlockCell\s*\{[^}]*border:\s*0px/.test(sheet) &&
+    /\.WindowFrame\.DeadlockCell \.WindowTitle/.test(sheet),
+    'the Deadlock schema draws no frame chrome over the game HUD');
+check(/\.CloudControl\s*\{/.test(sheet), 'the rail styles the cloud controls');
+
 console.log('chrome-test OK ' + checks + ' checks');
