@@ -146,6 +146,7 @@ globalThis.Game = {};
 function load(rel) { vm.runInThisContext(read(rel), { filename: rel }); }
 load('clientaddon/panorama/scripts/openlock_shell_data.js');
 load('clientaddon/panorama/scripts/openlock_audio.js');
+load('clientaddon/panorama/scripts/openlock_pairs.js');
 load('clientaddon/panorama/scripts/openlock_popit.js');
 load('clientaddon/panorama/scripts/openlock_layout.js');
 load('clientaddon/panorama/scripts/openlock_split.js');
@@ -646,5 +647,20 @@ const sliver = { x: 620, y: 340, w: 120, h: 60 };
 const sliverFrame = globalThis.OpenlockCellFrame(sliver, declared);
 check(sliverFrame.x === 620 && sliverFrame.h === 60,
     'a small inset element inside a big wrapper does not claim the wrapper boundary');
+
+// A pair is a live surface choice, not a Popit-only skin: the generated slot map is scoped by a
+// class on the shell root, so it reaches the window manager's frames and dressed cells. A slug
+// the generated table does not carry is refused rather than added, and Classic removes it.
+check(globalThis.OpenlockPair('lbp1-yellow-fuchsia') === 'PairLbp1YellowFuchsia',
+    'the chosen pair resolves to the generated class');
+check(root.HasClass('PairLbp1YellowFuchsia'), 'the shell root carries the chosen pair');
+check(globalThis.OpenlockPair('not-a-pair') === 'PairLbp1YellowFuchsia' &&
+    root.HasClass('PairLbp1YellowFuchsia'),
+    'an unknown pair slug cannot put an unstyled class on the root');
+check(globalThis.OpenlockPair('lbp3-cool-island') === 'PairLbp3CoolIsland' &&
+    root.HasClass('PairLbp3CoolIsland') && !root.HasClass('PairLbp1YellowFuchsia'),
+    'switching pairs replaces exactly one class on the root');
+check(globalThis.OpenlockPair('') === '' && !root.HasClass('PairLbp3CoolIsland'),
+    'Classic removes the pair class and the scheme returns');
 
 console.log('chrome-test OK ' + checks + ' checks');

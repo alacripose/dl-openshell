@@ -4055,6 +4055,14 @@
 
     // Cursor targets are what the game is actually drawing: split cells first, then live panel
     // windows. A window that is only a shell frame is not a Popit target.
+    // One ordering helper for every list of live titles. `localeCompare` is not safe in the
+    // client's V8: an ICU failure throws out of a sort and takes the caller with it.
+    function compareTitles(a, b) {
+        var left = String(a === undefined || a === null ? "" : a).toLowerCase();
+        var right = String(b === undefined || b === null ? "" : b).toLowerCase();
+        return left < right ? -1 : (left > right ? 1 : 0);
+    }
+
     function popitTargets() {
         var out = [];
         for (var id in open) {
@@ -4068,7 +4076,10 @@
         }
         out.sort(function (a, b) {
             if (a.kind !== b.kind) return a.kind === "cell" ? -1 : 1;
-            return String(a.title).localeCompare(String(b.title));
+            // Panorama's V8 throws `RangeError: Internal error. Icu error.` for localeCompare on
+            // some live HUD titles, which aborted the whole Popit open. A code-unit comparison
+            // cannot throw; the list is short enough that collation does not matter.
+            return compareTitles(a.title, b.title);
         });
         return out;
     }
@@ -4118,6 +4129,7 @@
             onPair: function (pair) {
                 popitPair = pair.id;
                 popitLayout.pair = pair.id;
+                applyShellPair(pair.id);
                 popitClassic = false;
                 cue("place");
                 logPerf("info", "popit pair " + pair.id);
@@ -4190,6 +4202,47 @@
     function closePopit() {
         if (globalThis.OpenlockPopit) globalThis.OpenlockPopit.close();
     }
+
+    // The Popit Forge prototype applies a pair to the live theme, so a pair is a live surface
+    // choice, not a Popit-only skin. `openlock_pairs.css` carries the prototype's slot map
+    // (`Pair* .WindowFrame`, `.WindowTitle`, `.ThemedCell`); this puts the class on the shell root
+    // so it reaches the window manager's frames and every dressed HUD cell. Classic removes it
+    // and the scheme's own roles return. The slug is checked against the generated table first, so
+    // a profile cannot name a class that the stylesheet does not carry.
+    var shellPairClass = "";
+
+    function pairClassName(id) {
+        return "Pair" + String(id || "").replace(/(^|[-_])([a-z])/g, function (_, lead, letter) {
+            return letter.toUpperCase();
+        });
+    }
+
+    function applyShellPair(id) {
+        var next = "";
+        if (id) {
+            var known = false;
+            var table = globalThis.OpenlockPopitPairs;
+            if (table && table.pairs instanceof Array) {
+                for (var i = 0; i < table.pairs.length; i++) {
+                    if (table.pairs[i].id === id) { known = true; break; }
+                }
+            }
+            // An unreadable slug is refused by name; the current pair is not dropped for it.
+            if (!known) return shellPairClass;
+            next = pairClassName(id);
+        }
+        if (shellPairClass === next) return next;
+        if (shellPairClass) {
+            try { root.RemoveClass(shellPairClass); } catch (e) {}
+        }
+        shellPairClass = next;
+        if (next) {
+            try { root.AddClass(next); } catch (e) { refuseFeature("Pair refused", String(e)); }
+        }
+        return next;
+    }
+
+    globalThis.OpenlockPair = applyShellPair;
 
     // The bible's reduced-motion rule is a real suppression path, not a decorative switch. The
     // host calls this; the Popit keeps its state and order and only stops transitioning.
@@ -6916,7 +6969,7 @@
             var win = windowById(id);
             out.push({ id: id, title: win ? (win.title || id) : id, style: popitCellStyles[id] });
         }
-        out.sort(function (a, b) { return String(a.title).localeCompare(String(b.title)); });
+        out.sort(function (a, b) { return compareTitles(a.title, b.title); });
         return out;
     }
 
@@ -8001,6 +8054,7 @@
             // A saved desktop returns with its Popit colours; the surface validates the id
             // against the generated pair table before applying it.
             popitPair = popitLayout.pair || "";
+            applyShellPair(popitPair);
         }
         if (profile.tab && windowById(profile.tab)) activeTab = profile.tab;
         if (profile.active && splitCells[profile.active] && splitCells[profile.active].length) {
