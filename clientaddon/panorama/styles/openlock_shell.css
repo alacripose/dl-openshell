@@ -344,6 +344,42 @@
     background-color: transparent;
 }
 
+/* Two cell schemas. A Deadlock cell keeps the game's own layout: the shell draws the boundary
+   and nothing else, so no title strip, cost readout or grips sit over the client's HUD. A shell
+   cell is the Brass Meridian themable surface and keeps the Popit frame. */
+.WindowFrame.DeadlockCell {
+    border: 0px;
+    background-color: transparent;
+}
+
+.WindowFrame.DeadlockCell .WindowTitle,
+.WindowFrame.DeadlockCell .WindowCost,
+.WindowFrame.DeadlockCell .ResizeGrip {
+    visibility: collapse;
+}
+
+/* The rail is the cloud surface layer: the Popit's controls, not a catalog of shell windows. */
+.CloudControl {
+    height: 22px;
+    min-width: 54px;
+    margin-right: 4px;
+    margin-top: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border: 1px solid #b9d94a88;
+    background-color: #0b1016cc;
+}
+
+.CloudControl Label {
+    color: #d2ec6d;
+    font-size: 11px;
+}
+
+.CloudControl:hover {
+    border-color: #d2ec6d;
+    background-color: #141c24ee;
+}
+
 /* A cell the Popit has dressed owns its own edge. The frame keeps its title strip and grips and
    drops the outline, so a themed cell is not bordered twice and the game's contour is not
    painted over by shell chrome. */
