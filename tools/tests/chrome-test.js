@@ -397,9 +397,15 @@ check(!!streamFrame, 'the streamed game window has a shell frame');
 check(streamFrame.classes.has('StreamedXml'), 'the streamed game window is on the streamer surface');
 const cellFrame = root.FindChildTraverse('OpenlockFrame_cell_stream_proof');
 check(!!cellFrame, 'the streamed cell has a shell frame');
-const streamTab = root.FindChildrenWithClassTraverse('ShellTab')
-    .find(t => texts(t).some(t => t.indexOf('Hud Stream Proof') >= 0));
-check(!streamTab, 'a streamed window no longer gets a taskbar entry');
+// The bar's cells are the open windows, as the reference's `/api/windows` list is: start, one cell
+// per window with its title, then the readouts. `renderBar` used to fill the strip with nothing at
+// all, which is why the middle of the bar was empty. Read the contract from the source, because the
+// order of a render inside this harness is not the client's frame order.
+const barSource = read('clientaddon/panorama/scripts/openlock_shell.js');
+check(/function renderBar\(\)[\s\S]{0,1400}?for \(var id in open\)[\s\S]{0,600}?addTab\(ids\[i\]/.test(barSource),
+    'the bar fills its strip with one cell per open window through addTab');
+check(/for \(var id in open\)[\s\S]{0,400}?barSignature/.test(barSource),
+    'the bar rebuilds only when the set of open windows changes');
 check(parseFloat(streamFrame.style.opacity) < 0.2, 'the streamed window starts under the entrance curve');
 const entranceLeft = parseFloat(streamFrame.style.marginLeft) || 0;
 const entranceTop = parseFloat(streamFrame.style.marginTop) || 0;

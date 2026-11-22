@@ -155,11 +155,59 @@
     $.Schedule(24, barChainReport);
     $.Schedule(32, barChainReport);
 
+    // The reference's own numbers, read off the drawn bar: cells inset 3 by 16, 5.76 between,
+    // Start 92.8, clock 108.8, no cell wider than 224. A bar that matches in the stylesheet and not
+    // on screen is not matched, so these are reported from the panels themselves.
+    function barMetrics() {
+        try {
+            var bar = root.FindChildTraverse("Taskbar");
+            if (!bar) { $.Msg("[Openlock] bar metrics: no Taskbar"); return; }
+            var start = root.FindChildTraverse("DashboardButton");
+            var strip = root.FindChildTraverse("TabStrip");
+            var tabs = strip && strip.GetChildCount ? kidsOf(strip) : [];
+            var first = tabs && tabs.length ? tabs[0] : null;
+            var win = root.FindChildTraverse("WindowsButton");
+            var clock = root.FindChildTraverse("Clock");
+            var w = function (panel) { return panel ? Math.round(num(panel.actuallayoutwidth)) : -1; };
+            var x = function (panel) { return panel ? Math.round(num(panel.actualxpos)) : -1; };
+            // `actualxpos` reads 0 for flow children, so the gap is measured in window pixels: the
+            // reference's 5.76 is the distance from the Start cell's right edge to the first cell.
+            var posOf = function (panel) {
+                try {
+                    var pos = panel.GetPositionWithinWindow();
+                    var px = pos && (pos[0] !== undefined ? pos[0] : pos.x);
+                    var py = pos && (pos[1] !== undefined ? pos[1] : pos.y);
+                    return [Math.round(num(px)), Math.round(num(py))];
+                } catch (e) { return [-1, -1]; }
+            };
+            var startPos = start ? posOf(start) : [-1, -1];
+            var firstPos = first ? posOf(first) : [-1, -1];
+            var gap = (startPos[0] >= 0 && firstPos[0] >= 0)
+                ? (firstPos[0] - (startPos[0] + w(start))) : -1;
+            $.Msg("[Openlock] bar metrics: bar=" + w(bar) + "x" + Math.round(num(bar.actuallayoutheight))
+                + " start=" + w(start) + " tab0=" + w(first) + " gap=" + gap
+                + " windows=" + w(win) + " clock=" + w(clock) + " tabs=" + (tabs ? tabs.length : 0)
+                + " startx=" + startPos[0] + " tab0x=" + firstPos[0] + " barh=" + Math.round(num(bar.actualypos)));
+        } catch (e) {
+            $.Msg("[Openlock] bar metrics threw " + String(e));
+        }
+    }
+    $.Schedule(26, barMetrics);
+    // Walk the bar the way a player does: open the windows cell, re-measure, toggle the shell closed
+    // and open, re-measure. These are the shell's own entry points, so the code path is the same one
+    // a click takes.
+    $.Schedule(30, function () { try { OpenlockWindows(); } catch (e) { $.Msg("[Openlock] walk: windows threw " + String(e)); } });
+    $.Schedule(34, barMetrics);
+    $.Schedule(38, function () { try { OpenlockToggle(); } catch (e) { $.Msg("[Openlock] walk: toggle threw " + String(e)); } });
+    $.Schedule(42, barMetrics);
+    $.Schedule(46, function () { try { OpenlockToggle(); } catch (e) {} });
+    $.Schedule(50, barMetrics);
+
     function paintBarChips() {
         var ids = ["DashboardButton", "WindowsButton", "Clock"];
         for (var i = 0; i < ids.length; i += 1) contourChip(root.FindChildTraverse(ids[i]));
-        if (strip && strip.Children) {
-            var tabs = strip.Children();
+        if (strip && strip.GetChildCount) {
+            var tabs = kidsOf(strip);
             for (var t = 0; t < tabs.length; t += 1) contourChip(tabs[t]);
         }
     }
@@ -326,6 +374,7 @@
         return bulkFramesEnabled;
     };
     var focused = "";
+    var barSignature = null;
     var cursorFree = false;
     var zTop = 100;
 
@@ -1319,6 +1368,19 @@
         return p;
     }
 
+    // Panorama panels have no Children(); the engine's accessors are GetChildCount and GetChild.
+    function kidsOf(panel) {
+        var out = [];
+        var count = 0;
+        try { count = panel.GetChildCount ? panel.GetChildCount() : 0; } catch (e) { count = 0; }
+        for (var i = 0; i < count; i += 1) {
+            var kid = null;
+            try { kid = panel.GetChild(i); } catch (e) { kid = null; }
+            if (kid) out.push(kid);
+        }
+        return out;
+    }
+
     function addTab(windowId, label, extraClass, entranceIndex) {
         var win = windowById(windowId);
         var text = label || (win && win.title) || windowId;
@@ -1501,6 +1563,10 @@
     }
     globalThis.runPopitAction = runPopitAction;
 
+    // The bar's cells are the windows that are open, exactly as the reference's `/api/windows`
+    // cells are: one cell per window, its title as the label, the active one taking `.Active` and a
+    // pinned one `.Pinned`. The strip used to be filled by nothing at all, so the bar drew Start and
+    // the readouts with an empty middle; `addTab` was already the cell builder.
     function renderBar() {
         if (preloadActive) return;
         if (versionLabel) {
@@ -1508,6 +1574,25 @@
             versionLabel.text = build.label || (data.name + " " + data.version);
             versionLabel.style.visibility = "visible";
         }
+        if (!strip) return;
+        var ids = [];
+        for (var id in open) {
+            if (!open.hasOwnProperty(id) || !open[id]) continue;
+            if (!index[id]) continue;
+            ids.push(id);
+        }
+        var signature = ids.join("|");
+        if (signature === barSignature) return;
+        barSignature = signature;
+        try {
+            strip.RemoveAndDeleteChildren();
+        } catch (e) {
+            var old = kidsOf(strip);
+            for (var k = 0; k < old.length; k += 1) {
+                try { old[k].DeleteAsync(0); } catch (e2) {}
+            }
+        }
+        for (var i = 0; i < ids.length; i += 1) addTab(ids[i], null, null, i);
     }
 
     function preloadList() {

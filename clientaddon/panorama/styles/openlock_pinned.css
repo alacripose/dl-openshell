@@ -210,56 +210,142 @@
     text-transform: uppercase;
 }
 
-/* --- the Popit shell's own two surfaces ------------------------------- */
-/* Read from the shell at F:/Documents/popit-shell. Its ui/bar.css draws the strip as an ink band
-   with a brass wash from the top edge, cells inset 3 by 16 with 13.44 paper text, a Start cell that
-   is brass-lit and centred, and a dim clock. Its ui/style.css draws a window as an ink body under a
-   plate whose title is brass-lit uppercase at 3.6 units with 1.1 units of tracking over a keyline at
-   32 per cent brass. A generated scheme still recolours through its roles; these two surfaces are
-   declared in ink so a scheme cannot leave a blue body or a black button behind. */
+/* --- the popit-shell bar and plate, value by value --------------------- */
+/* Authority: F:/Documents/popit-shell at e507d35 (equal to origin/main), files ui/bar.css and
+   ui/style.css. Every number below is the reference's own, in the reference's own units:
+   --cap 32 gives a 5.76 cell gap (cap * 0.18), 5.12 of bar padding (cap * 0.16) and 17.6 across
+   (cap * 0.55); cells inset 3 by 16 at 13.44 text (cap * 0.42) between 64 (cap * 2) and 224
+   (cap * 7) wide; Start 92.8 (cap * 2.9) centred with 0.96 tracking; clock 108.8 (cap * 3.4), dim.
+   A window is --u 5.4: plate padding 3.78 top (u * 0.7), 36 sides (ink-x * 0.9), 8.64 bottom
+   (u * 1.6), title 19.44 (u * 3.6) with 5.94 tracking (u * 1.1), keyline at 32 per cent brass, and
+   a body painted opaque through the contour (#0f1113 under two ink washes). The schemes still
+   recolour by role; these declare the surface the reference draws. */
 .Taskbar {
-    background-color: gradient( linear, 0% 0%, 0% 55%, from( #b08d571f ), to( #0f1113f8 ) );
+    height: 48px;
+    padding: 5.12px 17.6px 5.12px 17.6px;
+    background-color: gradient( linear, 0% 0%, 0% 55%, from( #b08d571f ), to( #0f1113 ) );
+}
+
+.Taskbar .TabStrip,
+.TabStrip {
+    margin-left: 0px;
+    height: 36px;
+    flow-children: right;
 }
 
 .Taskbar .ShellTab,
-.Taskbar .WindowsButton {
-    background-color: transparent;
+.ShellTab,
+.Taskbar .WindowsButton,
+.WindowsButton {
+    height: 36px;
+    min-width: 64px;
+    max-width: 224px;
+    padding: 3px 16px;
+    margin: 0px 5.76px 0px 0px;
+    background-color: #e6dbc20f;
     border: 0px;
+    vertical-align: center;
 }
 
+.Taskbar .ShellTab.Active,
+.ShellTab.Active {
+    background-color: #b08d5729;
+}
+
+.Taskbar .ShellTab:hover,
+.ShellTab:hover,
+.Taskbar .WindowsButton:hover,
+.WindowsButton:hover {
+    background-color: #b08d5721;
+}
+
+.Taskbar .ShellTabLabel,
+.ShellTabLabel,
 .Taskbar .WindowsButtonLabel,
-.Taskbar .ShellTabLabel {
+.WindowsButtonLabel {
     color: #e6dbc2;
-    font-size: 13px;
+    font-size: 13.44px;
 }
 
-.Taskbar .BarStart .WindowsButtonLabel {
+.Taskbar .ShellTab.Active .ShellTabLabel,
+.ShellTab.Active .ShellTabLabel {
     color: #d9b779;
+}
+
+.Taskbar .BarStart,
+.BarStart {
+    min-width: 92.8px;
+    padding: 3px 16px;
+    margin: 0px 5.76px 0px 0px;
+    horizontal-align: center;
     letter-spacing: 0.96px;
 }
 
-.Taskbar .Clock {
+.Taskbar .BarStart .WindowsButtonLabel,
+.BarStart .WindowsButtonLabel {
+    color: #d9b779;
+    font-size: 13.44px;
+    letter-spacing: 0.96px;
+}
+
+.Taskbar .Clock,
+.Clock {
+    min-width: 108.8px;
+    padding: 3px 16px;
+    margin: 0px 0px 0px 0px;
     color: #8b8778;
-    font-size: 13px;
-}
-
-.WindowFrame {
-    background-color: #0f1113f5;
+    font-size: 13.44px;
+    background-color: transparent;
     border: 0px;
+    horizontal-align: center;
 }
 
-.WindowBody {
+.Taskbar .VersionLabel,
+.VersionLabel {
+    color: #8b8778;
+    font-size: 11.34px;
+    background-color: transparent;
+    border: 0px;
+    padding: 3px 16px;
+}
+
+/* The body is opaque in the reference: it is the ink ground painted through the contour, not a
+   translucent slab over the desktop. The scheme's `.ContourFill` carries the body role at 95 per
+   cent, so the surface states solid ink here at the shell root's own specificity. */
+.ShellRoot .ContourFill {
     background-color: #0f1113;
 }
 
+/* The outline is the contour stroked at one pixel in brass at 42 per cent, brass-lit on hover and
+   solid brass-lit when the window has focus — the reference's three states. */
+.ShellRoot .ContourInk {
+    background-color: #b08d576b;
+}
+
+.ShellRoot .WindowFrame:hover .ContourInk {
+    background-color: #d9b779d9;
+}
+
+.ShellRoot .WindowFrame.Focused .ContourInk {
+    background-color: #d9b779;
+}
+
 .WindowFrame .WindowTitle {
-    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5714 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
+    height: 36px;
+    padding: 3.78px 36px 8.64px 36px;
+    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5724 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
     border-bottom: 1px solid #b08d5752;
 }
 
 .WindowFrame .WindowTitleLabel {
     color: #d9b779;
-    font-size: 19px;
+    font-size: 19.44px;
     letter-spacing: 5.94px;
     text-transform: uppercase;
+    text-shadow: 0px 1px 0px #000000, 0px 0px 18px #d9b77938;
+}
+
+.WindowFrame .WindowBody,
+.WindowBody {
+    background-color: #0f1113;
 }

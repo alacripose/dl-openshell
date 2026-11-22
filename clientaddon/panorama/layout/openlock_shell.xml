@@ -46,6 +46,12 @@
                     <Panel id="PreloadFill" class="PreloadFill" />
                 </Panel>
             </Panel>
+            <!-- The Popit start cell leads the strip: the reference's bar is Start, then one cell per
+                 open window, then the clock. It sat in the right-hand cluster, which put the cells to
+                 its left and read as a different bar. -->
+            <Panel id="DashboardButton" class="WindowsButton BarStart" onmouseactivate="OpenlockDashboard()">
+                <Label class="WindowsButtonLabel" text="Start" />
+            </Panel>
             <Panel id="TabStrip" class="TabStrip" />
             <Panel class="TaskbarSpacer" />
             <!-- One flow row, not three absolute margins: a wide build label must take the space
@@ -53,10 +59,6 @@
             <Panel id="TaskbarRight" class="TaskbarRight">
                 <!-- The shell's own dashboard: the menu surface it ships, because the game's
                      dashboard is reachable only through the pause menu in the release build. -->
-                <!-- The leading cell is the Popit start cell: it names the launcher and opens it. -->
-                <Panel id="DashboardButton" class="WindowsButton BarStart" onmouseactivate="OpenlockDashboard()">
-                    <Label class="WindowsButtonLabel" text="Start" />
-                </Panel>
                 <Panel id="WindowsButton" class="WindowsButton" onmouseactivate="OpenlockWindows()">
                     <Label class="WindowsButtonLabel" text="Windows" />
                 </Panel>
