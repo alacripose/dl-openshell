@@ -11922,16 +11922,16 @@ var SHELL = {
       "path": "D:/SteamLibrary/steamapps/common/Deadlock",
       "kind": "tools",
       "shell": "mounted",
-      "vpkBytes": 2626209,
+      "vpkBytes": 2698135,
       "toolsPresent": 1,
       "toolsTotal": 3,
-      "version": "2026-11-21 22:33:27",
+      "version": "compile",
       "build": {
         "grade": "dev",
-        "stage": "installed",
-        "state": "ok",
-        "finishedAt": "2026-11-21 22:33:27",
-        "vpkBytes": 2626209
+        "stage": "compile",
+        "state": "failed",
+        "finishedAt": "",
+        "vpkBytes": 0
       },
       "exe": "D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe"
     },
@@ -11953,12 +11953,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 2,
       "toolsTotal": 3,
-      "version": "2026-11-21 22:32:56",
+      "version": "2026-11-21 22:53:47",
       "build": {
         "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-21 22:32:56",
+        "finishedAt": "2026-11-21 22:53:47",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10/game/bin/win64/project8.exe"
@@ -11970,12 +11970,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 3,
       "toolsTotal": 3,
-      "version": "2026-11-21 22:33:27",
+      "version": "2026-11-21 22:54:10",
       "build": {
         "grade": "player",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-21 22:33:27",
+        "finishedAt": "2026-11-21 22:54:10",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Downloads/Reduced_CSDK_12/game/bin/win64/deadlock.exe"
@@ -12550,12 +12550,12 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "4c748c5",
+    "commit": "232ad46",
     "branch": "main",
     "dirty": true,
-    "sourceDigest": "53a5f07237b2a85525673658aa1091d9660088112b7285064e990acc9a4c6a62",
+    "sourceDigest": "d174f2f8831d255be9839e249cef1a71a25f490e3a6897feac8a677feafaa96a",
     "gameVersion": "6864",
-    "generatedAt": "2026-11-21 22:43",
+    "generatedAt": "2026-11-21 23:04",
     "grade": "dev",
     "deadlockRevision": "11170534",
     "baseline": {
@@ -12570,7 +12570,7 @@ var SHELL = {
     },
     "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
     "identityShort": "dl-openshell@e507d355+blake3:4a6e012e",
-    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / 4c748c5+ / game 6864"
+    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / 232ad46+ / game 6864"
   },
   "themes": {
     "default": "popit",
@@ -19745,48 +19745,30 @@ var SHELL = {
   "buildState": {
     "format": "openlock.build/c0fe71e57305319a492946bbe18ea9dd",
     "grade": "dev",
-    "stage": "installed",
-    "state": "ok",
-    "startedAt": "2026-11-21 22:31:27",
-    "updatedAt": "2026-11-21 22:33:27",
-    "finishedAt": "2026-11-21 22:33:27",
+    "stage": "compile",
+    "state": "failed",
+    "startedAt": "2026-11-21 22:59:55",
+    "updatedAt": "2026-11-21 23:00:52",
+    "finishedAt": "",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 2626209,
+    "vpkBytes": 0,
     "resources": 27,
     "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
         "name": "prepare",
         "state": "ok",
-        "startedAt": "22:31:27",
-        "finishedAt": "22:32:13"
+        "startedAt": "22:59:55",
+        "finishedAt": "23:00:30"
       },
       {
         "name": "compile",
-        "state": "ok",
-        "startedAt": "22:32:13",
-        "finishedAt": "22:32:36"
-      },
-      {
-        "name": "pack",
-        "state": "ok",
-        "startedAt": "22:32:37",
-        "finishedAt": "22:32:37"
-      },
-      {
-        "name": "install",
-        "state": "ok",
-        "startedAt": "22:32:37",
-        "finishedAt": "22:32:37"
-      },
-      {
-        "name": "installed",
-        "state": "ok",
-        "startedAt": "22:32:38",
-        "finishedAt": "22:33:27"
+        "state": "failed",
+        "startedAt": "23:00:30",
+        "finishedAt": "23:00:52"
       }
     ],
-    "message": "installed 2626209 bytes",
+    "message": "-Live is only valid for the CSDK10 tools tree; a game install is a packed archive.",
     "packages": []
   },
   "update": {

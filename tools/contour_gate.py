@@ -14,6 +14,7 @@ would put a rounded rectangle back in place of the shape:
   C6 `outline-not-clipped`    the ink is the outer edge and the fill is inset by the stroke
   C7 `contour-slices-tested`  the slices match an independent reading of the profile
   C8 `contour-wired`          the shell includes the runtime and paints frames and chips
+  C10 `options-pinned`        Popit is the default and no option form or theme moves the contour
 
     python tools/contour_gate.py            # print every check and one RESULT line
     python tools/contour_gate.py --json     # machine-readable
@@ -168,6 +169,22 @@ def c9_landing() -> None:
           str(page.relative_to(ROOT)), detail or "the section or its script is missing")
 
 
+def c10_options() -> None:
+    """The shape is pinned, so the options on it are checked by the gate that owns that rule.
+
+    tools/contour_options_gate.py asserts popit is themes/default, forms/default and order[0], and
+    that every other theme and form declares colour only. Running it from here means the shape gate
+    cannot pass while an option has quietly taken the contour back.
+    """
+    gate_path = ROOT / "tools" / "contour_options_gate.py"
+    run = subprocess.run([sys.executable, str(gate_path)], cwd=ROOT,
+                         capture_output=True, text=True, check=False)
+    detail = (run.stdout + run.stderr).strip().splitlines()
+    detail = detail[-1] if detail else "no output"
+    check("options-pinned", "popit is the pinned default and the options are colour only",
+          run.returncode == 0, str(gate_path.relative_to(ROOT)), detail)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     c1_authority()
@@ -178,6 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     c6_outline()
     c7_tested()
     c8_wired()
+    c10_options()
     # The shape's own count is taken before the landing check, so the facts the landing page
     # prints do not change the number they print.
     shape_checks = len(CHECKED)

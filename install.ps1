@@ -37,6 +37,10 @@ param(
     [ValidateSet('dev', 'observer', 'player')]
     [string]$Grade = '',
     [switch]$VpkOnly,
+    # Build the archive the installer would install, and stop. Nothing in the install tree is
+    # written, so this is the one build mode that is safe while the client is running: it is how a
+    # release gets inspected offline before the install window opens.
+    [switch]$BuildOnly,
     [switch]$Compile,
     # A nested install (one this installer started for another tree's refresh) must not start its
     # own fleet pass or its own parity gate: the outer run owns both, and a nested gate would
@@ -132,10 +136,14 @@ $runningTarget = @(Get-Process deadlock,project8 -ErrorAction SilentlyContinue |
     try { $path = [string]$_.Path } catch { }
     $path -and $path.StartsWith($DeadlockRoot, [System.StringComparison]::OrdinalIgnoreCase)
 })
+$script:buildOnly = [bool]$BuildOnly
 $skipMount = $false
 if ($runningTarget.Count -gt 0) {
-    if (-not $Live) {
+    if (-not $Live -and -not $script:buildOnly) {
         throw 'Deadlock is running from the install tree. Close it and run this again, or pass -Live to replace the mounted archive for a map reload.'
+    }
+    if ($script:buildOnly) {
+        Write-Host 'Build-only: the client is running; the archive is built and inspected, the install tree is left alone.'
     }
     $mountedText = ''
     try { $mountedText = [System.IO.File]::ReadAllText($gameinfo).Replace('\', '/').ToLowerInvariant() } catch { }
@@ -596,6 +604,8 @@ function Write-BuildRecord {
     if ($VpkBytes -ge 0) { $script:buildVpkBytes = $VpkBytes }
     if ($Message) { $script:buildMessage = $Message }
     if ($null -ne $Packages) { $script:buildPackages = @($Packages) }
+
+    if ($script:buildOnly) { return }
 
     $now = Get-Date
     if ($Stage) {
@@ -1296,6 +1306,26 @@ if ($packerWasRunning) {
 }
 Remove-Item -LiteralPath $packLog,$packErr -Force -ErrorAction SilentlyContinue
 Write-BuildRecord -Stage 'pack' -State 'ok' -VpkBytes $archiveBytes -Resources $compiledCount -Message "packed $archiveBytes bytes"
+
+# The archive carries the pinned Popit baseline or it is not a release. The options gate reads the
+# packed archive itself, so a theme or form that moved the contour stops the build here instead of
+# being discovered in a match.
+$optionsGate = Join-Path $repoRoot 'tools\contour_options_gate.py'
+if (Test-Path -LiteralPath $optionsGate) {
+    $gateRun = & $Python $optionsGate --archive $archive 2>&1
+    $gateExit = $LASTEXITCODE
+    $gateRun | ForEach-Object { Write-Host $_ }
+    if ($gateExit -ne 0) {
+        throw "The built archive does not carry the pinned Popit baseline (tools/contour_options_gate.py --archive exited $gateExit)."
+    }
+}
+
+# A build-only run stops here: the archive is what the install would copy, and this mode exists so
+# it can be unpacked and inspected while the client is still running.
+if ($script:buildOnly) {
+    Write-Host "Build-only: packed $archiveBytes bytes at $archive; the install tree was not touched."
+    exit 0
+}
 
 # 5. Install the archive as the only source. A loose copy of the same layout names beside the
 #    archive is a duplicate answer for `base_hud`; the shipping client reads the compiled resource

@@ -21,7 +21,7 @@
     }
   },
   "gate": {
-    "checks": 8,
+    "checks": 9,
     "refusals": 0
   },
   "contour": {
@@ -126,6 +126,6 @@
   "copy": {
     "lede": "One corner, 7.67 by 11.0 px, on a chip and a window",
     "caption": "Debian 13 reads 6 stars over 9 axes",
-    "note": "The gate holds 8 checks and 4 surfaces take this corner"
+    "note": "The gate holds 9 checks and 4 surfaces take this corner"
   }
 }

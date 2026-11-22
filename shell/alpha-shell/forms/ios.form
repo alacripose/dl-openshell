@@ -1,44 +1,14 @@
 shploingus.form/0c51154398407e2a79127583436d2808
+# iOS 6 SpringBoard, as an option on the pinned Popit contour.
+#
+# The owner's ruling is that the Popit shell is the pinned baseline and every other form is an
+# option layered on it. This form used to declare its own window frame, a 30px taskbar, a 60%
+# tab strip, 18x16 window buttons and its own title metrics, which replaced the pinned contour and
+# the slot sizes. Those rules are gone: the frame, the 48px bar, the cells at ink 3 by 16 and the
+# four resize grips all come from openlock_pinned.css, and this form cannot move them.
+#
+# What is left is the option surface: the form's identity and whatever colour rules a scheme hands
+# it. tools/contour_options_gate.py refuses a geometry rule here, so the inheritance cannot drift.
 form	ios
 	label	iOS 6 SpringBoard
-	rule	.WindowFrame	border-radius	0px
-	# A picked live cell is part of the window's shape language; radius only, so the game's
-	# own component layout is not reflowed by a border weight it never declared.
-	rule	.ThemedCell	border-radius	6px
-	rule	.WindowFrame	border-width	0px
-	rule	.WindowTitle	height	30px
-	rule	.WindowTitle	padding-left	8px
-	rule	.WindowTitle	padding-right	4px
-	rule	.WindowTitleLabel	margin-left	24px
-	rule	.WindowTitleLabel	font-size	12px
-	rule	.WindowTitleLabel	letter-spacing	0.2px
-	rule	.WindowButton	width	18px
-	rule	.WindowButton	height	16px
-	rule	.WindowButton	margin-right	5px
-	rule	.WindowButton	border-radius	8px
-	rule	.WindowButton Label	font-size	11px
-	rule	.WindowMeta	height	14px
-	rule	.WindowMeta	padding-left	8px
-	rule	.WindowBody	padding	8px
-	rule	.Taskbar	height	30px
-	rule	.TabStrip	margin-left	168px
-	rule	.TabStrip	width	60%
-	rule	.PreloadStrip	margin-left	168px
-	rule	.PreloadStrip	width	60%
-	rule	.ShellTab	margin-right	4px
-	rule	.ShellTab	padding	3px 10px
-	rule	.ShellTab	border-radius	0px
-	rule	.ShellTab.Active	border-radius	0px
-	rule	.LauncherButton	border-radius	12px
-	rule	.LauncherButton	padding	4px 10px
-	rule	.SchemeButton	width	20px
-	rule	.SchemeButton	height	20px
-	rule	.SchemeButton	border-radius	9px
-	rule	.ViewAction	border-radius	10px
-	rule	.ViewAction	padding	6px 12px
-	rule	.ContextMenu	border-radius	8px
-	rule	.Toast	border-left-width	3px
-	rule	.DwellInfo	border-radius	6px
-	rule	.UpdateModal	border-radius	8px
-	rule	.PickerBadge	border-radius	8px
-	rule	.PickerCancel	border-radius	10px
+	renderer	generic

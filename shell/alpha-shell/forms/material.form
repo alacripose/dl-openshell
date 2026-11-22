@@ -1,41 +1,10 @@
 shploingus.form/0c51154398407e2a79127583436d2808
+# Material Design 1, as an option on the pinned Popit contour.
+#
+# MD1's own frame radius, 30px taskbar, 2px tab underline and 20x20 buttons used to be declared
+# here; under the owner's ruling those replaced the pinned contour and the pinned slot sizes, so
+# they are removed. The frame is the contour, the bar is 48px and the cells are ink 3 by 16 from
+# openlock_pinned.css. This form carries its identity and its colour options only.
 form	material
 	label	Material Design 1
-	rule	.WindowFrame	border-radius	0px
-	# MD1's 2 dp corner is the shape a themed live cell follows too. Radius only: a border
-	# width would change the game's component box, not just its outline.
-	rule	.ThemedCell	border-radius	2px
-	rule	.WindowTitle	height	30px
-	rule	.WindowTitle	padding-left	8px
-	rule	.WindowTitle	padding-right	4px
-	rule	.WindowTitleLabel	margin-left	26px
-	rule	.WindowTitleLabel	font-size	13px
-	rule	.WindowButton	width	20px
-	rule	.WindowButton	height	20px
-	rule	.WindowButton	margin-right	4px
-	rule	.WindowButton	border-radius	10px
-	rule	.WindowButton Label	font-size	12px
-	rule	.WindowMeta	height	16px
-	rule	.WindowMeta	padding-left	8px
-	rule	.WindowBody	padding	8px
-	rule	.Taskbar	height	30px
-	rule	.TabStrip	margin-left	96px
-	rule	.PreloadStrip	margin-left	96px
-	rule	.ShellTab	margin-right	4px
-	rule	.ShellTab	padding	3px 10px
-	rule	.ShellTab	border-radius	0px
-	rule	.ShellTab	border-bottom-width	2px
-	rule	.ShellTab.Active	border-bottom-width	2px
-	rule	.LauncherButton	border-radius	0px
-	rule	.LauncherButton	padding	4px 8px
-	rule	.SchemeButton	width	20px
-	rule	.SchemeButton	height	20px
-	rule	.SchemeButton	border-radius	10px
-	rule	.ViewAction	border-radius	2px
-	rule	.ViewAction	padding	6px 12px
-	rule	.ContextMenu	border-radius	2px
-	rule	.Toast	border-left-width	2px
-	rule	.DwellInfo	border-radius	2px
-	rule	.UpdateModal	border-radius	2px
-	rule	.PickerBadge	border-radius	2px
-	rule	.PickerCancel	border-radius	2px
+	renderer	generic

@@ -4454,83 +4454,8 @@
 }
 
 /* iOS 6 SpringBoard chrome form (forms/ios.form). */
-.FormIos .WindowFrame { border-radius: 0px; }
-.FormIos .ThemedCell { border-radius: 6px; }
-.FormIos .WindowFrame { border-width: 0px; }
-.FormIos .WindowTitle { height: 30px; }
-.FormIos .WindowTitle { padding-left: 8px; }
-.FormIos .WindowTitle { padding-right: 4px; }
-.FormIos .WindowTitleLabel { margin-left: 24px; }
-.FormIos .WindowTitleLabel { font-size: 12px; }
-.FormIos .WindowTitleLabel { letter-spacing: 0.2px; }
-.FormIos .WindowButton { width: 18px; }
-.FormIos .WindowButton { height: 16px; }
-.FormIos .WindowButton { margin-right: 5px; }
-.FormIos .WindowButton { border-radius: 8px; }
-.FormIos .WindowButton Label { font-size: 11px; }
-.FormIos .WindowMeta { height: 14px; }
-.FormIos .WindowMeta { padding-left: 8px; }
-.FormIos .WindowBody { padding: 8px; }
-.FormIos .Taskbar { height: 30px; }
-.FormIos .TabStrip { margin-left: 168px; }
-.FormIos .TabStrip { width: 60%; }
-.FormIos .PreloadStrip { margin-left: 168px; }
-.FormIos .PreloadStrip { width: 60%; }
-.FormIos .ShellTab { margin-right: 4px; }
-.FormIos .ShellTab { padding: 3px 10px; }
-.FormIos .ShellTab { border-radius: 0px; }
-.FormIos .ShellTab.Active { border-radius: 0px; }
-.FormIos .LauncherButton { border-radius: 12px; }
-.FormIos .LauncherButton { padding: 4px 10px; }
-.FormIos .SchemeButton { width: 20px; }
-.FormIos .SchemeButton { height: 20px; }
-.FormIos .SchemeButton { border-radius: 9px; }
-.FormIos .ViewAction { border-radius: 10px; }
-.FormIos .ViewAction { padding: 6px 12px; }
-.FormIos .ContextMenu { border-radius: 8px; }
-.FormIos .Toast { border-left-width: 3px; }
-.FormIos .DwellInfo { border-radius: 6px; }
-.FormIos .UpdateModal { border-radius: 8px; }
-.FormIos .PickerBadge { border-radius: 8px; }
-.FormIos .PickerCancel { border-radius: 10px; }
 
 /* Material Design 1 chrome form (forms/material.form). */
-.FormMaterial .WindowFrame { border-radius: 0px; }
-.FormMaterial .ThemedCell { border-radius: 2px; }
-.FormMaterial .WindowTitle { height: 30px; }
-.FormMaterial .WindowTitle { padding-left: 8px; }
-.FormMaterial .WindowTitle { padding-right: 4px; }
-.FormMaterial .WindowTitleLabel { margin-left: 26px; }
-.FormMaterial .WindowTitleLabel { font-size: 13px; }
-.FormMaterial .WindowButton { width: 20px; }
-.FormMaterial .WindowButton { height: 20px; }
-.FormMaterial .WindowButton { margin-right: 4px; }
-.FormMaterial .WindowButton { border-radius: 10px; }
-.FormMaterial .WindowButton Label { font-size: 12px; }
-.FormMaterial .WindowMeta { height: 16px; }
-.FormMaterial .WindowMeta { padding-left: 8px; }
-.FormMaterial .WindowBody { padding: 8px; }
-.FormMaterial .Taskbar { height: 30px; }
-.FormMaterial .TabStrip { margin-left: 96px; }
-.FormMaterial .PreloadStrip { margin-left: 96px; }
-.FormMaterial .ShellTab { margin-right: 4px; }
-.FormMaterial .ShellTab { padding: 3px 10px; }
-.FormMaterial .ShellTab { border-radius: 0px; }
-.FormMaterial .ShellTab { border-bottom-width: 2px; }
-.FormMaterial .ShellTab.Active { border-bottom-width: 2px; }
-.FormMaterial .LauncherButton { border-radius: 0px; }
-.FormMaterial .LauncherButton { padding: 4px 8px; }
-.FormMaterial .SchemeButton { width: 20px; }
-.FormMaterial .SchemeButton { height: 20px; }
-.FormMaterial .SchemeButton { border-radius: 10px; }
-.FormMaterial .ViewAction { border-radius: 2px; }
-.FormMaterial .ViewAction { padding: 6px 12px; }
-.FormMaterial .ContextMenu { border-radius: 2px; }
-.FormMaterial .Toast { border-left-width: 2px; }
-.FormMaterial .DwellInfo { border-radius: 2px; }
-.FormMaterial .UpdateModal { border-radius: 2px; }
-.FormMaterial .PickerBadge { border-radius: 2px; }
-.FormMaterial .PickerCancel { border-radius: 2px; }
 
 /* Popit (LBP3) chrome form (forms/popit.form). */
 .FormPopit .WindowFrame { border-radius: 0px; }
@@ -4631,42 +4556,3 @@
 .FormPopit .PopitDetail { font-size: 10px; }
 
 /* TouchWiz Nature UX chrome form (forms/touchwiz.form). */
-.FormTouchwiz .WindowFrame { border-radius: 0px; }
-.FormTouchwiz .ThemedCell { border-radius: 8px; }
-.FormTouchwiz .WindowFrame { border-width: 0px; }
-.FormTouchwiz .WindowTitle { height: 30px; }
-.FormTouchwiz .WindowTitle { padding-left: 8px; }
-.FormTouchwiz .WindowTitle { padding-right: 4px; }
-.FormTouchwiz .WindowTitleLabel { margin-left: 26px; }
-.FormTouchwiz .WindowTitleLabel { font-size: 12px; }
-.FormTouchwiz .WindowTitleLabel { letter-spacing: 0.3px; }
-.FormTouchwiz .WindowButton { width: 22px; }
-.FormTouchwiz .WindowButton { height: 18px; }
-.FormTouchwiz .WindowButton { margin-right: 5px; }
-.FormTouchwiz .WindowButton { border-radius: 3px; }
-.FormTouchwiz .WindowButton Label { font-size: 12px; }
-.FormTouchwiz .WindowMeta { height: 16px; }
-.FormTouchwiz .WindowMeta { padding-left: 8px; }
-.FormTouchwiz .WindowBody { padding: 8px; }
-.FormTouchwiz .Taskbar { height: 30px; }
-.FormTouchwiz .TabStrip { margin-left: 96px; }
-.FormTouchwiz .PreloadStrip { margin-left: 96px; }
-.FormTouchwiz .ShellTab { margin-right: 3px; }
-.FormTouchwiz .ShellTab { padding: 4px 10px; }
-.FormTouchwiz .ShellTab { border-radius: 0px; }
-.FormTouchwiz .ShellTab { border-bottom-width: 2px; }
-.FormTouchwiz .ShellTab.Active { border-bottom-width: 2px; }
-.FormTouchwiz .LauncherButton { border-radius: 4px; }
-.FormTouchwiz .LauncherButton { border-width: 2px; }
-.FormTouchwiz .LauncherButton { padding: 3px 9px; }
-.FormTouchwiz .SchemeButton { width: 20px; }
-.FormTouchwiz .SchemeButton { height: 20px; }
-.FormTouchwiz .SchemeButton { border-radius: 4px; }
-.FormTouchwiz .ViewAction { border-radius: 4px; }
-.FormTouchwiz .ViewAction { padding: 6px 12px; }
-.FormTouchwiz .ContextMenu { border-radius: 4px; }
-.FormTouchwiz .Toast { border-left-width: 3px; }
-.FormTouchwiz .DwellInfo { border-radius: 4px; }
-.FormTouchwiz .UpdateModal { border-radius: 4px; }
-.FormTouchwiz .PickerBadge { border-radius: 4px; }
-.FormTouchwiz .PickerCancel { border-radius: 4px; }
