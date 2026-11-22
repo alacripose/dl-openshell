@@ -95,6 +95,7 @@
         var side = 4;
         var plates = [
             ["WindowTitle", band + "px " + side + "px 0px " + side + "px"],
+            ["WindowPlate", "0px " + side + "px 0px " + side + "px"],
             ["WindowMeta", "0px " + side + "px 0px " + side + "px"],
             ["WindowBody", "0px " + side + "px " + band + "px " + side + "px"]
         ];
@@ -105,6 +106,97 @@
             try { plate.style.margin = plates[i][1]; plate.style.marginTop = plates[i][1].split(" ")[0]; } catch (e2) { /* not a panel */ }
             try { plate.SetAttributeString("data-crown-inset", band + "px"); } catch (e3) { /* older Panorama */ }
         }
+    }
+
+    // --- the window plate ----------------------------------------------------
+    // The pinned application's start window puts three things on its plate: the title above it,
+    // the count of what the body holds, and a Find field. Every family window carries that plate,
+    // because a window's body is a list of rows and the plate is where a reader asks about them.
+
+    function countLabel(parent, cls, text) {
+        var l = $.CreatePanel("Label", parent, "");
+        l.AddClass(cls);
+        l.text = text;
+        l.hittest = false;
+        return l;
+    }
+
+    // A heading names a group; it is not an entry. The count and the filter leave it alone, so a
+    // query never hides a section's name and never counts it as a row a reader can open.
+    function windowRows(record) {
+        var out = [];
+        if (!record || !record.body || !record.body.FindChildrenWithClassTraverse) return out;
+        var found = [];
+        try { found = record.body.FindChildrenWithClassTraverse("ViewRowBox") || []; } catch (e) { found = []; }
+        for (var i = 0; i < found.length; i += 1) {
+            var box = found[i];
+            var head = false;
+            try { head = !!(box.HasClass && box.HasClass("ViewHead")); } catch (e2) { head = false; }
+            if (!head) out.push(box);
+        }
+        return out;
+    }
+
+    function rowText(box) {
+        var text = "";
+        try { text = String(box.GetAttributeString("data-row-text", "") || ""); } catch (e) { text = ""; }
+        if (text) return text;
+        var labels = [];
+        try { labels = box.FindChildrenWithClassTraverse("ViewRow") || []; } catch (e2) { labels = []; }
+        for (var i = 0; i < labels.length; i += 1) {
+            try { text += " " + String(labels[i].text || ""); } catch (e3) { /* a dead label reads as nothing */ }
+        }
+        return text;
+    }
+
+    // The count is the reference's totals line: the number of rows in brass, the word in dim, and
+    // the shown count only while a query is narrowing the list.
+    function setCounts(record, rows, shown, filtered) {
+        if (!record || !record.counts) return;
+        if (record.countValue && record.countValue.text !== String(rows)) record.countValue.text = String(rows);
+        if (record.countShown && record.countShown.text !== String(shown)) record.countShown.text = String(shown);
+        setChildVisibility(record, "plate", record.plate, rows > 0);
+        setChildVisibility(record, "countDot", record.countDot, filtered);
+        setChildVisibility(record, "countShown", record.countShown, filtered);
+        setChildVisibility(record, "countShownWord", record.countShownWord, filtered);
+    }
+
+    // filterFrame is the plate's one action: a row whose own text holds the query stays, every
+    // other row collapses. Nothing is deleted, so clearing the field brings the list back.
+    function filterFrame(record, query) {
+        if (!record) return 0;
+        var text = String(query == null ? "" : query).toLowerCase().replace(/^\s+|\s+$/g, "");
+        var rows = windowRows(record);
+        var shown = 0;
+        for (var i = 0; i < rows.length; i += 1) {
+            var box = rows[i];
+            var hit = !text || rowText(box).toLowerCase().indexOf(text) >= 0;
+            var want = hit ? "visible" : "collapse";
+            if (box.__findState !== want) {
+                box.__findState = want;
+                try { box.style.visibility = want; } catch (e) { /* not a panel */ }
+            }
+            if (hit) shown += 1;
+        }
+        setCounts(record, rows.length, shown, !!text);
+        return shown;
+    }
+
+    // A chosen row keeps the selection, and the rest of the list drops it: one fill states which
+    // row the window is working on, exactly as the reference's `.card.on` does.
+    function markRow(box) {
+        if (!box) return;
+        var parent = null;
+        try { parent = box.GetParent ? box.GetParent() : null; } catch (e) { parent = null; }
+        if (parent && parent.FindChildrenWithClassTraverse) {
+            var sibs = [];
+            try { sibs = parent.FindChildrenWithClassTraverse("ViewRowBox") || []; } catch (e2) { sibs = []; }
+            for (var i = 0; i < sibs.length; i += 1) {
+                if (sibs[i] === box) continue;
+                try { sibs[i].SetHasClass("On", false); } catch (e3) { /* a dead row keeps no state */ }
+            }
+        }
+        try { box.SetHasClass("On", true); } catch (e4) { /* not a panel */ }
     }
 
     // The strip itself is a contoured surface, exactly as the pinned bar is: its ends carry the
@@ -5086,6 +5178,38 @@
         // know the grip's width; this class is the reservation that does.
         if (closeButton) closeButton.AddClass("WindowClose");
 
+        // The plate is the pinned application's start-window plate: the title above it, then the
+        // count of rows the body holds, then a Find field that filters them. It is the same plate
+        // on every family window, because the body of a window is a list of rows.
+        var plate = $.CreatePanel("Panel", frame, "");
+        plate.AddClass("WindowPlate");
+        var counts = $.CreatePanel("Panel", plate, "");
+        counts.AddClass("WindowCounts");
+        var countValue = countLabel(counts, "WindowCountValue", "0");
+        countLabel(counts, "WindowCountWord", " rows");
+        var countDot = countLabel(counts, "WindowCountDot", "  ·  ");
+        var countShown = countLabel(counts, "WindowCountValue", "0");
+        var countShownWord = countLabel(counts, "WindowCountWord", " shown");
+        var findRow = $.CreatePanel("Panel", plate, "");
+        findRow.AddClass("WindowFindRow");
+        var findLabel = $.CreatePanel("Label", findRow, "");
+        findLabel.AddClass("WindowFindLabel");
+        findLabel.text = "Find";
+        findLabel.hittest = false;
+        var findBox = $.CreatePanel("Panel", findRow, "");
+        findBox.AddClass("WindowFindBox");
+        findBox.hittest = true;
+        findBox.hittestchildren = true;
+        contourChip(findBox);
+        var findEntry = $.CreatePanel("TextEntry", findBox, "");
+        findEntry.AddClass("WindowFindEntry");
+        findEntry.hittest = true;
+        // Two routes to one filter: the client's own text-changed event where the build has it,
+        // and Enter. The poll also reads the field, so a build that dispatches neither still
+        // filters within half a second instead of leaving a control that does nothing.
+        findEntry.SetPanelEvent("ontextentrychanged", function () { filterFrame(frames[win.id], findEntry.text); });
+        findEntry.SetPanelEvent("oninputsubmit", function () { filterFrame(frames[win.id], findEntry.text); });
+
         title.SetPanelEvent("onmouseactivate", function () { focusWindow(win.id); });
         bindDwell(title, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions", win.id);
         bindDwell(dragStrip, win.title || win.id, "Frame  ·  drag the title bar or the four-arrow handle to move; right-click for actions", win.id);
@@ -5135,6 +5259,15 @@
             buttons: [moveButton, popitButton, minButton, maxButton, pinButton, closeButton],
             meta: metaLabel,
             cost: costLabel,
+            plate: plate,
+            counts: counts,
+            countValue: countValue,
+            countShown: countShown,
+            countDot: countDot,
+            countShownWord: countShownWord,
+            findRow: findRow,
+            find: findEntry,
+            lastFind: "",
             body: body,
             contour: contourLayer,
             refusal: refusal,
@@ -6034,6 +6167,10 @@
         // text. A row drawn as a bare Label is a rectangle inside a contoured frame.
         var box = $.CreatePanel("Panel", body, "");
         box.AddClass("ViewRowBox");
+        if ((cls || "") === "ViewHeading") box.AddClass("ViewHead");
+        // The plate's Find reads the row's own text, so the row states what it is to the filter as
+        // well as to the screen.
+        try { box.SetAttributeString("data-row-text", text); } catch (eSet) { /* older Panorama */ }
         var l = $.CreatePanel("Label", box, "");
         l.AddClass(cls || "ViewLine");
         l.AddClass("ViewRow");
@@ -6058,6 +6195,7 @@
         // shape, and the Label inside it that keeps the text, the pointer and the handler.
         var box = $.CreatePanel("Panel", body, "");
         box.AddClass("ViewRowBox");
+        try { box.SetAttributeString("data-row-text", text); } catch (eSet) { /* older Panorama */ }
         var row = $.CreatePanel("Label", box, id || "");
         row.AddClass("ViewAction");
         row.AddClass("ViewRow");
@@ -6065,6 +6203,7 @@
         row.hittest = true;
         row.SetPanelEvent("onmouseactivate", function () {
             lastInteractionAt = Date.now();
+            markRow(box);
             fn();
         });
         contourChip(box);
@@ -7987,7 +8126,19 @@
         dashStatus(app, reading);
     }
 
+    // renderOwn builds a window's body, then settles the plate that reports on it. The count and
+    // the Find belong to the plate, so they are written once per build from what the body holds.
     function renderOwn(win, body) {
+        renderOwnBody(win, body);
+        var record = frames[win.id];
+        if (!record || !record.plate) return;
+        var query = "";
+        try { query = record.find && record.find.text ? record.find.text : ""; } catch (e) { query = ""; }
+        record.lastFind = String(query);
+        filterFrame(record, query);
+    }
+
+    function renderOwnBody(win, body) {
         body.RemoveAndDeleteChildren();
 
         if (win.id === DASHBOARD_ID || win.view === "dashboard") {
@@ -8797,6 +8948,20 @@
         }
         if (expanded && (pollCount % 4) === 2) {
             try { scanPopups(); } catch (e) { noteFailure("popup scan", e); }
+        }
+
+        // The plate's Find is read here as well as on its own events: one property read per open
+        // window, half a second apart, so a client that dispatches no text-changed event still
+        // filters instead of leaving a field that only answers Enter.
+        for (var fid in frames) {
+            if (!frames.hasOwnProperty(fid)) continue;
+            var frec = frames[fid];
+            if (!frec || !frec.find) continue;
+            var query = "";
+            try { query = String(frec.find.text || ""); } catch (eRead) { query = ""; }
+            if (query === frec.lastFind) continue;
+            frec.lastFind = query;
+            try { filterFrame(frec, query); } catch (eFilter) { noteFailure("window find", eFilter); }
         }
 
         // The bar stays. A five second idle timer used to hide it, which is the one behaviour the

@@ -731,4 +731,44 @@ check(/showTaskbar\(\);/.test(shellJs.split('function render()')[1] || ''),
 check(!/lastInteractionAt > 5000\) hideTaskbar\(\)/.test(shellJs),
     'the bar is not hidden by an idle timer');
 
+// The window plate is the pinned application's start-window plate: the title, then the count of
+// rows the body holds, then a Find field. It is built once per frame, so every family window
+// carries it, and it reports on the rows the window itself built rather than on a second list.
+const findEntries = root.FindChildrenWithClassTraverse('WindowFindEntry');
+check(findEntries.length >= 2,
+    'every window frame carries the pinned plate (' + findEntries.length + ')');
+const listFrame = findEntries
+    .map(e => e.parent && e.parent.parent && e.parent.parent.parent && e.parent.parent.parent.parent)
+    .find(f => f && f.FindChildrenWithClassTraverse('ViewRowBox')
+        .filter(r => !r.HasClass('ViewHead')).length > 0);
+check(!!listFrame, 'a window body of rows sits under a plated frame');
+const plateEntry = listFrame && listFrame.FindChildrenWithClassTraverse('WindowFindEntry')[0];
+const plateRows = listFrame ? listFrame.FindChildrenWithClassTraverse('ViewRowBox') : [];
+const plateCards = plateRows.filter(r => !r.HasClass('ViewHead'));
+const plateCounts = listFrame ? listFrame.FindChildrenWithClassTraverse('WindowCountValue') : [];
+check(plateCounts.length === 2 && plateCounts[0].text === String(plateCards.length),
+    'the plate counts the rows its body holds (' + (plateCounts[0] && plateCounts[0].text) + ')');
+
+// The Find field is the plate's one action: a row whose own text holds the query stays, every
+// other row collapses and the plate says how many are shown. Nothing is deleted, so clearing
+// the field brings the whole list back.
+plateEntry.text = 'no row in this window carries this';
+plateEntry.events.oninputsubmit();
+check(plateCards.every(r => r.style.visibility === 'collapse'),
+    'a query collapses every row it does not match');
+check(plateCounts[1].text === '0', 'the plate says how many rows the query shows');
+plateEntry.text = '';
+plateEntry.events.oninputsubmit();
+check(plateCards.every(r => r.style.visibility === 'visible'),
+    'clearing the field restores every row');
+check(plateRows.length === listFrame.FindChildrenWithClassTraverse('ViewRowBox').length,
+    'filtering collapses rows and deletes none');
+
+// A heading names a group, so the count and the filter leave it alone: it is neither a row a
+// reader can open nor a row that disappears with the group it names.
+const headingBox = listFrame.FindChildrenWithClassTraverse('ViewRowBox')
+    .find(r => r.HasClass('ViewHead'));
+check(!!headingBox && headingBox.style.visibility !== 'collapse',
+    'a group heading is not counted or filtered as a row');
+
 console.log('chrome-test OK ' + checks + ' checks');

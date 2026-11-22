@@ -378,10 +378,12 @@
 
 /* A window row is a surface: the same ground, the same ink, the same pads. The Label inside keeps the
    text and the pointer; nothing here draws a border or a radius of its own. */
+/* The gap between two cards is the reference's 1.1u, so a list reads as a column of cards and
+   not as a run of lines. */
 .ViewRowBox {
     width: 100%;
     height: fit-children;
-    margin: 0px 0px 3px 0px;
+    margin: 0px 0px 5.94px 0px;
     background-color: transparent;
 }
 
@@ -393,12 +395,22 @@
     background-color: #d9b779d9;
 }
 
-.ViewRowBox .ContourFill {
-    background-color: #1c1d1e;
+/* A card is the reference's own paint: its paper wash over the plate's ink, which composites to
+   #23211c. The chosen card is its brass 14 per cent over the same ink, #302a1f, exactly as
+   `.card.on` is brass 14 per cent in ui/style.css. Hover moves the ink and leaves the paint. */
+/* The card's paint is the window's plate ink plus its own wash, so it has to state the frame in
+   its selector: the sheet's `.ShellRoot .WindowFrame .ContourFill` rule is the plate's fill and
+   would otherwise win on specificity and paint every card the bare plate. */
+.ShellRoot .WindowFrame .ViewRowBox .ContourFill {
+    background-color: #23211c;
 }
 
-.ViewRowBox:hover .ContourFill {
-    background-color: #1c1d1e;
+.ShellRoot .WindowFrame .ViewRowBox:hover .ContourFill {
+    background-color: #23211c;
+}
+
+.ShellRoot .WindowFrame .ViewRowBox.On .ContourFill {
+    background-color: #302a1f;
 }
 
 .ShellRoot .ViewRowBox .ViewAction,
@@ -407,7 +419,8 @@
     background-color: transparent;
     border: 0px;
     border-radius: 0px;
-    margin: 0px 0px 3px 0px;
+    /* The box owns the gap between cards; a margin here would double it. */
+    margin: 0px 0px 0px 0px;
     height: 22px;
     min-height: 22px;
 }
@@ -428,15 +441,44 @@
     background-color: #1c1d1e;
 }
 
+/* The card's ink is the reference's `--ink-y` 3 by `--ink-x` at a 22 px card: the contour's own
+   inset, so the text starts inside the drawn outline and not on it. */
 .ShellRoot .ViewRowBox .ViewAction,
 .ShellRoot .ViewRowBox .ViewLine,
 .ShellRoot .ViewRowBox .ViewMuted {
-    padding: 3px 12px;
+    padding: 3px 10px;
     color: #e6dbc2;
-    font-size: 12px;
     background-color: transparent;
     border: 0px;
     border-radius: 0px;
+}
+
+/* Three sizes, as the reference uses three: the card's name is its window-title size (2.5u),
+   a line of prose is the body's (2.3u), and a secondary line is the dim size (2.1u). */
+.ShellRoot .ViewRowBox .ViewAction,
+.ShellRoot .ViewRowBox .ViewLine {
+    font-size: 13.44px;
+}
+
+.ShellRoot .ViewRowBox .ViewMuted {
+    color: #8b8778;
+    font-size: 11.34px;
+}
+
+/* A heading names a group; it is not a card and a reader cannot choose it. It is drawn as the
+   reference draws one: an uppercase brass word at 2u with 0.35u of tracking, over no fill. */
+.ShellRoot .ViewRowBox .ViewHeading {
+    color: #b08d57;
+    font-size: 10.8px;
+    letter-spacing: 1.89px;
+    text-transform: uppercase;
+    font-weight: normal;
+    padding: 3px 10px;
+}
+
+.ViewRowBox.ViewHead .ContourInk,
+.ViewRowBox.ViewHead .ContourFill {
+    background-color: transparent;
 }
 
 .ShellRoot .ViewRowBox .ViewAction:hover,
@@ -551,4 +593,75 @@
        release, and a transparent-ended linear wash over the body let the scene through. The body is
        the reference's ink, flat, and the washes stay recorded as the open delta. */
     background-color: #0f1113;
+}
+
+/* --- the window plate is the pinned application's start-window plate ------ */
+/* Authority: F:/Documents/popit-shell at e507d355, ui/index.html `.plate` and ui/style.css. The
+   plate carries the title, then `.totals` (dim at 2.1u with the numbers in brass-lit), then `.find`
+   (an uppercase brass label at 1.8u with 0.35u of tracking beside a field at 2.3u, on black at 42
+   per cent). At the plate's unit of 5.4 those are 11.34, 9.72 and 12.42, so every number below is
+   the reference's own and the plate declares no contour number. It sits under the title's keyline
+   and inside the same 36 px side ink, so all family windows share one plate. */
+.WindowFrame .WindowPlate {
+    width: 100%;
+    height: fit-children;
+    padding: 0px 36px 6px 36px;
+    flow-children: down;
+    background-color: transparent;
+}
+
+.WindowFrame .WindowCounts {
+    width: 100%;
+    height: 14px;
+    flow-children: right;
+    margin-top: 2px;
+}
+
+.WindowFrame .WindowCountValue {
+    color: #d9b779;
+    font-size: 11.34px;
+}
+
+.WindowFrame .WindowCountWord,
+.WindowFrame .WindowCountDot {
+    color: #8b8778;
+    font-size: 11.34px;
+}
+
+.WindowFrame .WindowFindRow {
+    width: 100%;
+    height: 22px;
+    flow-children: right;
+    margin-top: 4px;
+}
+
+.WindowFrame .WindowFindLabel {
+    color: #b08d57;
+    font-size: 9.72px;
+    letter-spacing: 1.89px;
+    text-transform: uppercase;
+    vertical-align: center;
+    margin-right: 8.64px;
+}
+
+.WindowFrame .WindowFindBox {
+    height: 22px;
+    width: fill-parent-flow(1);
+    background-color: transparent;
+}
+
+/* The reference's field is black at 42 per cent over the plate ink, #12100e; the field is a
+   contour surface like every other, so its ink and fill come from the slices. */
+.WindowFrame .WindowFindBox .ContourFill {
+    background-color: #12100e;
+}
+
+.WindowFrame .WindowFindEntry {
+    width: 100%;
+    height: 22px;
+    padding: 0px 8.64px;
+    background-color: transparent;
+    border: 0px;
+    color: #e6dbc2;
+    font-size: 12.42px;
 }

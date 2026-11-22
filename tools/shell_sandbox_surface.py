@@ -63,6 +63,18 @@ ADAPTER_CSS = r"""
     position: relative; box-sizing: border-box; cursor: pointer; }
   .WindowButton .WindowIcon { position: relative; display: block; flex: 0 0 auto;
     width: 8px; height: 8px; margin: 0; }
+  /* The plate is the pinned start-window plate: counts over a Find row, both inside the title's
+     own side ink. Panorama's flow-children down/right are flex here, as with the title. */
+  .WindowPlate { display: flex; flex: 0 0 auto; flex-direction: column; box-sizing: border-box;
+    width: 100%; }
+  .WindowFrame.CompactHud .WindowPlate { display: none; }
+  .WindowCounts { display: flex; flex: 0 0 14px; flex-direction: row; align-items: baseline; }
+  .WindowFindRow { display: flex; flex: 0 0 22px; flex-direction: row; align-items: center; }
+  .WindowFindBox { position: relative; display: flex; flex: 1 1 auto; min-width: 0;
+    box-sizing: border-box; }
+  .WindowFindEntry { display: block; width: 100%; height: 22px; box-sizing: border-box;
+    font: inherit; outline: none; }
+  .ViewRowBox { position: relative; display: block; box-sizing: border-box; }
   .WindowMeta { display: block; flex: 0 0 17px; height: 17px; box-sizing: border-box;
     overflow: hidden; }
   .WindowFrame.CompactHud .WindowMeta { display: none; }
