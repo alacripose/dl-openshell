@@ -92,7 +92,9 @@ def rows(facts: dict) -> list[tuple[str, str]]:
     out = []
     for component in facts["components"][:MAX_ROWS]:
         detail = str(component.get("detail", ""))
-        out.append((str(component.get("id", "civilian")), f"{component.get('value', 0)}/{component.get('weight', 0)} {detail}"))
+        name = str(component.get("id", "civilian"))
+        # The row names the line that makes the machine's civilian a bot in this lobby.
+        out.append((name, f"{component.get('value', 0)}/{component.get('weight', 0)} {detail}  openlock_axis_bot {name}"))
     return out
 
 

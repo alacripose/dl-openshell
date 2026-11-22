@@ -509,6 +509,60 @@ public sealed class OpenlockPlugin : DeadworksPluginBase
     [Command("openlock_deliver", Description = "Alias for dl_openshell_deliver")]
     public void CmdDeliverLegacy(Caller caller, string path = "") => CmdDeliver(caller, path);
 
+    // --- axis civilians ----------------------------------------------------
+
+    /// <summary>
+    /// The game owns the bot command, not this plugin. The names below are tried in order against
+    /// the build's own console, and a build that renamed the command refuses by name instead of
+    /// quietly running something else. The axis window names the civilian; this command adds it.
+    /// </summary>
+    private static readonly string[] AxisBotCommands =
+    [
+        "citadel_bot_add", "bot_add", "citadel_create_bot", "bot_create", "citadel_bot",
+    ];
+
+    [Command("openlock_axis_bot", Description = "Add an axis civilian as a bot in this lobby")]
+    public void CmdAxisBot(Caller caller, string civilian = "", string team = "")
+    {
+        if (string.IsNullOrWhiteSpace(civilian))
+        {
+            caller.Reply("[dl-openshell] axis-bot-needs-civilian: name one in the Civilians window");
+            return;
+        }
+
+        var name = civilian.Trim();
+        var side = (team ?? "").Trim();
+        var ran = "";
+        var seen = new List<string>();
+        foreach (var command in AxisBotCommands)
+        {
+            var line = side.Length > 0 ? $"{command} {name} {side}" : $"{command} {name}";
+            var output = "";
+            var answered = false;
+            Server.ExecuteCommand(line, text => { output += text ?? ""; answered = true; });
+            // Commands run on the next frame, so the callback is the witness; a command the build
+            // does not carry prints an unknown-command line and the next name is tried.
+            Server.ExecuteCommand("echo openlock-axis-bot-probe");
+            if (answered && output.Length > 0 && output.Contains("Unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                seen.Add(command);
+                continue;
+            }
+            ran = line;
+            break;
+        }
+
+        if (ran.Length == 0)
+        {
+            caller.Reply($"[dl-openshell] axis-bot-command-absent: tried {string.Join(", ", AxisBotCommands)}; {name} was not added");
+            Log.Write($"[axis] refused {name}: no bot command in this build");
+            return;
+        }
+
+        caller.Reply($"[dl-openshell] axis civilian {name} sent to the game as: {ran}");
+        Log.Write($"[axis] bot {name} ran {ran}");
+    }
+
     [Command("openlock_ui", Description = "dl-openshell shell panel: open | hide")]
     public void CmdUi(Caller caller, string verb = "open")
     {
