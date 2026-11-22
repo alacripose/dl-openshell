@@ -35,7 +35,7 @@ function panel(id, width, height, parent) {
         mounted: 0,
         _parent: parent || null,
         GetParent: function () { return node._parent; },
-        Children: function () { return node.kids.slice(); },
+        GetChild: function (index) { return node.kids[index] || null; },
         GetChildCount: function () { return node.kids.length; },
         RemoveAndDeleteChildren: function () { node.kids.length = 0; },
         BLoadLayout: function () { node.mounted += 1; return true; },
@@ -88,7 +88,7 @@ function clientTree(make, withAnchor, withContent) {
 let tree = runScenario(function (make) { return clientTree(make, false, true); });
 const created1 = tree.content.FindChildTraverse('OpenlockStandaloneHost');
 expect('created host lands on the laid-out panel', created1 && created1.GetParent() === tree.content, true);
-const direct = tree.root.Children().filter(function (kid) { return kid.id === 'OpenlockStandaloneHost'; });
+const direct = tree.root.kids.filter(function (kid) { return kid.id === 'OpenlockStandaloneHost'; });
 expect('the component root received no direct host', direct.length, 0);
 expect('one host was created', tree.created, 1);
 expect('the shell loaded into the host', created1.mounted, 1);
@@ -104,7 +104,22 @@ tree = runScenario(function (make) { return clientTree(make, false, false); });
 expect('last resort still creates a host', tree.created, 1);
 expect('last resort mounts the shell', tree.root.FindChildTraverse('OpenlockStandaloneHost').mounted, 1);
 
-// 4. a Deadworks host owns the shell: the boot yields and loads nothing.
+// 4. the shipped anchor exists but its whole tree is dead (the live client's measurement): the
+//    boot must not trust it, and must mount where the HUD is actually drawn.
+tree = runScenario(function (make) {
+    const root = make('CitadelHudRoot', 0, 0, null);
+    const context = make('Context', 0, 0, root);
+    const deadWindowRoot = make('WindowRoot', 0, 0, root);
+    const anchor = make('OpenlockStandaloneHost', 0, 0, deadWindowRoot);
+    const content = make('HudContent', 1920, 1080, root);
+    return { root: root, context: context, anchor: anchor, content: content, created: 0 };
+});
+const liveHost = tree.content.FindChildTraverse('OpenlockStandaloneHost');
+expect('dead anchor is not mounted into', tree.anchor.mounted, 0);
+expect('the shell mounts on the drawn HUD', liveHost !== null && liveHost.mounted, 1);
+expect('one host was created beside the dead anchor', tree.created, 1);
+
+// 5. a Deadworks host owns the shell: the boot yields and loads nothing.
 tree = runScenario(function (make) {
     const built = clientTree(make, true, true);
     make('DWHost_openlock-shell', 0, 0, built.content);

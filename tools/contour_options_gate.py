@@ -19,6 +19,7 @@ form the owner edits:
   O6 `forms-colour-only`    no form other than popit declares a geometry, slot or layout rule
   O7 `pinned-source`        the pinned sheet and the family look carry the numbers options inherit
   O8 `popit-form-pinned`    the popit form is the geometry source and declares the contour frame
+  O9 `roles-named`          a theme varies the pinned roles by name, and invents no role of its own
 
     python tools/contour_options_gate.py            # every check and one result line
     python tools/contour_options_gate.py --json     # machine-readable
@@ -256,6 +257,54 @@ def o7_pinned_source() -> None:
           not problems, "docs/family-look.json + openlock_pinned.css", " | ".join(problems))
 
 
+def role_problems(themes: list[dict]) -> list[str]:
+    """Every difference from the pinned scheme has to land in a named role."""
+    pinned = next((entry for entry in themes if entry["id"] == PINNED_THEME), None)
+    if pinned is None:
+        return ["the pinned theme is missing"]
+    named = list(pinned["roles"].keys())
+    invented: list[str] = []
+    missing: list[str] = []
+    shapely: list[str] = []
+    for entry in themes:
+        if not entry["id"]:
+            continue
+        for role in entry["roles"]:
+            if role not in named:
+                invented.append(f"{entry['id']}:{role}")
+        if entry["id"] != PINNED_THEME:
+            for role in named:
+                if role not in entry["roles"]:
+                    missing.append(f"{entry['id']}:{role}")
+        for role, (value, line) in entry["roles"].items():
+            text = value.strip()
+            if not (text.startswith("#") or text.startswith("@")):
+                shapely.append(f"{entry['id']}:{line} {role}={text}")
+    problems = []
+    if invented:
+        problems.append("role not named by the pinned scheme: " + ", ".join(invented[:6]))
+    if missing:
+        problems.append("pinned role left unpainted: " + ", ".join(missing[:6]))
+    if shapely:
+        problems.append("role value is not a colour or token: " + ", ".join(shapely[:6]))
+    return problems
+
+
+def o9_roles() -> None:
+    """A theme is a repaint of named roles, not a place to invent new ones.
+
+    The pinned scheme names eleven roles. An option theme may give any of them a different colour —
+    that is the whole option — but a role the pinned scheme does not name is a new surface with no
+    pinned value behind it, and a theme that drops one leaves a surface unpainted. Both are refused
+    by name, and a role value has to be a colour or a token, never a length or a shape.
+    """
+    themes = theme_files()
+    problems = role_problems(themes)
+    named = len(next((entry["roles"] for entry in themes if entry["id"] == PINNED_THEME), {}))
+    check("roles-named", f"{len(themes)} themes vary the pinned {named} roles by name",
+          not problems, "shell/alpha-shell/themes", " | ".join(problems))
+
+
 def o8_popit_form() -> None:
     popit = next((entry for entry in form_files() if entry["id"] == PINNED_FORM), None)
     if popit is None:
@@ -306,9 +355,27 @@ def selftest() -> int:
                 target.write_text(original, encoding="utf-8")
             return found
 
+        def role_probe(extra: str = "", drop: str = "") -> bool:
+            themes = [read_file(path) for path in sorted((sandbox / "themes").glob("*.theme"))]
+            target = next((entry for entry in themes if entry["id"] == "holo"), None)
+            if target is None:
+                return False
+            if extra:
+                role, value = extra.split("	")
+                target["roles"][role] = (value, 0)
+                return bool(role_problems(themes))
+            if drop:
+                target["roles"].pop(drop, None)
+                return bool(role_problems(themes))
+            return False
+
         clean = failures_for()
         theme_drift = failures_for(theme_drift="\trule\t.WindowFrame\tborder-radius\t9px\n")
         form_drift = failures_for(form_drift="\trule\t.Taskbar\theight\t30px\n")
+
+        invented = role_probe(extra="corner-radius	7.67px")
+        dropped = role_probe(drop="accent")
+        shaped = role_probe(extra="accent	7.67px")
 
         ordered = sandbox / "themes" / "order"
         original = ordered.read_text(encoding="utf-8")
@@ -320,6 +387,9 @@ def selftest() -> int:
         ("theme-geometry-refused", theme_drift == ["theme holo .WindowFrame border-radius"], theme_drift),
         ("form-slot-refused", form_drift == ["form ios .Taskbar height"], form_drift),
         ("order-read", order_first == "family", order_first),
+        ("role-invented", invented, "planted role accepted"),
+        ("role-dropped", dropped, "dropped role accepted"),
+        ("role-shape", shaped, "a length in a role was accepted"),
     ]
     bad = [name for name, ok, _ in checks if not ok]
     for name, ok, seen in checks:
@@ -420,6 +490,7 @@ def main(argv: list[str] | None = None) -> int:
     o6_forms()
     o7_pinned_source()
     o8_popit_form()
+    o9_roles()
 
     if "--json" in args:
         print(json.dumps({"checks": len(CHECKED), "refusals": REFUSALS}, indent=2))

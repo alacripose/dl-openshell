@@ -56,36 +56,79 @@
             return;
         }
 
-        // base_hud ships the anchor. Keeping the lookup means a client whose base_hud revision
-        // dropped the panel still mounts.
-        var host = null;
-        for (var ai = 0; ai < chain.length && !host; ai += 1) {
-            try { host = chain[ai].FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        function boxOf(panel) {
+            var w = 0;
+            var h = 0;
+            try { w = Math.round(panel.actuallayoutwidth); h = Math.round(panel.actuallayoutheight); } catch (e) { w = 0; }
+            return [w, h];
         }
+
+        function laidOut(panel) {
+            var box = boxOf(panel);
+            return box[0] > 0 && box[1] > 0;
+        }
+
+        // Panorama panels have no Children(): the engine's own accessors are GetChildCount() and
+        // GetChild(i). Asking for Children() returned undefined for every panel, the walk found no
+        // carrier, and the host landed on the 0x0 component root again.
+        function kidsOf(panel) {
+            var out = [];
+            var count = 0;
+            try { count = panel.GetChildCount ? panel.GetChildCount() : 0; } catch (e) { count = 0; }
+            for (var i = 0; i < count; i += 1) {
+                var kid = null;
+                try { kid = panel.GetChild(i); } catch (e) { kid = null; }
+                if (kid) out.push(kid);
+            }
+            return out;
+        }
+
+        // base_hud ships the anchor, but shipping it proves nothing: the measurement in a live
+        // client was `Taskbar:0x0 < OpenlockStandaloneHost:0x0 < CitadelHudRoot:0x0`, the anchor
+        // inside a tree that is never laid out. So the anchor is used only when a panel above it
+        // has a box; otherwise the shell mounts where the HUD is actually drawn.
+        var anchor = null;
+        for (var ai = 0; ai < chain.length && !anchor; ai += 1) {
+            try { anchor = chain[ai].FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        }
+
+        var host = null;
+        if (anchor) {
+            var above = null;
+            try { above = anchor.GetParent ? anchor.GetParent() : null; } catch (e) { above = null; }
+            var proof = laidOut(anchor);
+            var guard = 0;
+            while (!proof && above && guard < 30) {
+                proof = laidOut(above);
+                try { above = above.GetParent ? above.GetParent() : null; } catch (e) { above = null; }
+                guard += 1;
+            }
+            if (proof) host = anchor;
+        }
+
         var carrier = null;
         for (var bi = 0; bi < chain.length && !carrier; bi += 1) {
-            var w = 0;
-            try { w = Math.round(chain[bi].actuallayoutwidth); } catch (e) { w = 0; }
-            if (w > 0) carrier = chain[bi];
+            if (laidOut(chain[bi])) carrier = chain[bi];
         }
         // A component root is not laid out and neither are its ancestors, so the box that is on
         // screen belongs to a panel the component built. The nearest laid-out descendant is where
         // a host can draw; without one the client would get an invisible shell over a live HUD.
+        var walked = 0;
+        var bestW = 0;
+        var bestH = 0;
         if (!carrier) {
             var queue = [outer];
             var seen = 0;
-            while (queue.length && !carrier && seen < 200) {
+            while (queue.length && !carrier && seen < 400) {
                 var head = queue.shift();
                 seen += 1;
-                var children = [];
-                try { children = head.Children ? head.Children() : []; } catch (e) { children = []; }
-                for (var qi = 0; qi < children.length; qi += 1) {
-                    var kid = children[qi];
-                    var kw = 0;
-                    var kh = 0;
-                    try { kw = Math.round(kid.actuallayoutwidth); kh = Math.round(kid.actuallayoutheight); } catch (e) { kw = 0; }
-                    if (kw > 0 && kh > 0) { carrier = kid; break; }
-                    queue.push(kid);
+                var kids = kidsOf(head);
+                for (var qi = 0; qi < kids.length; qi += 1) {
+                    var kb = boxOf(kids[qi]);
+                    if (kb[0] > bestW) bestW = kb[0];
+                    if (kb[1] > bestH) bestH = kb[1];
+                    if (laidOut(kids[qi])) { carrier = kids[qi]; break; }
+                    queue.push(kids[qi]);
                 }
             }
         }
@@ -106,6 +149,12 @@
         if (!host) {
             log("anchor was not created; stock HUD untouched");
             return;
+        }
+        if (host !== anchor) {
+            log(anchor ? "the shipped anchor sits in a tree with no box; mounting where a box is"
+                       : "no shipped anchor in this tree; mounting where a box is");
+            log("carrier walk: visited=" + seen + " widest=" + bestW + "x" + bestH
+                + " carrier=" + (carrier && carrier.id ? carrier.id : "(no id)"));
         }
 
         host.style.width = "100%";
