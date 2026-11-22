@@ -1,21 +1,51 @@
-// The family contour on the landing page, drawn as nine slices from the measured profile in
-// `family-look.json`: one pixel rows at the crowns, one rail across the span between them.
-// Nothing is scaled and nothing is clipped, so the page shows the same shape the Panorama shell
-// draws and the same corner a taskbar chip takes.
+// The family contour on the landing page. This is the shape engine the pinned client uses
+// (`popit-shell/ui/contour.js`), not a second drawing of it: the same measured page 9 profile,
+// the same one-factor corners, the same clip padding, so a surface on this page is cut exactly
+// the way a taskbar chip and a window frame are cut in the shell.
+//
+// A surface paints through `--clip` and strokes the same path one pixel inside it, so the
+// outline is never clipped. The page reads `contour.json` beside it for the profile.
 
-const CORNER_FALLBACK = { width: 7.67, height: 11 };
+const UNITS_W = 81.9;
+const UNITS_H = 121.348;
+const CORNER_BAND_X = 16.38;
+const CORNER_BAND_Y = 23.48;
+const CORNER_UNITS = 27.8;
+const BAR_HEIGHT = 48;
+const CLIP_PAD = 0.5;
+const FRAME_PAD = 1.5;
+const CORNER_PX = (CORNER_UNITS * BAR_HEIGHT) / UNITS_H;
 
-function cubic(p0, p1, p2, p3, t) {
-  const u = 1 - t;
-  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+const PROFILE_END = [
+  [461.43, 634.0, 510.57, 634.0],
+  [510.57, 634.0, 525.0, 612.17],
+  [525.0, 612.17, 525.0, 537.83],
+  [525.0, 537.83, 510.57, 516.0],
+  [510.57, 516.0, 461.43, 516.0],
+  [461.43, 516.0, 447.0, 537.83],
+  [447.0, 537.83, 447.0, 612.17],
+  [447.0, 612.17, 461.43, 634.0],
+];
+
+let shape = null;
+
+async function loadContour() {
+  shape = await (await fetch("contour.json")).json();
+  return shape;
 }
 
-function loopFor(shape, width, height, pad, cornerPx) {
+// scaleOf is the one uniform scale a surface of this size takes: the contour never stretches,
+// so the smaller of the two fits governs.
+function scaleOf(width, height) {
+  return Math.min(width / UNITS_W, height / UNITS_H);
+}
+
+function contourPath(width, height, pad = FRAME_PAD, cornerPx = CORNER_PX) {
+  if (!shape) return "";
   const inset = Math.min(pad, width / 6, height / 6);
   const boxW = Math.max(2, width - 2 * inset);
   const boxH = Math.max(2, height - 2 * inset);
-  const band = { x: shape.start[0] - shape.left, y: shape.bottom - shape.segments[1][5] };
-  const scale = Math.min(cornerPx / band.y, boxH / 3 / band.y, boxW / 3 / band.x);
+  const scale = Math.min(cornerPx / CORNER_BAND_Y, boxH / 3 / CORNER_BAND_Y, boxW / 3 / CORNER_BAND_X);
   const right = inset + boxW;
   const bottom = inset + boxH;
   const corners = {
@@ -25,111 +55,110 @@ function loopFor(shape, width, height, pad, cornerPx) {
     TL: [inset - shape.left * scale, inset - shape.top * scale],
   };
   const owner = ["BL", "BR", "BR", "TR", "TR", "TL", "TL", "BL"];
-  const points = [
+  const loop = [
     [461.43, 634.0], [510.57, 634.0], [525.0, 612.17], [525.0, 537.83],
     [510.57, 516.0], [461.43, 516.0], [447.0, 537.83], [447.0, 612.17],
-  ];
-  const loop = points.map((point, index) => {
+  ].map((point, index) => {
     const [tx, ty] = corners[owner[index]];
     return [point[0] * scale + tx, point[1] * scale + ty];
   });
-  const curves = shape.segments.map((segment, index) => {
-    const start = points[index];
-    const end = points[(index + 1) % points.length];
-    const from = loop[index];
-    const to = loop[(index + 1) % loop.length];
-    return [
-      from[0], from[1],
-      from[0] + (segment[0] - start[0]) * scale, from[1] + (segment[1] - start[1]) * scale,
-      to[0] + (segment[2] - end[0]) * scale, to[1] + (segment[3] - end[1]) * scale,
-      to[0], to[1],
-    ];
-  });
-  return { curves, band: Math.max(1, Math.round(band.y * scale)) };
+  const fmt = (value) => (Math.round(value * 2) / 2).toFixed(1);
+  const xy = (x, y) => `${fmt(x)} ${fmt(y)}`;
+  let d = `M ${xy(loop[0][0], loop[0][1])}`;
+  for (let i = 0; i < shape.segments.length; i += 1) {
+    const seg = shape.segments[i];
+    const [sx, sy, ex, ey] = PROFILE_END[i];
+    const [dsx, dsy] = loop[i];
+    const [dex, dey] = loop[(i + 1) % loop.length];
+    d += ` C ${xy(dsx + (seg[0] - sx) * scale, dsy + (seg[1] - sy) * scale)},`;
+    d += ` ${xy(dex + (seg[2] - ex) * scale, dey + (seg[3] - ey) * scale)}, ${xy(dex, dey)}`;
+  }
+  return `${d} Z`;
 }
 
-function span(curves, y) {
-  let low = Infinity;
-  let high = -Infinity;
-  const steps = 96;
-  for (const curve of curves) {
-    let previous = cubic(curve[1], curve[3], curve[5], curve[7], 0) - y;
-    for (let step = 1; step <= steps; step += 1) {
-      const t1 = step / steps;
-      const value = cubic(curve[1], curve[3], curve[5], curve[7], t1) - y;
-      if ((previous <= 0 && value > 0) || (previous >= 0 && value < 0)) {
-        let lo = (step - 1) / steps;
-        let hi = t1;
-        for (let pass = 0; pass < 20; pass += 1) {
-          const mid = (lo + hi) / 2;
-          const at = cubic(curve[1], curve[3], curve[5], curve[7], mid) - y;
-          if ((at <= 0) === (previous <= 0)) lo = mid; else hi = mid;
-        }
-        const x = cubic(curve[0], curve[2], curve[4], curve[6], (lo + hi) / 2);
-        if (x < low) low = x;
-        if (x > high) high = x;
-      }
-      previous = value;
+function contourFits(path, width, height, pad) {
+  const numbers = path.match(/-?\d+(\.\d+)?/g) || [];
+  const xs = [];
+  const ys = [];
+  for (let i = 0; i + 1 < numbers.length; i += 2) {
+    xs.push(Number(numbers[i]));
+    ys.push(Number(numbers[i + 1]));
+  }
+  const low = pad - 0.75;
+  return xs.every((x) => x >= low && x <= width - pad + 0.75)
+    && ys.every((y) => y >= low && y <= height - pad + 0.75);
+}
+
+// A painted surface that is not the contour is refused by name: the paint is removed and the
+// surface says so, rather than a rounded rectangle standing in for the shape.
+function refuse(element, code) {
+  if (!element || element.dataset.refused === code) return;
+  element.dataset.refused = code;
+  element.style.background = "none";
+  element.style.border = "0";
+  element.style.clipPath = "none";
+  element.setAttribute("title", `refused ${code}`);
+}
+
+function clipToContour(element) {
+  if (!shape || !element) return;
+  const apply = () => {
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const w = Math.max(2, Math.floor(rect.width));
+    const h = Math.max(2, Math.floor(rect.height));
+    const d = contourPath(w, h, FRAME_PAD);
+    const clip = contourPath(w, h, CLIP_PAD);
+    if (!contourFits(clip, w, h, CLIP_PAD)) {
+      refuse(element, "contour-crown-outside-frame");
+      return;
     }
-  }
-  return low === Infinity ? null : { left: low, right: high };
+    element.style.setProperty("--clip", `path('${clip}')`);
+    let frame = element.querySelector(":scope > .contour-frame");
+    if (!frame) {
+      frame = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      frame.setAttribute("class", "contour-frame");
+      frame.setAttribute("aria-hidden", "true");
+      const stroke = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      stroke.setAttribute("fill", "none");
+      frame.append(stroke);
+      element.append(frame);
+    }
+    frame.setAttribute("width", String(w));
+    frame.setAttribute("height", String(h));
+    frame.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    frame.setAttribute("preserveAspectRatio", "none");
+    frame.style.width = `${w}px`;
+    frame.style.height = `${h}px`;
+    const stroke = frame.firstElementChild;
+    stroke.setAttribute("d", d);
+    stroke.setAttribute("stroke-width", "1");
+    stroke.setAttribute("stroke-linejoin", "round");
+    stroke.setAttribute("shape-rendering", "geometricPrecision");
+  };
+  apply();
+  new ResizeObserver(apply).observe(element);
 }
 
-function body(layer, shape, width, height, offset, pad, cornerPx, className) {
-  const loop = loopFor(shape, width, height, pad, cornerPx);
-  if (loop.band * 2 > height) return false;
-  const rows = [];
-  for (let i = 0; i < loop.band; i += 1) rows.push(i);
-  for (let j = height - loop.band; j < height; j += 1) rows.push(j);
-  let drawn = 0;
-  for (const row of rows) {
-    const line = span(loop.curves, row + 0.5);
-    if (!line) continue;
-    const left = Math.max(0, Math.round(line.left));
-    const right = Math.min(width, Math.round(line.right));
-    if (right - left < 1) continue;
-    drawn += 1;
-    const strip = document.createElement("div");
-    strip.className = className;
-    strip.style.cssText = `left:${offset + left}px;top:${offset + row}px;width:${right - left}px;height:1px`;
-    layer.append(strip);
-  }
-  if (drawn === 0) return false;
-  const rail = document.createElement("div");
-  rail.className = className;
-  rail.style.cssText = `left:${offset}px;top:${offset + loop.band}px;width:${width}px;height:${height - loop.band * 2}px`;
-  layer.append(rail);
-  return true;
-}
-
-function paint(element, shape, look) {
-  const width = Math.max(4, Math.floor(element.clientWidth));
-  const height = Math.max(4, Math.floor(element.clientHeight));
-  const corner = Math.min(look.corner_px.height, height / 2);
-  element.replaceChildren();
-  const ink = document.createElement("div");
-  ink.className = "contour-layer";
-  element.append(ink);
-  if (!body(ink, shape, width, height, 0, look.constants.frame_pad, corner, "contour-ink")) return;
-  body(ink, shape, width - 2, height - 2, 1, look.constants.frame_pad, corner, "contour-fill");
-  element.dataset.contour = "sliced";
+function fillContours(root) {
+  root.querySelectorAll("[data-contour]").forEach(clipToContour);
 }
 
 async function main() {
-  const response = await fetch("family-look.json");
-  if (!response.ok) return;
-  const facts = await response.json();
+  await loadContour();
+  fillContours(document);
+  const again = () => fillContours(document);
+  new ResizeObserver(again).observe(document.body);
+  window.addEventListener("resize", again);
+  // The machine's sentences for this section, written into the page from its own reading.
+  const facts = await (await fetch("family-look.json")).json();
   const set = (id, text) => {
     const node = document.getElementById(id);
     if (node && text) node.textContent = text;
   };
   set("contour-lede", facts.copy.lede);
-  set("contour-caption", facts.copy.caption);
   set("contour-note", facts.copy.note);
-  const surfaces = Array.from(document.querySelectorAll("[data-contour-surface]"));
-  const draw = () => surfaces.forEach((surface) => paint(surface, facts.contour, facts.look));
-  draw();
-  new ResizeObserver(draw).observe(document.body);
+  set("contour-caption", facts.copy.caption);
 }
 
 main().catch(() => {});

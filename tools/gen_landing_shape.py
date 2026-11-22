@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import os
 import subprocess
 import sys
@@ -157,7 +158,9 @@ def main(argv: list[str] | None = None) -> int:
         print("[ok] the landing shape facts are these records")
         return 0
     OUTPUT.write_text(text, encoding="utf-8")
-    print(f"wrote {OUTPUT.relative_to(ROOT)}")
+    # The page's engine reads the profile beside it, exactly as the client does.
+    shutil.copyfile(CONTOUR, ROOT / "landing" / "contour.json")
+    print(f"wrote {OUTPUT.relative_to(ROOT)} and landing/contour.json")
     return 0
 
 

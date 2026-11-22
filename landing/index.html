@@ -329,12 +329,14 @@
       *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
     }
 
-    /* The contour: nine slices of the measured profile, one corner on every surface. */
+    /* The contour: the same surface grammar the pinned client draws. A surface paints through
+       its clip and strokes the same path a pixel inside it, so the outline is never cut. */
     .contour-stage {
       display: grid;
       gap: clamp(14px, 2vw, 24px);
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       margin-top: 22px;
+      align-items: end;
     }
     .contour-figure {
       margin: 0;
@@ -343,16 +345,29 @@
       color: var(--muted);
       font: 12px/1.5 var(--mono);
     }
-    .contour-shape {
-      position: relative;
-      background: none;
+    .surface { position: relative; background: none; }
+    .surface::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      clip-path: var(--clip, none);
+      background: var(--raised);
     }
+    .surface > * { position: relative; z-index: 1; }
+    .surface .contour-frame {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .surface .contour-frame path { stroke: var(--line-strong); fill: none; }
     .contour-shape[data-contour-surface="chip"] { height: 34px; }
     .contour-shape[data-contour-surface="card"] { height: 132px; }
     .contour-shape[data-contour-surface="window"] { height: 260px; }
-    .contour-layer { position: absolute; inset: 0; }
-    .contour-ink { position: absolute; background: var(--line-strong); }
-    .contour-fill { position: absolute; background: var(--raised); }
     .contour-note { margin: 14px 0 0; color: var(--dim); font: 13px/1.6 var(--sans); }
   </style>
 </head>
@@ -755,15 +770,15 @@
       </div>
       <div class="contour-stage">
         <figure class="contour-figure">
-          <div class="contour-shape" data-contour-surface="chip" aria-hidden="true"></div>
+          <div class="surface contour-shape" data-contour-surface="chip" data-contour="card" aria-hidden="true"></div>
           <figcaption>taskbar chip</figcaption>
         </figure>
         <figure class="contour-figure">
-          <div class="contour-shape" data-contour-surface="card" aria-hidden="true"></div>
+          <div class="surface contour-shape" data-contour-surface="card" data-contour="card" aria-hidden="true"></div>
           <figcaption>card</figcaption>
         </figure>
         <figure class="contour-figure">
-          <div class="contour-shape" data-contour-surface="window" aria-hidden="true"></div>
+          <div class="surface contour-shape" data-contour-surface="window" data-contour="card" aria-hidden="true"></div>
           <figcaption>window</figcaption>
         </figure>
       </div>
