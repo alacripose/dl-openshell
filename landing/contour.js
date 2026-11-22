@@ -159,6 +159,24 @@ async function main() {
   set("contour-lede", facts.copy.lede);
   set("contour-note", facts.copy.note);
   set("contour-caption", facts.copy.caption);
+  // The prose record: what the family checkers said about this page's own sentences. The refusal
+  // is printed with the sentence that earned it; the page does not rewrite itself to be quiet.
+  const prose = await (await fetch("prose.json", { cache: "no-store" })).json();
+  const refusals = Array.isArray(prose.refusals) ? prose.refusals : [];
+  set("prose-tally", `${prose.sentences} sentences, ${prose.words} words, longest ${prose.longest}, ${refusals.length} refusals`);
+  const list = document.getElementById("prose-refusals");
+  if (list) {
+    list.replaceChildren();
+    refusals.forEach((refusal) => {
+      const item = document.createElement("li");
+      const rule = document.createElement("code");
+      rule.textContent = refusal.rule;
+      const text = document.createElement("span");
+      text.textContent = refusal.text;
+      item.append(rule, text);
+      list.append(item);
+    });
+  }
 }
 
 main().catch(() => {});

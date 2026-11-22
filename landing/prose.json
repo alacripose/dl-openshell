@@ -1,0 +1,159 @@
+{
+  "schema": "openlock.landing-prose/2",
+  "page": "landing/index.html",
+  "sentences": 296,
+  "words": 3112,
+  "longest": 34,
+  "digest": "b1fc127dcc041e1e7326289b249db2c561fcf0e633625d2446333eabf5fb6a9d",
+  "checkers": {
+    "ui_prose": "5b0a1e8c55aca4d0",
+    "prose_mjs": "5090e9d726a753fc"
+  },
+  "refusals": [
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "Owns the durable key for a split of a discovered window, so a HUD rebuil"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "Owns per-scheme window geometry, arrangement state and each cell's Popit"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "A pair paints the live shell as well as the Popit: the chosen class reac"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The taskbar and its window manager are retired: no title strip, cost rea"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "It carries the Popit's interface - page arrows, cell arrows, the section"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "A pair's own role table paints it: primary is the slab, secondary the hi"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The shell ground, its ink and its single selection accent stay with the "
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The bibles and the pair table are the LittleBigPlanet lineage the Popit "
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "Verified here: 83 window-manager checks (frame boundary, cell outline, p"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The shell itself runs in the client: a CSDK13 build mounted as logged , "
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "Not verified: a pointer-driven pair switch inside the client, the Popit "
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The live renderer is closed to the tags it knows; anything else becomes "
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "An input the pipeline cannot honestly read is refused by name instead of"
+    },
+    {
+      "rule": "budget",
+      "detail": "over 24 words",
+      "text": "The checkout installer also hashes the built and installed VPK, keeps th"
+    },
+    {
+      "rule": "word: actually",
+      "detail": "ui_prose",
+      "text": "The shell reads only directories the game already mounts, and lists what it actually found."
+    },
+    {
+      "rule": "em-dash",
+      "detail": "ui_prose",
+      "text": "Recorded in \u00a711, \u00a76 and \u00a75\u2013\u00a77, \u00a712.8."
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "27 words",
+      "text": "Owns the durable key for a split of a discovered window, so a HUD rebuild or a renamed panel does no"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "25 words",
+      "text": "Owns per-scheme window geometry, arrangement state and each cell's Popit style, written through a te"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "32 words",
+      "text": "A pair paints the live shell as well as the Popit: the chosen class reaches the window frames, their"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "30 words",
+      "text": "The taskbar and its window manager are retired: no title strip, cost readout, grips, minimize or max"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "27 words",
+      "text": "It carries the Popit's interface - page arrows, cell arrows, the section reveal and the Popit contro"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "34 words",
+      "text": "A pair's own role table paints it: primary is the slab, secondary the highlight, emphasis the text, "
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "25 words",
+      "text": "The shell ground, its ink and its single selection accent stay with the theme, so a light pair canno"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "30 words",
+      "text": "The bibles and the pair table are the LittleBigPlanet lineage the Popit follows; no LittleBigPlanet "
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "34 words",
+      "text": "Verified here: 83 window-manager checks (frame boundary, cell outline, pair class), 65 Popit checks,"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "31 words",
+      "text": "The shell itself runs in the client: a CSDK13 build mounted as logged , framed live HUD surfaces ( 8"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "28 words",
+      "text": "Not verified: a pointer-driven pair switch inside the client, the Popit surface and its child reveal"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "25 words",
+      "text": "The live renderer is closed to the tags it knows; anything else becomes a plain Panel, with no scrip"
+    },
+    {
+      "rule": "prose.mjs:sentence",
+      "detail": "25 words",
+      "text": "The checkout installer also hashes the built and installed VPK, keeps the first replaced archive as "
+    }
+  ]
+}

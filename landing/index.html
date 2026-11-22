@@ -407,6 +407,7 @@
           <a href="#family">Family</a>
           <a href="#compare">Compared</a>
           <a href="#addons">Addons</a>
+          <a href="#evidence">Evidence</a>
           <a href="#install">Install</a>
           <a href="https://github.com/alacripose/dl-openshell">Source</a>
         </div>
@@ -423,7 +424,7 @@
           <a class="button primary" href="https://github.com/alacripose/dl-openshell/releases/latest" data-contour="card">Download the player build</a>
           <a class="button" href="#security" data-contour="card">Read the trust boundary</a>
         </div>
-        <div class="version">v0.7.0 · player build · game build 6821 · MIT · no server required</div>
+        <div class="version">v0.7.0 · player build · game build 6861 · popit baseline e507d355 · MIT · no server required</div>
       </div>
       <div class="terminal" aria-label="Install and verification example" data-contour="card">
         <div class="bar"><i></i><i></i><i></i><span>install / receipt</span></div>
@@ -441,7 +442,7 @@
     </section>
 
     <div class="audit-line" aria-label="Audit status">
-      <span>audited <b>2026-11-12</b> against the tracked tree</span>
+      <span>audited <b>2026-11-22</b> against the pinned popit contour</span>
       <span><b>11</b> behavioural suites</span>
       <span><b>5</b> parity cells</span>
       <span><b>11/11</b> family register checks</span>
@@ -806,6 +807,58 @@
       </div>
       <p class="contour-note" id="contour-note"></p>
       <p class="contour-note" id="contour-caption"></p>
+    </section>
+
+    <section id="evidence" aria-labelledby="evidence-title">
+      <div class="section-head">
+        <h2 id="evidence-title">Evidence</h2>
+        <p>Read from the pinned contour record, the gate runs and this page's own prose record.
+          Every number names the run that produced it.</p>
+      </div>
+      <div class="ledger">
+        <aside class="ledger-index" aria-label="Evidence sources">
+          <p class="index-title">Sources</p>
+          <a href="https://github.com/alacripose/hero-retarget-workbench/blob/main/pins/contour-pin.json">contour-pin.json</a>
+          <a href="#evidence-prose">prose.json</a>
+          <p class="rail-note">The pin is the model forge's record of the accepted contour. The prose
+            record is this page's own sentences and what the family checkers said about them.</p>
+        </aside>
+        <div class="ledger-body">
+          <article class="stage">
+            <div class="stage-head"><span class="stage-no">01</span><h3>Pinned surfaces</h3><span class="stage-where">contour-pin.json</span></div>
+            <ul class="refuse-list">
+              <li><code>36 &middot; 20&times;20</code><span>Title strip 36 px, window control 20 by 20 px.</span></li>
+              <li><code>22 &middot; 43.2</code><span>Row 22 px, a row with a meta line 43.2 px.</span></li>
+              <li><code>93 @ x 18</code><span>The bar's Start cell is 93 px wide at x 18.</span></li>
+              <li><code>0.5 &middot; 1.5 &middot; 1</code><span>Clip 0.5 outside, frame 1.5 inside, stroke 1, overhang 1.</span></li>
+            </ul>
+          </article>
+          <article class="stage">
+            <div class="stage-head"><span class="stage-no">02</span><h3>Gates</h3><span class="stage-where">tools/</span></div>
+            <ul class="refuse-list">
+              <li><code>11 / 0</code><span>Contour gate checks and refusals.</span></li>
+              <li><code>9 / 0</code><span>Contour options checks and refusals.</span></li>
+              <li><code>76 / 0</code><span>Contour reference model checks and failures.</span></li>
+              <li><code>107 / 0</code><span>Chrome checks and failures.</span></li>
+              <li><code>61 / 0</code><span>Dashboard checks and failures.</span></li>
+              <li><code>HELD</code><span>Browser minimal shell probe, exit 0 at three window sizes.</span></li>
+            </ul>
+          </article>
+          <article class="stage" id="evidence-prose">
+            <div class="stage-head"><span class="stage-no">03</span><h3>Prose record</h3><span class="stage-where">prose.json</span></div>
+            <p id="prose-tally">Read by deadlock-model-forge/tools/ui_prose.py and brass-meridian/tools/prose.mjs.</p>
+            <ol class="refuse-list" id="prose-refusals"></ol>
+          </article>
+          <article class="stage">
+            <div class="stage-head"><span class="stage-no">04</span><h3>Family baseline</h3><span class="stage-where">docs/family-baseline.json</span></div>
+            <ul class="refuse-list">
+              <li><code>e507d355</code><span>The popit shell revision this shell is pinned against.</span></li>
+              <li><code>4a6e012e</code><span>BLAKE3 over the 28 files of that baseline.</span></li>
+              <li><code>6861</code><span>Live Deadlock build, 2026-11-09.</span></li>
+            </ul>
+          </article>
+        </div>
+      </div>
     </section>
 
     <section id="security" aria-labelledby="security-title">

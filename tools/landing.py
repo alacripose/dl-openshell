@@ -188,7 +188,15 @@ def main(argv: list[str] | None = None) -> int:
         if current != text:
             print("[FAIL] landing-shape-stale: landing/family-look.json is not these records")
             return 1
+        # The page's prose is read by the family checkers, and its record is part of the page.
+        # A sentence edited without that read is drift, whether the sentence got better or worse.
+        prose = subprocess.run([sys.executable, str(ROOT / "tools" / "landing_prose.py"), "--check"],
+                               capture_output=True, text=True, check=False)
+        if prose.returncode != 0:
+            print((prose.stdout or prose.stderr).strip())
+            return 1
         print("[ok] the landing shape facts are these records")
+        print((prose.stdout or "").strip())
         return 0
     OUTPUT.write_text(text, encoding="utf-8")
     # The page's engine reads the profile beside it, exactly as the client does.

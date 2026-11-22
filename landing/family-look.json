@@ -11,7 +11,7 @@
     "digest": "f9b1a006662c94b9232a6eaa08a33feda653a5921565a86973d066c7074fd453",
     "client": {
       "tool": "tools/landing.py",
-      "source": "sha256:3348dc32d4eae951e7e840435905a5362f732386fd6a7ad498e01a2ca8629de7",
+      "source": "sha256:69e976e0c64d27889e9ea5b28510dee1b6157b2ee836e6328def716dc20aafc4",
       "routes": [
         "/api/axis/system",
         "/api/axis/civilians",
