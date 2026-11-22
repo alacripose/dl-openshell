@@ -219,8 +219,13 @@
     color: #d9b779;
 }
 
-.Taskbar .ShellTab.Active {
-    background-color: #b08d5729;
+/* The active cell's paint is its fill, never a rectangle: the reference's `.cell.on` paint is
+   rgba(176,141,87,0.16) and `.cell` is paper at 6 per cent, both composited over the bar. The
+   rectangle that used to sit here flooded the crown, which is what the pin caught. */
+.Taskbar .ShellTab.Active,
+.Taskbar .ShellTab:hover,
+.Taskbar .WindowsButton:hover {
+    background-color: transparent;
 }
 
 /* The launcher is the shell's start surface: a plate over the ink, not a floating chip. */
@@ -302,18 +307,110 @@
    cent paper is composited over the bar because there the clip removes everything else, and here the
    ink sits under the fill rather than around it. The value is the paper at six per cent over the
    bar's own ink, which is what the reference renders. */
+/* The reference's two paints, composited over the bar's own ink so one opaque surface can stand in
+   for a clip: paper at 6 per cent (#e6dbc2 0.06 over #0f1113) and brass at 16 per cent (#b08d57 0.16
+   over #0f1113). Hover moves the ink and leaves the paint where it is, as bar.css does. */
 .Taskbar .ShellTab .ContourFill,
 .ShellTab .ContourFill,
 .Taskbar .WindowsButton .ContourFill,
 .WindowsButton .ContourFill,
 .Taskbar .Clock .ContourFill,
 .Clock .ContourFill {
-    background-color: #1b1a16;
+    background-color: #1c1d1e;
+}
+
+.Taskbar .ShellTab:hover .ContourFill,
+.ShellTab:hover .ContourFill,
+.Taskbar .WindowsButton:hover .ContourFill,
+.WindowsButton:hover .ContourFill {
+    background-color: #1c1d1e;
 }
 
 .Taskbar .ShellTab.Active .ContourFill,
 .ShellTab.Active .ContourFill {
-    background-color: #2a2519;
+    background-color: #29251e;
+}
+
+/* The window's own plates sit inside the crown: a body at the frame's edge squares the corner the
+   contour just cut, because Panorama has no clip for a child. */
+.WindowFrame .WindowTitle {
+    margin: 2px 2px 0px 2px;
+}
+
+.WindowFrame .WindowMeta {
+    margin: 0px 2px 0px 2px;
+}
+
+.WindowFrame .WindowBody {
+    margin: 0px 2px 2px 2px;
+}
+
+/* A window row is a surface: the same ground, the same ink, the same pads. The Label inside keeps the
+   text and the pointer; nothing here draws a border or a radius of its own. */
+.ViewRowBox {
+    width: 100%;
+    height: fit-children;
+    margin: 0px 0px 3px 0px;
+    background-color: transparent;
+}
+
+.ViewRowBox .ContourInk {
+    background-color: #b08d576b;
+}
+
+.ViewRowBox:hover .ContourInk {
+    background-color: #d9b779d9;
+}
+
+.ViewRowBox .ContourFill {
+    background-color: #1c1d1e;
+}
+
+.ViewRowBox:hover .ContourFill {
+    background-color: #1c1d1e;
+}
+
+.ShellRoot .ViewRowBox .ViewAction,
+.ShellRoot .ViewAction,
+.ShellRoot .ViewAction:hover {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+    margin: 0px 0px 3px 0px;
+    height: 22px;
+    min-height: 22px;
+}
+
+.ShellRoot .ViewAction .ContourInk {
+    background-color: #b08d576b;
+}
+
+.ShellRoot .ViewAction:hover .ContourInk {
+    background-color: #d9b779d9;
+}
+
+.ShellRoot .ViewAction .ContourFill {
+    background-color: #1c1d1e;
+}
+
+.ShellRoot .ViewAction:hover .ContourFill {
+    background-color: #1c1d1e;
+}
+
+.ShellRoot .ViewRowBox .ViewAction,
+.ShellRoot .ViewRowBox .ViewLine,
+.ShellRoot .ViewRowBox .ViewMuted {
+    padding: 3px 12px;
+    color: #e6dbc2;
+    font-size: 12px;
+    background-color: transparent;
+    border: 0px;
+    border-radius: 0px;
+}
+
+.ShellRoot .ViewRowBox .ViewAction:hover,
+.ShellRoot .ViewAction:hover {
+    color: #d9b779;
 }
 
 .Taskbar .ShellTab:hover .ContourFill,
@@ -426,8 +523,8 @@
 
 .WindowFrame .WindowBody,
 .WindowBody {
-    /* The reference paints two radial washes over the ink. This is the direct attempt at the first
-       one; the client's report says whether the property survives, so the substitute below is only
-       used when it does not. */
-    background-color: gradient( radial, 8% -12%, 0% 0%, 92% 112%, from( #2a2418 ), to( #00000000 ) );
+    /* The reference's two radial washes do not exist here: the client has no radial gradient in this
+       release, and a transparent-ended linear wash over the body let the scene through. The body is
+       the reference's ink, flat, and the washes stay recorded as the open delta. */
+    background-color: #0f1113;
 }

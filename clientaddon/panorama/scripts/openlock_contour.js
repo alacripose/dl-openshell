@@ -126,6 +126,17 @@
     // same shape inset by the stroke. The panels are a fixed pool that is resized in place, so a
     // repaint never races a deferred delete and a surface cannot end up with two layers of slices
     // (which is what painted a bar cell solid brass: the ink body drawn twice and the fill under it).
+    // padsOf is the one place the pin's padding becomes pixels: the frame pad the profile is cut at,
+    // the clip pad the reference keeps outside it, and the stroke the ink is drawn with.
+    function padsOf(look) {
+        var constants = (look && look.constants) || {};
+        return {
+            clip: Number(constants.clip_pad) || 0.5,
+            frame: Number(constants.frame_pad) || 1.5,
+            stroke: Math.max(1, Number(constants.stroke_width) || 1),
+        };
+    }
+
     function paint(layer, width, height, strokeClass, fillClass) {
         if (!data) return false;
         if (width < 4 || height < 4) {
@@ -133,14 +144,19 @@
             return false;
         }
         var look = data.look;
+        var pads = padsOf(look);
         var corner = Math.min(look.corner_px.height, height / 2);
-        var shape = loopFor(width, height, look.constants.frame_pad, corner);
+        // One shared padding arithmetic for every surface: the frame sits at the pin's frame pad, the
+        // ink is one stroke wide, and the fill starts at pad plus stroke. A cell, a window crown and a
+        // window row all come through here, so none of them carries its own numbers.
+        var shape = loopFor(width, height, pads.frame, corner);
         var band = shape.band;
         if (band * 2 > height) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
         }
-        var inner = loopFor(Math.max(4, width - 2), Math.max(4, height - 2), look.constants.frame_pad, corner);
+        var inner = loopFor(Math.max(4, width - 2 * pads.stroke), Math.max(4, height - 2 * pads.stroke),
+            pads.frame, corner);
         // The stroke is an outline: two crowns and two side lines, one pixel each. The fill is a
         // whole surface: two crowns and the span between them. A stroke painted as a slab is what
         // turned a bar cell solid brass — the fill is 6 per cent paper and cannot hide a slab.
@@ -227,7 +243,8 @@
         var drawnOuter = everyRow(kids, width, height, 0, 0, strokeClass, 0);
         interior = true;
         useInner = true;
-        var drawnInner = everyRow(kids, width - 2, height - 2, 1, 1, fillClass, slots);
+        var drawnInner = everyRow(kids, width - 2 * pads.stroke, height - 2 * pads.stroke,
+            pads.stroke, pads.stroke, fillClass, slots);
         if (drawnOuter === 0 || drawnInner === 0) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
@@ -295,6 +312,7 @@
 
     globalThis.OpenlockContour = {
         draw: draw,
+        pads: function () { return data ? padsOf(data.look) : { clip: 0.5, frame: 1.5, stroke: 1 }; },
         refuse: refuse,
         refusals: function () { return refused.slice(); },
         band: function (height) {

@@ -129,7 +129,8 @@ def c6_outline() -> None:
     # The ink is drawn at the box and the fill at one pixel in, which is what keeps both halves
     # of the stroke inside the surface rather than cut by it.
     holds = "everyRow(kids, width, height, 0, 0, strokeClass, 0)" in runtime \
-        and "everyRow(kids, width - 2, height - 2, 1, 1, fillClass, slots)" in runtime
+        and "everyRow(kids, width - 2 * pads.stroke, height - 2 * pads.stroke," in runtime
+    holds = holds and "padsOf(look)" in runtime
     look = json.loads(LOOK.read_text(encoding="utf-8"))
     holds = holds and look["constants"]["clip_pad"] < look["constants"]["frame_pad"]
     check("outline-not-clipped", "the ink is the outer edge and the fill is inset by the stroke",
@@ -141,6 +142,16 @@ def c7_tested() -> None:
     check("contour-slices-tested", "the slices match an independent reading of the profile",
           run.returncode == 0, str(TEST.relative_to(ROOT)),
           (run.stdout + run.stderr).strip().splitlines()[-1][:200] if (run.stdout or run.stderr) else "no output")
+
+
+def c11_rows_and_crowns() -> None:
+    """The rows inside a window and a crown after a drag come through the same draw."""
+    shell = SHELL_JS.read_text(encoding="utf-8")
+    runtime = RUNTIME.read_text(encoding="utf-8")
+    holds = "contourChip(box)" in shell         and "ViewRowBox" in shell         and "__contourW = -1" in shell         and "pads: function ()" in runtime
+    check("contour-on-rows-and-crowns", "a window row and a dragged crown take the same contour",
+          holds, str(SHELL_JS.relative_to(ROOT)),
+          "rows and dragged crowns are drawn" if holds else "a row or a dragged crown is not drawn")
 
 
 def c8_wired() -> None:
@@ -195,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     c6_outline()
     c7_tested()
     c8_wired()
+    c11_rows_and_crowns()
     c10_options()
     # The shape's own count is taken before the landing check, so the facts the landing page
     # prints do not change the number they print.

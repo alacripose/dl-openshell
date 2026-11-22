@@ -232,6 +232,27 @@ for (const surface of [frame, chip]) {
     }
 }
 
+// --- the pads are the pin's, not the runtime's own numbers ------------------
+// A cell, a window crown and a window row all come through pads(): the frame pad the profile is cut
+// at, the clip pad the reference keeps outside it, and the stroke the ink is drawn with.
+const pads = contour.pads();
+ok(pads.frame === data.look.constants.frame_pad, `the frame pad is ${pads.frame}, the pin says ${data.look.constants.frame_pad}`);
+ok(pads.clip === data.look.constants.clip_pad, `the clip pad is ${pads.clip}, the pin says ${data.look.constants.clip_pad}`);
+ok(pads.stroke === data.look.constants.stroke_width, `the stroke is ${pads.stroke}, the pin says ${data.look.constants.stroke_width}`);
+for (const surface of [frame, chip]) {
+    const layer = makePanel("ContourSlices");
+    layer.AddClass("ContourSlices");
+    contour.draw(layer, surface.width, surface.height);
+    const fillRows = rowsOf(layer, "ContourFill");
+    ok(fillRows.length > 0, `${surface.width}x${surface.height} the fill has no rows`);
+    const topMost = Math.min.apply(null, fillRows.map((row) => row.top));
+    const leftMost = Math.min.apply(null, fillRows.map((row) => row.left));
+    ok(topMost >= pads.stroke, `${surface.width}x${surface.height} the fill starts above the stroke (${topMost})`);
+    ok(leftMost >= pads.stroke, `${surface.width}x${surface.height} the fill starts left of the stroke (${leftMost})`);
+    ok(fillRows.every((row) => row.left + row.width <= surface.width - pads.stroke + 1),
+        `${surface.width}x${surface.height} the fill runs past the right stroke`);
+}
+
 // A surface with no room for a crown is refused by name, not drawn as a rectangle.
 const tiny = makePanel("ContourSlices");
 tiny.AddClass("ContourSlices");

@@ -1369,6 +1369,8 @@
         // and swallows the click, which is exactly how the title-bar glyphs stopped working.
         l.hittest = false;
         if (cls === "ShellTab") l.AddClass("ShellTabLabel");
+        // A view action is a surface in a window, so it carries the contour like a bar cell.
+        if (cls === "ViewAction") contourChip(p);
         // A title glyph must work on both clients. The shipping client dispatches activate after
         // a press; the reduced tools client can lose that event while the title's drag poll owns
         // the pointer. Bind both, with a short guard so one press does not run the action twice.
@@ -5876,6 +5878,20 @@
         if (!win || !commit) return;
         var g = ensureGeometry(win);
         applyWindow(win);
+        // The crown is cut from the box the drag ended on, not the one it started from: the frame's
+        // own size cache is dropped first so the scheduled draw measures again.
+        var record = frames[id];
+        if (record && record.frame) {
+            record.frame.__contourW = -1;
+            record.frame.__contourH = -1;
+            contourChip(record.frame);
+            $.Schedule(0.12, function () {
+                if (!alive(record.frame)) return;
+                record.frame.__contourW = -1;
+                record.frame.__contourH = -1;
+                contourChip(record.frame);
+            });
+        }
     }
 
     function makeDraggable(panel, id, mode) {
@@ -5974,10 +5990,15 @@
     // --- shell views ---------------------------------------------------------
 
     function rowXd(body, text, cls) {
-        var l = $.CreatePanel("Label", body, "");
+        // Every line in a window is a surface too: the ground takes the contour, the Label keeps the
+        // text. A row drawn as a bare Label is a rectangle inside a contoured frame.
+        var box = $.CreatePanel("Panel", body, "");
+        box.AddClass("ViewRowBox");
+        var l = $.CreatePanel("Label", box, "");
         l.AddClass(cls || "ViewLine");
         l.AddClass("ViewRow");
         l.text = text;
+        contourChip(box);
         return l;
     }
 
@@ -5993,7 +6014,11 @@
     // the pointer itself, and owns the activation handler. A row built as an unnamed Panel with a
     // hit-test-disabled label is addressable only by position, which is the defect this replaces.
     function actionRow(body, text, fn, id) {
-        var row = $.CreatePanel("Label", body, id || "");
+        // The row is a surface, so it takes the contour like a bar cell: a ground panel that owns the
+        // shape, and the Label inside it that keeps the text, the pointer and the handler.
+        var box = $.CreatePanel("Panel", body, "");
+        box.AddClass("ViewRowBox");
+        var row = $.CreatePanel("Label", box, id || "");
         row.AddClass("ViewAction");
         row.AddClass("ViewRow");
         row.text = text;
@@ -6002,6 +6027,7 @@
             lastInteractionAt = Date.now();
             fn();
         });
+        contourChip(box);
         return row;
     }
 
