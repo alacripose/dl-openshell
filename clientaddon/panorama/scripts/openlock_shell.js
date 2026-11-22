@@ -103,8 +103,57 @@
             depth += 1;
         }
         $.Msg("[Openlock] bar chain: " + parts.join(" < "));
+        // Which tree is the bar in, and is the game's own HUD beside it laid out? If the stock HUD
+        // has a box here and the bar does not, the mount is inside the drawn HUD and the bar is the
+        // thing that is wrong; if neither has one, this whole instance is offscreen.
+        try {
+            var outer = root;
+            var guard = 0;
+            while (outer && outer.GetParent && guard < 30) {
+                var up = outer.GetParent();
+                if (!up) break;
+                outer = up;
+                guard += 1;
+            }
+            var hud = outer ? outer.FindChildTraverse("Hud") : null;
+            var hudBox = hud ? (Math.round(num(hud.actuallayoutwidth)) + "x" + Math.round(num(hud.actuallayoutheight))) : "none";
+            var upId = outer && outer.GetParent ? (outer.GetParent() ? (outer.GetParent().id || "(no id)") : "(no parent)") : "(?)";
+            var kidText = [];
+            var kidCount = outer && outer.GetChildCount ? outer.GetChildCount() : 0;
+            for (var k = 0; k < kidCount && k < 5; k += 1) {
+                var kid = outer.GetChild(k);
+                if (!kid) continue;
+                kidText.push((kid.id || "(no id)") + ":" + Math.round(num(kid.actuallayoutwidth)) + "x" + Math.round(num(kid.actuallayoutheight)));
+            }
+            // Measurement cross-check: actuallayoutwidth can read 0 in a fork that lays panels out
+            // with a different property, and then every number in this report is meaningless. The
+            // bar's content box and window position are the second opinion.
+            try {
+                var probe = root.FindChildTraverse("Taskbar");
+                if (probe) {
+                    var pw = "?";
+                    try { pw = String(probe.GetPositionWithinWindow()); } catch (e5) { pw = "n/a(" + String(e5) + ")"; }
+                    $.Msg("[Openlock] bar measure: layout=" + Math.round(num(probe.actuallayoutwidth)) + "x" + Math.round(num(probe.actuallayoutheight))
+                        + " content=" + String(probe.contentwidth) + "x" + String(probe.contentheight)
+                        + " pos=" + String(probe.actualxpos) + "," + String(probe.actualypos)
+                        + " window=" + pw);
+                }
+            } catch (e6) {}
+            $.Msg("[Openlock] tree at 1.6s: top=" + (outer && outer.id ? outer.id : "(no id)")
+                + " parent=" + upId + " hud=" + hudBox + " top=" + (outer ? Math.round(num(outer.actuallayoutwidth)) + "x" + Math.round(num(outer.actuallayoutheight)) : "?")
+                + " kids=" + kidText.join(" , "));
+        } catch (e) {
+            $.Msg("[Openlock] tree at 1.6s: threw " + String(e));
+        }
     }
     $.Schedule(1.6, barChainReport);
+    // The first report lands while the client may still have no HUD (menu). The second one lands
+    // after a state change, which is where the bar has to have a box.
+    $.Schedule(14, barChainReport);
+    // The menu has no HUD and the bar has no box there; these land after the state change, which is
+    // where the chain has to be real.
+    $.Schedule(24, barChainReport);
+    $.Schedule(32, barChainReport);
 
     function paintBarChips() {
         var ids = ["DashboardButton", "WindowsButton", "Clock"];
@@ -5286,22 +5335,25 @@
     // launcher brings it back. The frames own the longer idle curve below.
     var taskbarHiding = false;
 
-    // The taskbar is retired. It keeps its node for the preloader and older packages, but no
-    // code path brings it back: the lower cloud band is the shell's only rail.
+    // The taskbar is the shell's bar. The lower cloud band is withdrawn: it drew a surface the
+    // pinned client does not have, and the pair that replaced the bar had been left inverted —
+    // "show" collapsed the strip and every pointer move called it, so the only thing a player ever
+    // saw was the preload sliver. Showing shows again, and the Popit bar is what is shown.
     function showTaskbar() {
-        if (!taskbar) return;
-        taskbarHiding = false;
-        taskbar.style.opacity = "0";
-        taskbar.style.visibility = "collapse";
-    }
-
-    // The bar does not fade away: the pinned client keeps its strip on screen, and a bar that
-    // hides is indistinguishable from a bar that failed to draw.
-    function hideTaskbar() {
         if (!taskbar) return;
         taskbarHiding = false;
         taskbar.style.visibility = "visible";
         taskbar.style.opacity = "1";
+    }
+
+    // The bar does not fade away: the pinned client keeps its strip on screen, and a bar that
+    // hides is indistinguishable from a bar that failed to draw. Hiding is still a real action, so
+    // it collapses the strip rather than leaving an invisible one in the pointer's way.
+    function hideTaskbar() {
+        if (!taskbar) return;
+        taskbarHiding = true;
+        taskbar.style.visibility = "collapse";
+        taskbar.style.opacity = "0";
     }
 
     function render() {
@@ -5313,7 +5365,8 @@
             globalThis.OpenlockLayoutPass.setOpen(!!expanded);
         }
         if (launcherBar) launcherBar.style.visibility = "visible";
-        if (taskbar) taskbar.style.visibility = "visible";
+        // The bar is not a state: it is the shell's surface, so every render asserts it.
+        showTaskbar();
 
         // Opening the shell materializes the pinned live windows. They are the customization
         // layer: once pinned, they keep their placement while the shell is closed.
@@ -8568,7 +8621,8 @@
             try { scanPopups(); } catch (e) { noteFailure("popup scan", e); }
         }
 
-        if (expanded && !preloadActive && Date.now() - lastInteractionAt > 5000) hideTaskbar();
+        // The bar stays. A five second idle timer used to hide it, which is the one behaviour the
+        // pinned client does not have: its strip is on screen whether or not the pointer moved.
     }
 
     // A live HUD deletes and rebuilds panels while this poll reads them (the shop does it on every

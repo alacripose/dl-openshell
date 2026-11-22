@@ -1,28 +1,29 @@
 shploingus.theme/339926f6b1b54ebb89810d4c6238d523
-# The LittleBigPlanet Popit scheme: the blue Popit menu, its teal tool field and the cream
-# edge from the LBP3 surface. `renderer popit` asks the shell for the port's editor renderer;
-# `form popit` is the geometry axis. Either can be swapped without touching the other, and the
-# generic renderer remains the fallback when the port is absent.
+# The Popit shell scheme, which is the pinned baseline: ink ground, brass keyline, brass light for
+# attention, warm paper for text, dim for meta. These are the inks F:/Documents/popit-shell draws
+# with (its bar.css and style.css name #0f1113, #1c2125, #b08d57, #d9b779, #e6dbc2, #8b8778), and
+# they are the same values openlock_pinned.css cuts the bar and the plate with. `renderer popit`
+# asks the shell for the port's editor renderer; `form popit` is the geometry axis.
 #
 # The values below are roles, not CSS. The spine, tray, target rows, material swatches, tweak
 # options and the shell's own windows all read them through tools/gen_shell_theme.py; no shell
 # file declares a Popit hex.
 theme	popit
 	label	Popit
-	source	LittleBigPlanet Popit suite (Goodies Bag, Stickers & Decorations, Tools Bag, Player Color)
-	body	#1F6E96F2
-	panel	#267AA4F2
-	title	#1B6288F2
-	meta	#237A80F2
-	border	#F4F0E4
-	borderStrong	#FFFFFF
-	ink	#FFFFFF
-	muted	#DDF4FC
-	accent	#3F7D24
+	source	popit-shell ui/bar.css and ui/style.css (ink, paper, brass, brass-lit, dim)
+	body	#0F1113F2
+	panel	#14171AF2
+	title	#191D21F2
+	meta	#0B0D0FF2
+	border	#B08D57
+	borderStrong	#D9B779
+	ink	#E6DBC2
+	muted	#8B8778
+	accent	#B08D57
 	alert	#7A2114
 	alertBody	#FFE3DAF2
-# The Popit palette reaches the game surfaces the shell frames. The HUD bar becomes the blue
-# card edge; the shop keeps the same field with the green accent border.
+# The Popit palette reaches the game surfaces the shell frames. The HUD bar becomes the ink strip
+# with the brass keyline; the shop takes the same ground with the brass accent border.
 rule	.CitadelHudTopBar	background-color	role:body
 rule	.CitadelHudTopBar	border-color	role:borderStrong
 rule	.CitadelHudHeroShop	background-color	role:body

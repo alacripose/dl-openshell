@@ -450,9 +450,19 @@ RULES: list[tuple[str, list[tuple[str, str]]]] = [
     (".ShellTab.Active", [("background-color", "title"), ("border-color", "borderStrong")]),
     (".ShellTab.Active .ShellTabLabel", [("color", "ink")]),
     (".ShellTab.Pinned .ShellTabLabel", [("color", "accent")]),
-    (".WindowFrame", [("background-color", "body"), ("border-color", "border")]),
-    (".WindowFrame.Focused", [("border-color", "borderStrong")]),
-    (".WindowFrame.Pinned", [("border-color", "accent")]),
+    # A frame's colour reaches its contour, not a rectangle behind it: the outline is the
+    # `.ContourInk` nine-slice and the interior is `.ContourFill`. Focus and pin recolour the
+    # same outline a window is cut from.
+    (".WindowFrame", [("border-color", "border")]),
+    (".ContourInk", [("background-color", "border")]),
+    (".ContourFill", [("background-color", "body")]),
+    (".WindowFrame.Focused .ContourInk", [("background-color", "borderStrong")]),
+    (".WindowFrame.Pinned .ContourInk", [("background-color", "accent")]),
+    (".ShellTab .ContourFill", [("background-color", "panel")]),
+    (".ShellTab.Active .ContourFill", [("background-color", "title")]),
+    (".ShellTab.Active .ContourInk", [("background-color", "borderStrong")]),
+    (".WindowsButton .ContourFill", [("background-color", "panel")]),
+    (".Clock .ContourFill", [("background-color", "panel")]),
     (".WindowTitle", [("background-color", "title"), ("border-bottom-color", "border")]),
     (".WindowTitleLabel", [("color", "ink")]),
     (".WindowButton", [("background-color", "panel"), ("border-color", "border")]),
@@ -844,6 +854,25 @@ def write_css(schemes: list[dict], output: Path | None = None) -> None:
         lines.append(f".{scheme_class(scheme['id'])} .WindowFrame.PanelWindow {{")
         lines.append("    background-color: transparent;")
         lines.append("}")
+        # The Popit is painted by the active scheme, not by a second pair registry. The same role
+        # slots the windows use own the Popit slab, its headings and the dressed-cell edge, so one
+        # generated block colours every surface the shell draws.
+        if "panel" in roles and "borderStrong" in roles:
+            lines.append(f".{scheme_class(scheme['id'])} .PopitRoot, .{scheme_class(scheme['id'])} .PopitChild {{")
+            lines.append(f"    background-color: {roles['panel']};")
+            lines.append(f"    border-color: {roles['borderStrong']};")
+            lines.append("}")
+        if "accent" in roles:
+            lines.append(f".{scheme_class(scheme['id'])} .PopitHeaderTitle, .{scheme_class(scheme['id'])} .PopitWordmark, .{scheme_class(scheme['id'])} .PopitDetail {{")
+            lines.append(f"    color: {roles['accent']};")
+            lines.append("}")
+            lines.append(f".{scheme_class(scheme['id'])} .PopitRootRow.Active, .{scheme_class(scheme['id'])} .PopitPageDot.On {{")
+            lines.append(f"    border-color: {roles['accent']};")
+            lines.append("}")
+        if "borderStrong" in roles:
+            lines.append(f".{scheme_class(scheme['id'])} .ThemedCell {{")
+            lines.append(f"    border-color: {roles['borderStrong']};")
+            lines.append("}")
 
         for rule in scheme.get("rules", []):
             if "role" in rule:

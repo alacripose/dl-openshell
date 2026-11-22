@@ -209,3 +209,57 @@
     letter-spacing: 1px;
     text-transform: uppercase;
 }
+
+/* --- the Popit shell's own two surfaces ------------------------------- */
+/* Read from the shell at F:/Documents/popit-shell. Its ui/bar.css draws the strip as an ink band
+   with a brass wash from the top edge, cells inset 3 by 16 with 13.44 paper text, a Start cell that
+   is brass-lit and centred, and a dim clock. Its ui/style.css draws a window as an ink body under a
+   plate whose title is brass-lit uppercase at 3.6 units with 1.1 units of tracking over a keyline at
+   32 per cent brass. A generated scheme still recolours through its roles; these two surfaces are
+   declared in ink so a scheme cannot leave a blue body or a black button behind. */
+.Taskbar {
+    background-color: gradient( linear, 0% 0%, 0% 55%, from( #b08d571f ), to( #0f1113f8 ) );
+}
+
+.Taskbar .ShellTab,
+.Taskbar .WindowsButton {
+    background-color: transparent;
+    border: 0px;
+}
+
+.Taskbar .WindowsButtonLabel,
+.Taskbar .ShellTabLabel {
+    color: #e6dbc2;
+    font-size: 13px;
+}
+
+.Taskbar .BarStart .WindowsButtonLabel {
+    color: #d9b779;
+    letter-spacing: 0.96px;
+}
+
+.Taskbar .Clock {
+    color: #8b8778;
+    font-size: 13px;
+}
+
+.WindowFrame {
+    background-color: #0f1113f5;
+    border: 0px;
+}
+
+.WindowBody {
+    background-color: #0f1113;
+}
+
+.WindowFrame .WindowTitle {
+    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5714 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
+    border-bottom: 1px solid #b08d5752;
+}
+
+.WindowFrame .WindowTitleLabel {
+    color: #d9b779;
+    font-size: 19px;
+    letter-spacing: 5.94px;
+    text-transform: uppercase;
+}

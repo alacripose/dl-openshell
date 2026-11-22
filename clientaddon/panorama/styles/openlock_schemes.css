@@ -4,173 +4,173 @@
    The scheme class is on the shell root and on the game HUD root, so a rule can
    reach a real Deadlock element. A scheme with no rules leaves the game untouched. */
 
-/* Popit — LittleBigPlanet Popit suite (Goodies Bag, Stickers & Decorations, Tools Bag, Player Color) */
+/* Popit — popit-shell ui/bar.css and ui/style.css (ink, paper, brass, brass-lit, dim) */
 .SchemePopit .LauncherButton:hover {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .LauncherLabel {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .Clock {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
-    color: #3F7D24;
+    background-color: #14171AF2;
+    border-color: #B08D57;
+    color: #B08D57;
 }
 .SchemePopit .VersionLabel {
-    background-color: #237A80F2;
-    border-color: #F4F0E4;
-    color: #DDF4FC;
+    background-color: #0B0D0FF2;
+    border-color: #B08D57;
+    color: #8B8778;
 }
 .SchemePopit .ShellTab {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .ShellTab:hover {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .ShellTab .ShellTabLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .ShellTab.Active {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .ShellTab.Active .ShellTabLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .ShellTab.Pinned .ShellTabLabel {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .WindowFrame {
-    border-color: #F4F0E4;
+    border-color: #B08D57;
 }
 .SchemePopit .ContourInk {
-    background-color: #F4F0E4;
+    background-color: #B08D57;
 }
 .SchemePopit .ContourFill {
-    background-color: #1F6E96F2;
+    background-color: #0F1113F2;
 }
 .SchemePopit .WindowFrame.Focused .ContourInk {
-    background-color: #FFFFFF;
+    background-color: #D9B779;
 }
 .SchemePopit .WindowFrame.Pinned .ContourInk {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .ShellTab .ContourFill {
-    background-color: #267AA4F2;
+    background-color: #14171AF2;
 }
 .SchemePopit .ShellTab.Active .ContourFill {
-    background-color: #1B6288F2;
+    background-color: #191D21F2;
 }
 .SchemePopit .ShellTab.Active .ContourInk {
-    background-color: #FFFFFF;
+    background-color: #D9B779;
 }
 .SchemePopit .WindowsButton .ContourFill {
-    background-color: #267AA4F2;
+    background-color: #14171AF2;
 }
 .SchemePopit .Clock .ContourFill {
-    background-color: #267AA4F2;
+    background-color: #14171AF2;
 }
 .SchemePopit .WindowTitle {
-    background-color: #1B6288F2;
-    border-bottom-color: #F4F0E4;
+    background-color: #191D21F2;
+    border-bottom-color: #B08D57;
 }
 .SchemePopit .WindowTitleLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .WindowButton {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .WindowButton:hover {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .WindowButton Label {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .WindowGlyph {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .WindowButton.PinOn {
-    background-color: #1B6288F2;
-    border-color: #3F7D24;
+    background-color: #191D21F2;
+    border-color: #B08D57;
 }
 .SchemePopit .IconBar {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .IconHalf {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .IconPinHead {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .IconPinStem {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .IconLeft {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 .SchemePopit .IconRight {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 .SchemePopit .WindowMeta {
-    background-color: #237A80F2;
-    border-bottom-color: #F4F0E4;
+    background-color: #0B0D0FF2;
+    border-bottom-color: #B08D57;
 }
 .SchemePopit .WindowMetaLabel {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .WindowBody {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .ViewHeading {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .ViewLine {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .ViewMuted {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .ViewAction {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .ViewAction:hover {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .ViewAction Label {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .ConsoleEntry {
-    background-color: #237A80F2;
-    border-color: #F4F0E4;
-    color: #FFFFFF;
+    background-color: #0B0D0FF2;
+    border-color: #B08D57;
+    color: #E6DBC2;
 }
 .SchemePopit .ConsoleEntry:focus {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .UiFieldLabel {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .ContextMenu {
-    background-color: #1F6E96F2;
-    border-color: #FFFFFF;
+    background-color: #0F1113F2;
+    border-color: #D9B779;
 }
 .SchemePopit .ContextTitle {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .DwellInfo {
-    background-color: #1F6E96F2;
-    border-color: #F4F0E4;
+    background-color: #0F1113F2;
+    border-color: #B08D57;
 }
 .SchemePopit .DwellTitle {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .DwellBody {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .WindowRefusal {
     background-color: #FFE3DAF2;
@@ -178,172 +178,172 @@
     color: #7A2114;
 }
 .SchemePopit .PanelWindow {
-    border-color: #F4F0E4;
+    border-color: #B08D57;
 }
 .SchemePopit .PanelWindow.Focused {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .PanelWindow.Pinned {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 .SchemePopit .PanelWindow .WindowTitle {
-    background-color: #1B6288F2;
+    background-color: #191D21F2;
 }
 .SchemePopit .PanelWindow .WindowMeta {
-    background-color: #237A80F2;
+    background-color: #0B0D0FF2;
 }
 .SchemePopit .PanelWindow .WindowRefusal {
     background-color: #FFE3DAF2;
 }
 .SchemePopit .ResizeGrip {
-    background-color: #F4F0E4;
-    border-top-color: #FFFFFF;
-    border-left-color: #FFFFFF;
+    background-color: #B08D57;
+    border-top-color: #D9B779;
+    border-left-color: #D9B779;
 }
 .SchemePopit .ResizeGrip:hover {
-    background-color: #FFFFFF;
+    background-color: #D9B779;
 }
 .SchemePopit .DropCell {
-    background-color: #3F7D2422;
-    border-color: #F4F0E466;
+    background-color: #B08D5722;
+    border-color: #B08D5766;
 }
 .SchemePopit .DropCell:hover {
-    background-color: #3F7D2455;
-    border-color: #FFFFFF;
+    background-color: #B08D5755;
+    border-color: #D9B779;
 }
 .SchemePopit .Toast {
-    background-color: #1B6288F2;
-    border-color: #F4F0E4;
-    border-left-color: #3F7D24;
+    background-color: #191D21F2;
+    border-color: #B08D57;
+    border-left-color: #B08D57;
 }
 .SchemePopit .Toast.Attention {
     border-left-color: #7A2114;
 }
 .SchemePopit .ToastTitle {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .ToastBody {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .UpdateModal {
-    background-color: #1F6E96F2;
-    border-color: #FFFFFF;
+    background-color: #0F1113F2;
+    border-color: #D9B779;
 }
 .SchemePopit .UpdateTitle {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .UpdateBody {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .UpdateCountdown {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .SchemeButton {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .SchemeButton:hover {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .SchemeLabel {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PopitDismiss {
-    background-color: #1F6E96B8;
+    background-color: #0F1113B8;
 }
 .SchemePopit .PopitCursorHalo {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitSpine {
-    background-color: #1F6E96;
-    border-color: #F4F0E4;
+    background-color: #0F1113;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitTool {
-    background-color: #1F6E96;
-    border-color: #F4F0E4;
+    background-color: #0F1113;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitTool.Hover {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitTool.Active {
-    background-color: #3F7D24;
-    border-color: #FFFFFF;
+    background-color: #B08D57;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitToolLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitTool.Active .PopitToolLabel {
-    color: #237A80F2;
+    color: #0B0D0FF2;
 }
 .SchemePopit .PopitTray {
-    background-color: #1F6E96;
-    border-color: #FFFFFF;
+    background-color: #0F1113;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitHeaderTitle {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PopitTargetLabel {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitItem {
-    background-color: #1F6E96;
-    border-color: #F4F0E4;
+    background-color: #0F1113;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitItem.Hover {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitItem.Selected {
-    background-color: #1B6288F2;
-    border-color: #3F7D24;
+    background-color: #191D21F2;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitSwatch {
-    border-color: #F4F0E4;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitItemLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitTarget {
-    background-color: #1F6E96;
-    border-color: #F4F0E4;
+    background-color: #0F1113;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitTarget.Hover {
-    background-color: #1B6288F2;
-    border-color: #FFFFFF;
+    background-color: #191D21F2;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitTarget.Selected {
-    background-color: #1B6288F2;
-    border-color: #3F7D24;
+    background-color: #191D21F2;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitTargetName {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitTargetKind {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitGroupLabel {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitOption {
-    background-color: #1F6E96;
-    border-color: #F4F0E4;
+    background-color: #0F1113;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitOption.Hover {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitOption.Selected {
-    background-color: #3F7D24;
-    border-color: #FFFFFF;
+    background-color: #B08D57;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitOptionLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitOption.Selected .PopitOptionLabel {
-    color: #237A80F2;
+    color: #0B0D0FF2;
 }
 .SchemePopit .PopitReset {
-    background-color: #267AA4F2;
+    background-color: #14171AF2;
     border-color: #7A2114;
 }
 .SchemePopit .PopitReset.Hover {
@@ -354,151 +354,151 @@
     color: #7A2114;
 }
 .SchemePopit .PopitWordmark {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitHeader {
-    border-bottom-color: #F4F0E4;
+    border-bottom-color: #B08D57;
 }
 .SchemePopit .PopitSectionLabel {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PopitSectionRule {
-    border-bottom-color: #F4F0E4;
+    border-bottom-color: #B08D57;
 }
 .SchemePopit .PopitPageDot {
-    background-color: #F4F0E4;
+    background-color: #B08D57;
 }
 .SchemePopit .PopitPageDot.On {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .PopitPairChip {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitPairChipLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitPairDot {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitClassicChip {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PopitClassicChipLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PopitClassicChip.On {
-    background-color: #3F7D24;
-    border-color: #FFFFFF;
+    background-color: #B08D57;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitClassicChip.On .PopitClassicChipLabel {
-    color: #237A80F2;
+    color: #0B0D0FF2;
 }
 .SchemePopit .PopitPairSwatch {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitPairGame {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitPairNote {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitEmpty {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PopitDetail {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .IconPopitDot {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .PerfGraph {
-    background-color: #237A80F2;
-    border-color: #F4F0E4;
+    background-color: #0B0D0FF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PerfBar {
-    background-color: #3F7D24;
+    background-color: #B08D57;
 }
 .SchemePopit .PerfBar.Slow {
     background-color: #7A2114;
 }
 .SchemePopit .PerfValue {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PerfMuted {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PickerHighlight {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .PickerBadge {
-    background-color: #1F6E96F2;
-    border-color: #F4F0E4;
+    background-color: #0F1113F2;
+    border-color: #B08D57;
 }
 .SchemePopit .PickerBadgeLabel {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PickerCancel {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PickerCancel Label {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PaletteRow {
-    background-color: #237A80F2;
-    border-color: #F4F0E4;
+    background-color: #0B0D0FF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PaletteName {
-    color: #FFFFFF;
+    color: #E6DBC2;
 }
 .SchemePopit .PaletteValue {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PaletteNote {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .PaletteReset {
-    background-color: #267AA4F2;
-    border-color: #F4F0E4;
+    background-color: #14171AF2;
+    border-color: #B08D57;
 }
 .SchemePopit .PaletteReset Label {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PickerTarget {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PickerHint {
-    color: #DDF4FC;
+    color: #8B8778;
 }
 .SchemePopit .WindowFrame.PanelWindow {
     background-color: transparent;
 }
 .SchemePopit .PopitRoot, .SchemePopit .PopitChild {
-    background-color: #267AA4F2;
-    border-color: #FFFFFF;
+    background-color: #14171AF2;
+    border-color: #D9B779;
 }
 .SchemePopit .PopitHeaderTitle, .SchemePopit .PopitWordmark, .SchemePopit .PopitDetail {
-    color: #3F7D24;
+    color: #B08D57;
 }
 .SchemePopit .PopitRootRow.Active, .SchemePopit .PopitPageDot.On {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 .SchemePopit .ThemedCell {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .CitadelHudTopBar {
-    background-color: #1F6E96F2;
+    background-color: #0F1113F2;
 }
 .SchemePopit .CitadelHudTopBar {
-    border-color: #FFFFFF;
+    border-color: #D9B779;
 }
 .SchemePopit .CitadelHudHeroShop {
-    background-color: #1F6E96F2;
+    background-color: #0F1113F2;
 }
 .SchemePopit .CitadelHudHeroShop {
-    border-color: #3F7D24;
+    border-color: #B08D57;
 }
 
 /* Brass meridian — openlock_pinned.css pinned inks (bar, plate, keyline, paper) */

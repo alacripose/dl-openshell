@@ -708,4 +708,21 @@ check(/\.BuildHashChip\s*\{/.test(read('clientaddon/panorama/styles/openlock_she
 check(/\.LauncherBar \.LauncherButton/.test(read('clientaddon/panorama/styles/openlock_shell.css')),
     'the launcher and its switches no longer draw');
 
+// The bar is a surface, not a state. "Show" had been left collapsing the strip while every pointer
+// move called it, so the shell drew nothing but its preload sliver; an idle timer hid it too. Both
+// are refused by reading the source: show is visible, hide is collapse, and render asserts it.
+const shellJs = read('clientaddon/panorama/scripts/openlock_shell.js');
+const showBody = (shellJs.match(/function showTaskbar\(\)[\s\S]{0,400}?\n    \}/) || [''])[0];
+const hideBody = (shellJs.match(/function hideTaskbar\(\)[\s\S]{0,400}?\n    \}/) || [''])[0];
+check(/taskbar\.style\.visibility = "visible"/.test(showBody) &&
+    !/taskbar\.style\.visibility = "collapse"/.test(showBody),
+    'showTaskbar makes the bar visible instead of collapsing it');
+check(/taskbar\.style\.visibility = "collapse"/.test(hideBody) &&
+    !/taskbar\.style\.visibility = "visible"/.test(hideBody),
+    'hideTaskbar is the only path that collapses the bar');
+check(/showTaskbar\(\);/.test(shellJs.split('function render()')[1] || ''),
+    'every render asserts the bar');
+check(!/lastInteractionAt > 5000\) hideTaskbar\(\)/.test(shellJs),
+    'the bar is not hidden by an idle timer');
+
 console.log('chrome-test OK ' + checks + ' checks');
