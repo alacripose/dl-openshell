@@ -11922,16 +11922,16 @@ var SHELL = {
       "path": "D:/SteamLibrary/steamapps/common/Deadlock",
       "kind": "tools",
       "shell": "mounted",
-      "vpkBytes": 2620413,
+      "vpkBytes": 2626209,
       "toolsPresent": 1,
       "toolsTotal": 3,
-      "version": "2026-11-21 21:52:16",
+      "version": "2026-11-21 22:33:27",
       "build": {
         "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-21 21:52:16",
-        "vpkBytes": 2620413
+        "finishedAt": "2026-11-21 22:33:27",
+        "vpkBytes": 2626209
       },
       "exe": "D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe"
     },
@@ -11953,12 +11953,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 2,
       "toolsTotal": 3,
-      "version": "2026-11-21 21:51:53",
+      "version": "2026-11-21 22:32:56",
       "build": {
         "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-21 21:51:53",
+        "finishedAt": "2026-11-21 22:32:56",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10/game/bin/win64/project8.exe"
@@ -11970,12 +11970,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 3,
       "toolsTotal": 3,
-      "version": "2026-11-21 21:52:16",
+      "version": "2026-11-21 22:33:27",
       "build": {
         "grade": "player",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-21 21:52:16",
+        "finishedAt": "2026-11-21 22:33:27",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Downloads/Reduced_CSDK_12/game/bin/win64/deadlock.exe"
@@ -12550,12 +12550,12 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "ecee2bb",
+    "commit": "4c748c5",
     "branch": "main",
     "dirty": true,
-    "sourceDigest": "82cee78ee7217462d8c7b6b14efac64c5379cbb66c8a553117d43f615d4dc91c",
+    "sourceDigest": "53a5f07237b2a85525673658aa1091d9660088112b7285064e990acc9a4c6a62",
     "gameVersion": "6864",
-    "generatedAt": "2026-11-21 21:57",
+    "generatedAt": "2026-11-21 22:43",
     "grade": "dev",
     "deadlockRevision": "11170534",
     "baseline": {
@@ -12570,10 +12570,10 @@ var SHELL = {
     },
     "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
     "identityShort": "dl-openshell@e507d355+blake3:4a6e012e",
-    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / ecee2bb+ / game 6864"
+    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / 4c748c5+ / game 6864"
   },
   "themes": {
-    "default": "family",
+    "default": "popit",
     "defaultForm": "popit",
     "forms": [
       {
@@ -12605,8 +12605,9 @@ var SHELL = {
       }
     },
     "order": [
-      "family",
       "popit",
+      "brass",
+      "family",
       "deadlock",
       "alpha",
       "holo",
@@ -12615,804 +12616,6 @@ var SHELL = {
       "touchwiz"
     ],
     "schemes": [
-      {
-        "id": "family",
-        "label": "Family register",
-        "source": "landing/index.html web-dark roles",
-        "roles": {
-          "body": "#12151AF2",
-          "panel": "#171B21F2",
-          "title": "#1C222BF2",
-          "meta": "#0C0E11F2",
-          "border": "#262C34",
-          "borderStrong": "#F0C454",
-          "ink": "#ECEFF2",
-          "muted": "#AAB3BD",
-          "accent": "#F0C454",
-          "alert": "#E4786F",
-          "alertBody": "#2A1114F2",
-          "accentSoft": "#F0C45422",
-          "accentStrong": "#F0C45455",
-          "borderSoft": "#262C3466",
-          "solid": "#12151A",
-          "scrim": "#12151AB8"
-        },
-        "rules": [
-          {
-            "selector": ".CitadelHudTopBar",
-            "property": "background-color",
-            "value": "#12151AE6",
-            "line": 21
-          },
-          {
-            "selector": ".CitadelHudTopBar",
-            "property": "border-color",
-            "role": "borderStrong",
-            "line": 22
-          },
-          {
-            "selector": ".CitadelHudHeroShop",
-            "property": "background-color",
-            "value": "#12151AE6",
-            "line": 23
-          },
-          {
-            "selector": ".CitadelHudHeroShop",
-            "property": "border-color",
-            "role": "borderStrong",
-            "line": 24
-          }
-        ],
-        "extensions": [],
-        "palette": [
-          {
-            "slot": "body",
-            "label": "Window body",
-            "value": "#12151AF2",
-            "steps": [
-              "#F4E7C8",
-              "#EADBB4",
-              "#CFE6E4",
-              "#FFD9CE",
-              "#2A2422"
-            ]
-          },
-          {
-            "slot": "panel",
-            "label": "Panel",
-            "value": "#171B21F2",
-            "steps": [
-              "#FFF8E8",
-              "#E8DCC0",
-              "#BFD8E8",
-              "#F6C8B8",
-              "#3A312D"
-            ]
-          },
-          {
-            "slot": "accent",
-            "label": "Accent",
-            "value": "#F0C454",
-            "steps": [
-              "#6FBF3F",
-              "#4F9E2F",
-              "#8FD95A",
-              "#2E7DFF",
-              "#FF8A00"
-            ]
-          },
-          {
-            "slot": "alert",
-            "label": "Alert",
-            "value": "#E4786F",
-            "steps": [
-              "#E0452F",
-              "#FF8A00",
-              "#FFD500",
-              "#FF2300",
-              "#C0362A"
-            ]
-          },
-          {
-            "slot": "ink",
-            "label": "Ink",
-            "value": "#ECEFF2",
-            "steps": [
-              "#2A2422",
-              "#3A312D",
-              "#121212",
-              "#4A3F38",
-              "#FFF8E8"
-            ]
-          },
-          {
-            "slot": "border",
-            "label": "Rule",
-            "value": "#262C34",
-            "steps": [
-              "#2A2422",
-              "#4A3F38",
-              "#8A7F70",
-              "#6FBF3F",
-              "#FFD500"
-            ]
-          },
-          {
-            "slot": "muted",
-            "label": "Muted ink",
-            "value": "#AAB3BD",
-            "steps": [
-              "#7A6F62",
-              "#8A7F70",
-              "#5A5148",
-              "#B8A894",
-              "#CFC4B4"
-            ]
-          }
-        ],
-        "paint": [
-          {
-            "selector": ".LauncherLabel",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".Clock",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".Clock",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".Clock",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".VersionLabel",
-            "property": "background-color",
-            "role": "meta"
-          },
-          {
-            "selector": ".VersionLabel",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".VersionLabel",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".ShellTab",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".ShellTab",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".WindowFrame",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ContourInk",
-            "property": "background-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ContourFill",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowTitle",
-            "property": "background-color",
-            "role": "title"
-          },
-          {
-            "selector": ".WindowTitle",
-            "property": "border-bottom-color",
-            "role": "border"
-          },
-          {
-            "selector": ".WindowTitleLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".WindowButton",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".WindowButton",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".WindowGlyph",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconBar",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconHalf",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconPinHead",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconPinStem",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconLeft",
-            "property": "border-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".IconRight",
-            "property": "border-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".WindowMeta",
-            "property": "background-color",
-            "role": "meta"
-          },
-          {
-            "selector": ".WindowMeta",
-            "property": "border-bottom-color",
-            "role": "border"
-          },
-          {
-            "selector": ".WindowMetaLabel",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".WindowBody",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".ViewHeading",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".ViewLine",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".ViewMuted",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".ViewAction",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".ViewAction",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ConsoleEntry",
-            "property": "background-color",
-            "role": "meta"
-          },
-          {
-            "selector": ".ConsoleEntry",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ConsoleEntry",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".UiFieldLabel",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".ContextMenu",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".ContextMenu",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".ContextTitle",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".DwellInfo",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".DwellInfo",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".DwellTitle",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".DwellBody",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".WindowRefusal",
-            "property": "background-color",
-            "role": "alertBody"
-          },
-          {
-            "selector": ".WindowRefusal",
-            "property": "border-top-color",
-            "role": "alert"
-          },
-          {
-            "selector": ".WindowRefusal",
-            "property": "color",
-            "role": "alert"
-          },
-          {
-            "selector": ".PanelWindow",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ResizeGrip",
-            "property": "background-color",
-            "role": "border"
-          },
-          {
-            "selector": ".ResizeGrip",
-            "property": "border-top-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".ResizeGrip",
-            "property": "border-left-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".DropCell",
-            "property": "background-color",
-            "role": "accentSoft"
-          },
-          {
-            "selector": ".DropCell",
-            "property": "border-color",
-            "role": "borderSoft"
-          },
-          {
-            "selector": ".Toast",
-            "property": "background-color",
-            "role": "title"
-          },
-          {
-            "selector": ".Toast",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".Toast",
-            "property": "border-left-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".ToastTitle",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".ToastBody",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".UpdateModal",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".UpdateModal",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".UpdateTitle",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".UpdateBody",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".UpdateCountdown",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".SchemeButton",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".SchemeButton",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".SchemeLabel",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PopitDismiss",
-            "property": "background-color",
-            "role": "scrim"
-          },
-          {
-            "selector": ".PopitCursorHalo",
-            "property": "border-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PopitSpine",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitSpine",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitTool",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitTool",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitToolLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitTray",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitTray",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".PopitHeaderTitle",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PopitTargetLabel",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitItem",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitItem",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitSwatch",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitItemLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitTarget",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitTarget",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitTargetName",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitTargetKind",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitGroupLabel",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitOption",
-            "property": "background-color",
-            "role": "solid"
-          },
-          {
-            "selector": ".PopitOption",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitOptionLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitReset",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".PopitReset",
-            "property": "border-color",
-            "role": "alert"
-          },
-          {
-            "selector": ".PopitResetLabel",
-            "property": "color",
-            "role": "alert"
-          },
-          {
-            "selector": ".PopitWordmark",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitHeader",
-            "property": "border-bottom-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitSectionLabel",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PopitSectionRule",
-            "property": "border-bottom-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitPageDot",
-            "property": "background-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitPairChip",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".PopitPairChip",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitPairChipLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitPairDot",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".PopitClassicChip",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".PopitClassicChip",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PopitClassicChipLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PopitPairSwatch",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".PopitPairGame",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitPairNote",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitEmpty",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PopitDetail",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".IconPopitDot",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PerfGraph",
-            "property": "background-color",
-            "role": "meta"
-          },
-          {
-            "selector": ".PerfGraph",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PerfBar",
-            "property": "background-color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PerfValue",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PerfMuted",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PickerHighlight",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".PickerBadge",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".PickerBadge",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PickerBadgeLabel",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PickerCancel",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".PickerCancel",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PaletteRow",
-            "property": "background-color",
-            "role": "meta"
-          },
-          {
-            "selector": ".PaletteRow",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PaletteName",
-            "property": "color",
-            "role": "ink"
-          },
-          {
-            "selector": ".PaletteValue",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PaletteNote",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".PaletteReset",
-            "property": "background-color",
-            "role": "panel"
-          },
-          {
-            "selector": ".PaletteReset",
-            "property": "border-color",
-            "role": "border"
-          },
-          {
-            "selector": ".PickerTarget",
-            "property": "color",
-            "role": "accent"
-          },
-          {
-            "selector": ".PickerHint",
-            "property": "color",
-            "role": "muted"
-          },
-          {
-            "selector": ".CitadelHudTopBar",
-            "property": "border-color",
-            "role": "borderStrong"
-          },
-          {
-            "selector": ".CitadelHudHeroShop",
-            "property": "border-color",
-            "role": "borderStrong"
-          }
-        ]
-      },
       {
         "id": "popit",
         "label": "Popit",
@@ -14218,6 +13421,1567 @@ var SHELL = {
             "selector": ".CitadelHudHeroShop",
             "property": "border-color",
             "role": "accent"
+          }
+        ]
+      },
+      {
+        "id": "brass",
+        "label": "Brass meridian",
+        "source": "openlock_pinned.css pinned inks (bar, plate, keyline, paper)",
+        "roles": {
+          "body": "#0F1113F2",
+          "panel": "#14171AF2",
+          "title": "#191D21F2",
+          "meta": "#0B0D0FF2",
+          "border": "#B08D57",
+          "borderStrong": "#D9B779",
+          "ink": "#E6DBC2",
+          "muted": "#8B8778",
+          "accent": "#B08D57",
+          "alert": "#7A2114",
+          "alertBody": "#FFE3DAF2",
+          "accentSoft": "#B08D5722",
+          "accentStrong": "#B08D5755",
+          "borderSoft": "#B08D5766",
+          "solid": "#0F1113",
+          "scrim": "#0F1113B8"
+        },
+        "rules": [],
+        "extensions": [],
+        "palette": [
+          {
+            "slot": "body",
+            "label": "Window body",
+            "value": "#0F1113F2",
+            "steps": [
+              "#F4E7C8",
+              "#EADBB4",
+              "#CFE6E4",
+              "#FFD9CE",
+              "#2A2422"
+            ]
+          },
+          {
+            "slot": "panel",
+            "label": "Panel",
+            "value": "#14171AF2",
+            "steps": [
+              "#FFF8E8",
+              "#E8DCC0",
+              "#BFD8E8",
+              "#F6C8B8",
+              "#3A312D"
+            ]
+          },
+          {
+            "slot": "accent",
+            "label": "Accent",
+            "value": "#B08D57",
+            "steps": [
+              "#6FBF3F",
+              "#4F9E2F",
+              "#8FD95A",
+              "#2E7DFF",
+              "#FF8A00"
+            ]
+          },
+          {
+            "slot": "alert",
+            "label": "Alert",
+            "value": "#7A2114",
+            "steps": [
+              "#E0452F",
+              "#FF8A00",
+              "#FFD500",
+              "#FF2300",
+              "#C0362A"
+            ]
+          },
+          {
+            "slot": "ink",
+            "label": "Ink",
+            "value": "#E6DBC2",
+            "steps": [
+              "#2A2422",
+              "#3A312D",
+              "#121212",
+              "#4A3F38",
+              "#FFF8E8"
+            ]
+          },
+          {
+            "slot": "border",
+            "label": "Rule",
+            "value": "#B08D57",
+            "steps": [
+              "#2A2422",
+              "#4A3F38",
+              "#8A7F70",
+              "#6FBF3F",
+              "#FFD500"
+            ]
+          },
+          {
+            "slot": "muted",
+            "label": "Muted ink",
+            "value": "#8B8778",
+            "steps": [
+              "#7A6F62",
+              "#8A7F70",
+              "#5A5148",
+              "#B8A894",
+              "#CFC4B4"
+            ]
+          }
+        ],
+        "paint": [
+          {
+            "selector": ".LauncherLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".Clock",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".Clock",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".Clock",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ShellTab",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".ShellTab",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowFrame",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".WindowTitle",
+            "property": "background-color",
+            "role": "title"
+          },
+          {
+            "selector": ".WindowTitle",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowTitleLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".WindowButton",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".WindowButton",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowGlyph",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconBar",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconHalf",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconPinHead",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconPinStem",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconLeft",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconRight",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".WindowMeta",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".WindowMeta",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowMetaLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".WindowBody",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ViewHeading",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".ViewLine",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ViewMuted",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ViewAction",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".ViewAction",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".UiFieldLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ContextMenu",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".ContextMenu",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".ContextTitle",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".DwellInfo",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".DwellInfo",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".DwellTitle",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".DwellBody",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "background-color",
+            "role": "alertBody"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "border-top-color",
+            "role": "alert"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PanelWindow",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "border-top-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "border-left-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".DropCell",
+            "property": "background-color",
+            "role": "accentSoft"
+          },
+          {
+            "selector": ".DropCell",
+            "property": "border-color",
+            "role": "borderSoft"
+          },
+          {
+            "selector": ".Toast",
+            "property": "background-color",
+            "role": "title"
+          },
+          {
+            "selector": ".Toast",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".Toast",
+            "property": "border-left-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".ToastTitle",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ToastBody",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".UpdateModal",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".UpdateModal",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".UpdateTitle",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".UpdateBody",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".UpdateCountdown",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".SchemeButton",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".SchemeButton",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".SchemeLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitDismiss",
+            "property": "background-color",
+            "role": "scrim"
+          },
+          {
+            "selector": ".PopitCursorHalo",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSpine",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitSpine",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitTool",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTool",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitToolLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTray",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTray",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitHeaderTitle",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitTargetLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitItem",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitItem",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSwatch",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitItemLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTarget",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTarget",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitTargetName",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTargetKind",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitGroupLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitOption",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitOption",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitOptionLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitReset",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitReset",
+            "property": "border-color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PopitResetLabel",
+            "property": "color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitEmpty",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitDetail",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".IconPopitDot",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PerfGraph",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".PerfGraph",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PerfBar",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PerfValue",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PerfMuted",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PickerHighlight",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PickerBadge",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".PickerBadge",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PickerBadgeLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PickerCancel",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PickerCancel",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PaletteRow",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".PaletteRow",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PaletteName",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PaletteValue",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PaletteNote",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PaletteReset",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PaletteReset",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PickerTarget",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PickerHint",
+            "property": "color",
+            "role": "muted"
+          }
+        ]
+      },
+      {
+        "id": "family",
+        "label": "Family register",
+        "source": "landing/index.html web-dark roles",
+        "roles": {
+          "body": "#12151AF2",
+          "panel": "#171B21F2",
+          "title": "#1C222BF2",
+          "meta": "#0C0E11F2",
+          "border": "#262C34",
+          "borderStrong": "#F0C454",
+          "ink": "#ECEFF2",
+          "muted": "#AAB3BD",
+          "accent": "#F0C454",
+          "alert": "#E4786F",
+          "alertBody": "#2A1114F2",
+          "accentSoft": "#F0C45422",
+          "accentStrong": "#F0C45455",
+          "borderSoft": "#262C3466",
+          "solid": "#12151A",
+          "scrim": "#12151AB8"
+        },
+        "rules": [
+          {
+            "selector": ".CitadelHudTopBar",
+            "property": "background-color",
+            "value": "#12151AE6",
+            "line": 21
+          },
+          {
+            "selector": ".CitadelHudTopBar",
+            "property": "border-color",
+            "role": "borderStrong",
+            "line": 22
+          },
+          {
+            "selector": ".CitadelHudHeroShop",
+            "property": "background-color",
+            "value": "#12151AE6",
+            "line": 23
+          },
+          {
+            "selector": ".CitadelHudHeroShop",
+            "property": "border-color",
+            "role": "borderStrong",
+            "line": 24
+          }
+        ],
+        "extensions": [],
+        "palette": [
+          {
+            "slot": "body",
+            "label": "Window body",
+            "value": "#12151AF2",
+            "steps": [
+              "#F4E7C8",
+              "#EADBB4",
+              "#CFE6E4",
+              "#FFD9CE",
+              "#2A2422"
+            ]
+          },
+          {
+            "slot": "panel",
+            "label": "Panel",
+            "value": "#171B21F2",
+            "steps": [
+              "#FFF8E8",
+              "#E8DCC0",
+              "#BFD8E8",
+              "#F6C8B8",
+              "#3A312D"
+            ]
+          },
+          {
+            "slot": "accent",
+            "label": "Accent",
+            "value": "#F0C454",
+            "steps": [
+              "#6FBF3F",
+              "#4F9E2F",
+              "#8FD95A",
+              "#2E7DFF",
+              "#FF8A00"
+            ]
+          },
+          {
+            "slot": "alert",
+            "label": "Alert",
+            "value": "#E4786F",
+            "steps": [
+              "#E0452F",
+              "#FF8A00",
+              "#FFD500",
+              "#FF2300",
+              "#C0362A"
+            ]
+          },
+          {
+            "slot": "ink",
+            "label": "Ink",
+            "value": "#ECEFF2",
+            "steps": [
+              "#2A2422",
+              "#3A312D",
+              "#121212",
+              "#4A3F38",
+              "#FFF8E8"
+            ]
+          },
+          {
+            "slot": "border",
+            "label": "Rule",
+            "value": "#262C34",
+            "steps": [
+              "#2A2422",
+              "#4A3F38",
+              "#8A7F70",
+              "#6FBF3F",
+              "#FFD500"
+            ]
+          },
+          {
+            "slot": "muted",
+            "label": "Muted ink",
+            "value": "#AAB3BD",
+            "steps": [
+              "#7A6F62",
+              "#8A7F70",
+              "#5A5148",
+              "#B8A894",
+              "#CFC4B4"
+            ]
+          }
+        ],
+        "paint": [
+          {
+            "selector": ".LauncherLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".Clock",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".Clock",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".Clock",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".VersionLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ShellTab",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".ShellTab",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowFrame",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".WindowTitle",
+            "property": "background-color",
+            "role": "title"
+          },
+          {
+            "selector": ".WindowTitle",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowTitleLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".WindowButton",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".WindowButton",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowGlyph",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconBar",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconHalf",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconPinHead",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconPinStem",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconLeft",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".IconRight",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".WindowMeta",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".WindowMeta",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".WindowMetaLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".WindowBody",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ViewHeading",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".ViewLine",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ViewMuted",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ViewAction",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".ViewAction",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ConsoleEntry",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".UiFieldLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".ContextMenu",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".ContextMenu",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".ContextTitle",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".DwellInfo",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".DwellInfo",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".DwellTitle",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".DwellBody",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "background-color",
+            "role": "alertBody"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "border-top-color",
+            "role": "alert"
+          },
+          {
+            "selector": ".WindowRefusal",
+            "property": "color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PanelWindow",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "border-top-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".ResizeGrip",
+            "property": "border-left-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".DropCell",
+            "property": "background-color",
+            "role": "accentSoft"
+          },
+          {
+            "selector": ".DropCell",
+            "property": "border-color",
+            "role": "borderSoft"
+          },
+          {
+            "selector": ".Toast",
+            "property": "background-color",
+            "role": "title"
+          },
+          {
+            "selector": ".Toast",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".Toast",
+            "property": "border-left-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".ToastTitle",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".ToastBody",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".UpdateModal",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".UpdateModal",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".UpdateTitle",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".UpdateBody",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".UpdateCountdown",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".SchemeButton",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".SchemeButton",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".SchemeLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitDismiss",
+            "property": "background-color",
+            "role": "scrim"
+          },
+          {
+            "selector": ".PopitCursorHalo",
+            "property": "border-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSpine",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitSpine",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitTool",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTool",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitToolLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTray",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTray",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitHeaderTitle",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitTargetLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitItem",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitItem",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSwatch",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitItemLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTarget",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitTarget",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitTargetName",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitTargetKind",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitGroupLabel",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitOption",
+            "property": "background-color",
+            "role": "solid"
+          },
+          {
+            "selector": ".PopitOption",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitOptionLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitReset",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitReset",
+            "property": "border-color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PopitResetLabel",
+            "property": "color",
+            "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitEmpty",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitDetail",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".IconPopitDot",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PerfGraph",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".PerfGraph",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PerfBar",
+            "property": "background-color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PerfValue",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PerfMuted",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PickerHighlight",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PickerBadge",
+            "property": "background-color",
+            "role": "body"
+          },
+          {
+            "selector": ".PickerBadge",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PickerBadgeLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PickerCancel",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PickerCancel",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PaletteRow",
+            "property": "background-color",
+            "role": "meta"
+          },
+          {
+            "selector": ".PaletteRow",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PaletteName",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PaletteValue",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PaletteNote",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PaletteReset",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PaletteReset",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PickerTarget",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PickerHint",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".CitadelHudTopBar",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".CitadelHudHeroShop",
+            "property": "border-color",
+            "role": "borderStrong"
           }
         ]
       },
@@ -18983,46 +19747,46 @@ var SHELL = {
     "grade": "dev",
     "stage": "installed",
     "state": "ok",
-    "startedAt": "2026-11-21 21:51:05",
-    "updatedAt": "2026-11-21 21:52:16",
-    "finishedAt": "2026-11-21 21:52:16",
+    "startedAt": "2026-11-21 22:31:27",
+    "updatedAt": "2026-11-21 22:33:27",
+    "finishedAt": "2026-11-21 22:33:27",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 2620413,
+    "vpkBytes": 2626209,
     "resources": 27,
     "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
         "name": "prepare",
         "state": "ok",
-        "startedAt": "21:51:05",
-        "finishedAt": "21:51:15"
+        "startedAt": "22:31:27",
+        "finishedAt": "22:32:13"
       },
       {
         "name": "compile",
         "state": "ok",
-        "startedAt": "21:51:15",
-        "finishedAt": "21:51:35"
+        "startedAt": "22:32:13",
+        "finishedAt": "22:32:36"
       },
       {
         "name": "pack",
         "state": "ok",
-        "startedAt": "21:51:36",
-        "finishedAt": "21:51:37"
+        "startedAt": "22:32:37",
+        "finishedAt": "22:32:37"
       },
       {
         "name": "install",
         "state": "ok",
-        "startedAt": "21:51:37",
-        "finishedAt": "21:51:37"
+        "startedAt": "22:32:37",
+        "finishedAt": "22:32:37"
       },
       {
         "name": "installed",
         "state": "ok",
-        "startedAt": "21:51:37",
-        "finishedAt": "21:52:16"
+        "startedAt": "22:32:38",
+        "finishedAt": "22:33:27"
       }
     ],
-    "message": "installed 2620413 bytes",
+    "message": "installed 2626209 bytes",
     "packages": []
   },
   "update": {

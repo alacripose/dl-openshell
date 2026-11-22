@@ -1,0 +1,19 @@
+shploingus.theme/339926f6b1b54ebb89810d4c6238d523
+# Brass meridian, as an option after the pinned Popit baseline. The roles are the exact inks the
+# pinned stylesheet draws with, so choosing this scheme makes the whole shell read as the brass
+# plate over ink that openlock_pinned.css already cuts: ink ground, brass keyline, brass light
+# for attention, warm paper for text. Nothing here changes geometry; the contour is the shape.
+theme	brass
+	label	Brass meridian
+	source	openlock_pinned.css pinned inks (bar, plate, keyline, paper)
+	body	#0F1113F2
+	panel	#14171AF2
+	title	#191D21F2
+	meta	#0B0D0FF2
+	border	#B08D57
+	borderStrong	#D9B779
+	ink	#E6DBC2
+	muted	#8B8778
+	accent	#B08D57
+	alert	#7A2114
+	alertBody	#FFE3DAF2

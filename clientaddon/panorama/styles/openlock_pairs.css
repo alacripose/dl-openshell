@@ -5,741 +5,75 @@
    Classic mode removes the Pair class and the scheme's own roles return. */
 
 /* Popit Blue — Popit Forge default */
-.PairPopitBlue .PopitRoot { background-color: #3f8ad7E6; border-color: #d641d6; }
-.PairPopitBlue .PopitChild { background-color: #3f8ad7E6; border-color: #d641d6; }
-.PairPopitBlue .PopitHeaderTitle { color: #b9d94a; }
-.PairPopitBlue .PopitWordmark { color: #b9d94a; }
-.PairPopitBlue .PopitPairChip { background-color: #d641d633; border-color: #d641d6; }
-.PairPopitBlue .PopitPairChipLabel { color: #f4f2ea; }
-.PairPopitBlue .PopitRootRow.Active { background-color: #d641d633; border-color: #d641d6; }
-.PairPopitBlue .PopitTool.Active { background-color: #d641d6; border-color: #41d641; }
-.PairPopitBlue .PopitOption.Selected { background-color: #d641d6; border-color: #41d641; }
-.PairPopitBlue .PopitPageDot.On { background-color: #d641d6; }
-.PairPopitBlue .PopitItem.Selected { border-color: #d641d6; }
-.PairPopitBlue .PopitTarget.Selected { border-color: #d641d6; }
-.PairPopitBlue .PopitDetail { color: #b9d94a; }
-.PairPopitBlue .WindowFrame { background-color: #1A3A5A; border-color: #d641d6; }
-.PairPopitBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #d641d6; }
-.PairPopitBlue .WindowFrame .WindowTitle { background-color: #802780; }
-.PairPopitBlue .WindowFrame .WindowTitleLabel { color: #41d641; }
-.PairPopitBlue .ThemedCell { border-color: #6FA7E159; }
 
 /* Yellow & Fuchsia — LittleBigPlanet */
-.PairLbp1YellowFuchsia .PopitRoot { background-color: #e5e510E6; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitChild { background-color: #e5e510E6; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1YellowFuchsia .PopitWordmark { color: #b9d94a; }
-.PairLbp1YellowFuchsia .PopitPairChip { background-color: #e70f8133; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitPairChipLabel { color: #10131a; }
-.PairLbp1YellowFuchsia .PopitRootRow.Active { background-color: #e70f8133; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitTool.Active { background-color: #e70f81; border-color: #5656e8; }
-.PairLbp1YellowFuchsia .PopitOption.Selected { background-color: #e70f81; border-color: #5656e8; }
-.PairLbp1YellowFuchsia .PopitPageDot.On { background-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitItem.Selected { border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitTarget.Selected { border-color: #e70f81; }
-.PairLbp1YellowFuchsia .PopitDetail { color: #b9d94a; }
-.PairLbp1YellowFuchsia .WindowFrame { background-color: #606007; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .WindowFrame.CompactHud { background-color: transparent; border-color: #e70f81; }
-.PairLbp1YellowFuchsia .WindowFrame .WindowTitle { background-color: #8B094D; }
-.PairLbp1YellowFuchsia .WindowFrame .WindowTitleLabel { color: #5656e8; }
-.PairLbp1YellowFuchsia .ThemedCell { border-color: #ECEC4C59; }
 
 /* Navy & Blue — LittleBigPlanet */
-.PairLbp1NavyBlue .PopitRoot { background-color: #392853E6; border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitChild { background-color: #392853E6; border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1NavyBlue .PopitWordmark { color: #b9d94a; }
-.PairLbp1NavyBlue .PopitPairChip { background-color: #3973a833; border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1NavyBlue .PopitRootRow.Active { background-color: #3973a833; border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitTool.Active { background-color: #3973a8; border-color: #a87139; }
-.PairLbp1NavyBlue .PopitOption.Selected { background-color: #3973a8; border-color: #a87139; }
-.PairLbp1NavyBlue .PopitPageDot.On { background-color: #3973a8; }
-.PairLbp1NavyBlue .PopitItem.Selected { border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitTarget.Selected { border-color: #3973a8; }
-.PairLbp1NavyBlue .PopitDetail { color: #b9d94a; }
-.PairLbp1NavyBlue .WindowFrame { background-color: #181123; border-color: #3973a8; }
-.PairLbp1NavyBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #3973a8; }
-.PairLbp1NavyBlue .WindowFrame .WindowTitle { background-color: #224565; }
-.PairLbp1NavyBlue .WindowFrame .WindowTitleLabel { color: #a87139; }
-.PairLbp1NavyBlue .ThemedCell { border-color: #6A5E7E59; }
 
 /* Deep Pink & Green — LittleBigPlanet */
-.PairLbp1DeepPinkGreen .PopitRoot { background-color: #9a2853E6; border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitChild { background-color: #9a2853E6; border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1DeepPinkGreen .PopitWordmark { color: #b9d94a; }
-.PairLbp1DeepPinkGreen .PopitPairChip { background-color: #89992933; border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1DeepPinkGreen .PopitRootRow.Active { background-color: #89992933; border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitTool.Active { background-color: #899929; border-color: #5c5699; }
-.PairLbp1DeepPinkGreen .PopitOption.Selected { background-color: #899929; border-color: #5c5699; }
-.PairLbp1DeepPinkGreen .PopitPageDot.On { background-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitItem.Selected { border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitTarget.Selected { border-color: #899929; }
-.PairLbp1DeepPinkGreen .PopitDetail { color: #b9d94a; }
-.PairLbp1DeepPinkGreen .WindowFrame { background-color: #411123; border-color: #899929; }
-.PairLbp1DeepPinkGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #899929; }
-.PairLbp1DeepPinkGreen .WindowFrame .WindowTitle { background-color: #525C19; }
-.PairLbp1DeepPinkGreen .WindowFrame .WindowTitleLabel { color: #5c5699; }
-.PairLbp1DeepPinkGreen .ThemedCell { border-color: #B35E7E59; }
 
 /* Blue & Pink — LittleBigPlanet */
-.PairLbp1BluePink .PopitRoot { background-color: #3f8ad7E6; border-color: #d641d6; }
-.PairLbp1BluePink .PopitChild { background-color: #3f8ad7E6; border-color: #d641d6; }
-.PairLbp1BluePink .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1BluePink .PopitWordmark { color: #b9d94a; }
-.PairLbp1BluePink .PopitPairChip { background-color: #d641d633; border-color: #d641d6; }
-.PairLbp1BluePink .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1BluePink .PopitRootRow.Active { background-color: #d641d633; border-color: #d641d6; }
-.PairLbp1BluePink .PopitTool.Active { background-color: #d641d6; border-color: #41d641; }
-.PairLbp1BluePink .PopitOption.Selected { background-color: #d641d6; border-color: #41d641; }
-.PairLbp1BluePink .PopitPageDot.On { background-color: #d641d6; }
-.PairLbp1BluePink .PopitItem.Selected { border-color: #d641d6; }
-.PairLbp1BluePink .PopitTarget.Selected { border-color: #d641d6; }
-.PairLbp1BluePink .PopitDetail { color: #b9d94a; }
-.PairLbp1BluePink .WindowFrame { background-color: #1A3A5A; border-color: #d641d6; }
-.PairLbp1BluePink .WindowFrame.CompactHud { background-color: transparent; border-color: #d641d6; }
-.PairLbp1BluePink .WindowFrame .WindowTitle { background-color: #802780; }
-.PairLbp1BluePink .WindowFrame .WindowTitleLabel { color: #41d641; }
-.PairLbp1BluePink .ThemedCell { border-color: #6FA7E159; }
 
 /* Violet & Deep Pink — LittleBigPlanet */
-.PairLbp1VioletDeepPink .PopitRoot { background-color: #6a39b5E6; border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitChild { background-color: #6a39b5E6; border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1VioletDeepPink .PopitWordmark { color: #b9d94a; }
-.PairLbp1VioletDeepPink .PopitPairChip { background-color: #b2395033; border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1VioletDeepPink .PopitRootRow.Active { background-color: #b2395033; border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitTool.Active { background-color: #b23950; border-color: #3ab29e; }
-.PairLbp1VioletDeepPink .PopitOption.Selected { background-color: #b23950; border-color: #3ab29e; }
-.PairLbp1VioletDeepPink .PopitPageDot.On { background-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitItem.Selected { border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitTarget.Selected { border-color: #b23950; }
-.PairLbp1VioletDeepPink .PopitDetail { color: #b9d94a; }
-.PairLbp1VioletDeepPink .WindowFrame { background-color: #2D184C; border-color: #b23950; }
-.PairLbp1VioletDeepPink .WindowFrame.CompactHud { background-color: transparent; border-color: #b23950; }
-.PairLbp1VioletDeepPink .WindowFrame .WindowTitle { background-color: #6B2230; }
-.PairLbp1VioletDeepPink .WindowFrame .WindowTitleLabel { color: #3ab29e; }
-.PairLbp1VioletDeepPink .ThemedCell { border-color: #8F6AC859; }
 
 /* Coral & Pale Green — LittleBigPlanet */
-.PairLbp1CoralPaleGreen .PopitRoot { background-color: #e76161E6; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitChild { background-color: #e76161E6; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1CoralPaleGreen .PopitWordmark { color: #b9d94a; }
-.PairLbp1CoralPaleGreen .PopitPairChip { background-color: #a5e56333; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1CoralPaleGreen .PopitRootRow.Active { background-color: #a5e56333; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitTool.Active { background-color: #a5e563; border-color: #a363e4; }
-.PairLbp1CoralPaleGreen .PopitOption.Selected { background-color: #a5e563; border-color: #a363e4; }
-.PairLbp1CoralPaleGreen .PopitPageDot.On { background-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitItem.Selected { border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitTarget.Selected { border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .PopitDetail { color: #b9d94a; }
-.PairLbp1CoralPaleGreen .WindowFrame { background-color: #612929; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #a5e563; }
-.PairLbp1CoralPaleGreen .WindowFrame .WindowTitle { background-color: #63893B; }
-.PairLbp1CoralPaleGreen .WindowFrame .WindowTitleLabel { color: #a363e4; }
-.PairLbp1CoralPaleGreen .ThemedCell { border-color: #ED888859; }
 
 /* Red & Green — LittleBigPlanet */
-.PairLbp1RedGreen .PopitRoot { background-color: #ca0000E6; border-color: #67c900; }
-.PairLbp1RedGreen .PopitChild { background-color: #ca0000E6; border-color: #67c900; }
-.PairLbp1RedGreen .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1RedGreen .PopitWordmark { color: #b9d94a; }
-.PairLbp1RedGreen .PopitPairChip { background-color: #67c90033; border-color: #67c900; }
-.PairLbp1RedGreen .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1RedGreen .PopitRootRow.Active { background-color: #67c90033; border-color: #67c900; }
-.PairLbp1RedGreen .PopitTool.Active { background-color: #67c900; border-color: #7d48c1; }
-.PairLbp1RedGreen .PopitOption.Selected { background-color: #67c900; border-color: #7d48c1; }
-.PairLbp1RedGreen .PopitPageDot.On { background-color: #67c900; }
-.PairLbp1RedGreen .PopitItem.Selected { border-color: #67c900; }
-.PairLbp1RedGreen .PopitTarget.Selected { border-color: #67c900; }
-.PairLbp1RedGreen .PopitDetail { color: #b9d94a; }
-.PairLbp1RedGreen .WindowFrame { background-color: #550000; border-color: #67c900; }
-.PairLbp1RedGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #67c900; }
-.PairLbp1RedGreen .WindowFrame .WindowTitle { background-color: #3E7900; }
-.PairLbp1RedGreen .WindowFrame .WindowTitleLabel { color: #7d48c1; }
-.PairLbp1RedGreen .ThemedCell { border-color: #D7404059; }
 
 /* Orange & Green — LittleBigPlanet */
-.PairLbp1OrangeGreen .PopitRoot { background-color: #e44311E6; border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitChild { background-color: #e44311E6; border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1OrangeGreen .PopitWordmark { color: #b9d94a; }
-.PairLbp1OrangeGreen .PopitPairChip { background-color: #46e21333; border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp1OrangeGreen .PopitRootRow.Active { background-color: #46e21333; border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitTool.Active { background-color: #46e213; border-color: #bf13e2; }
-.PairLbp1OrangeGreen .PopitOption.Selected { background-color: #46e213; border-color: #bf13e2; }
-.PairLbp1OrangeGreen .PopitPageDot.On { background-color: #46e213; }
-.PairLbp1OrangeGreen .PopitItem.Selected { border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitTarget.Selected { border-color: #46e213; }
-.PairLbp1OrangeGreen .PopitDetail { color: #b9d94a; }
-.PairLbp1OrangeGreen .WindowFrame { background-color: #601C07; border-color: #46e213; }
-.PairLbp1OrangeGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #46e213; }
-.PairLbp1OrangeGreen .WindowFrame .WindowTitle { background-color: #2A880B; }
-.PairLbp1OrangeGreen .WindowFrame .WindowTitleLabel { color: #bf13e2; }
-.PairLbp1OrangeGreen .ThemedCell { border-color: #EB724C59; }
 
 /* Flesh Pink & Leaf Green — LittleBigPlanet */
-.PairLbp1FleshPinkLeafGreen .PopitRoot { background-color: #b59d81E6; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitChild { background-color: #b59d81E6; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1FleshPinkLeafGreen .PopitWordmark { color: #b9d94a; }
-.PairLbp1FleshPinkLeafGreen .PopitPairChip { background-color: #678c6733; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitPairChipLabel { color: #10131a; }
-.PairLbp1FleshPinkLeafGreen .PopitRootRow.Active { background-color: #678c6733; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitTool.Active { background-color: #678c67; border-color: #ca9acc; }
-.PairLbp1FleshPinkLeafGreen .PopitOption.Selected { background-color: #678c67; border-color: #ca9acc; }
-.PairLbp1FleshPinkLeafGreen .PopitPageDot.On { background-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitItem.Selected { border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitTarget.Selected { border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .PopitDetail { color: #b9d94a; }
-.PairLbp1FleshPinkLeafGreen .WindowFrame { background-color: #4C4236; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .WindowFrame.CompactHud { background-color: transparent; border-color: #678c67; }
-.PairLbp1FleshPinkLeafGreen .WindowFrame .WindowTitle { background-color: #3E543E; }
-.PairLbp1FleshPinkLeafGreen .WindowFrame .WindowTitleLabel { color: #ca9acc; }
-.PairLbp1FleshPinkLeafGreen .ThemedCell { border-color: #C8B6A059; }
 
 /* Green & Pale Blue — LittleBigPlanet */
-.PairLbp1GreenPaleBlue .PopitRoot { background-color: #8acb2eE6; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitChild { background-color: #8acb2eE6; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1GreenPaleBlue .PopitWordmark { color: #b9d94a; }
-.PairLbp1GreenPaleBlue .PopitPairChip { background-color: #2fc9c933; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitPairChipLabel { color: #10131a; }
-.PairLbp1GreenPaleBlue .PopitRootRow.Active { background-color: #2fc9c933; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitTool.Active { background-color: #2fc9c9; border-color: #c92f4c; }
-.PairLbp1GreenPaleBlue .PopitOption.Selected { background-color: #2fc9c9; border-color: #c92f4c; }
-.PairLbp1GreenPaleBlue .PopitPageDot.On { background-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitItem.Selected { border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitTarget.Selected { border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .PopitDetail { color: #b9d94a; }
-.PairLbp1GreenPaleBlue .WindowFrame { background-color: #3A5513; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #2fc9c9; }
-.PairLbp1GreenPaleBlue .WindowFrame .WindowTitle { background-color: #1C7979; }
-.PairLbp1GreenPaleBlue .WindowFrame .WindowTitleLabel { color: #c92f4c; }
-.PairLbp1GreenPaleBlue .ThemedCell { border-color: #A7D86259; }
 
 /* Aqua & Blue — LittleBigPlanet */
-.PairLbp1AquaBlue .PopitRoot { background-color: #2ecba8E6; border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitChild { background-color: #2ecba8E6; border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1AquaBlue .PopitWordmark { color: #b9d94a; }
-.PairLbp1AquaBlue .PopitPairChip { background-color: #655cbf33; border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitPairChipLabel { color: #10131a; }
-.PairLbp1AquaBlue .PopitRootRow.Active { background-color: #655cbf33; border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitTool.Active { background-color: #655cbf; border-color: #b3c92f; }
-.PairLbp1AquaBlue .PopitOption.Selected { background-color: #655cbf; border-color: #b3c92f; }
-.PairLbp1AquaBlue .PopitPageDot.On { background-color: #655cbf; }
-.PairLbp1AquaBlue .PopitItem.Selected { border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitTarget.Selected { border-color: #655cbf; }
-.PairLbp1AquaBlue .PopitDetail { color: #b9d94a; }
-.PairLbp1AquaBlue .WindowFrame { background-color: #135547; border-color: #655cbf; }
-.PairLbp1AquaBlue .WindowFrame.CompactHud { background-color: transparent; border-color: #655cbf; }
-.PairLbp1AquaBlue .WindowFrame .WindowTitle { background-color: #3D3773; }
-.PairLbp1AquaBlue .WindowFrame .WindowTitleLabel { color: #b3c92f; }
-.PairLbp1AquaBlue .ThemedCell { border-color: #62D8BE59; }
 
 /* Pale Blue & Purple — LittleBigPlanet */
-.PairLbp1PaleBluePurple .PopitRoot { background-color: #2ea8cbE6; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitChild { background-color: #2ea8cbE6; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitHeaderTitle { color: #b9d94a; }
-.PairLbp1PaleBluePurple .PopitWordmark { color: #b9d94a; }
-.PairLbp1PaleBluePurple .PopitPairChip { background-color: #932fc933; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitPairChipLabel { color: #10131a; }
-.PairLbp1PaleBluePurple .PopitRootRow.Active { background-color: #932fc933; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitTool.Active { background-color: #932fc9; border-color: #64c92f; }
-.PairLbp1PaleBluePurple .PopitOption.Selected { background-color: #932fc9; border-color: #64c92f; }
-.PairLbp1PaleBluePurple .PopitPageDot.On { background-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitItem.Selected { border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitTarget.Selected { border-color: #932fc9; }
-.PairLbp1PaleBluePurple .PopitDetail { color: #b9d94a; }
-.PairLbp1PaleBluePurple .WindowFrame { background-color: #134755; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .WindowFrame.CompactHud { background-color: transparent; border-color: #932fc9; }
-.PairLbp1PaleBluePurple .WindowFrame .WindowTitle { background-color: #581C79; }
-.PairLbp1PaleBluePurple .WindowFrame .WindowTitleLabel { color: #64c92f; }
-.PairLbp1PaleBluePurple .ThemedCell { border-color: #62BED859; }
 
 /* Cool Island — LittleBigPlanet 3 */
-.PairLbp3CoolIsland .PopitRoot { background-color: #92ba19E6; border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitChild { background-color: #92ba19E6; border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitHeaderTitle { color: #8800ff; }
-.PairLbp3CoolIsland .PopitWordmark { color: #8800ff; }
-.PairLbp3CoolIsland .PopitPairChip { background-color: #2569cc33; border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitPairChipLabel { color: #10131a; }
-.PairLbp3CoolIsland .PopitRootRow.Active { background-color: #2569cc33; border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitTool.Active { background-color: #2569cc; border-color: #1ddccd; }
-.PairLbp3CoolIsland .PopitOption.Selected { background-color: #2569cc; border-color: #1ddccd; }
-.PairLbp3CoolIsland .PopitPageDot.On { background-color: #2569cc; }
-.PairLbp3CoolIsland .PopitItem.Selected { border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitTarget.Selected { border-color: #2569cc; }
-.PairLbp3CoolIsland .PopitDetail { color: #8800ff; }
-.PairLbp3CoolIsland .WindowFrame { background-color: #3D4E0A; border-color: #2569cc; }
-.PairLbp3CoolIsland .WindowFrame.CompactHud { background-color: transparent; border-color: #2569cc; }
-.PairLbp3CoolIsland .WindowFrame .WindowTitle { background-color: #163F7A; }
-.PairLbp3CoolIsland .WindowFrame .WindowTitleLabel { color: #1ddccd; }
-.PairLbp3CoolIsland .ThemedCell { border-color: #ADCB5259; }
 
 /* Ice Cream Sprinkles — LittleBigPlanet 3 */
-.PairLbp3IceCreamSprinkles .PopitRoot { background-color: #ceb424E6; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitChild { background-color: #ceb424E6; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitHeaderTitle { color: #8800ff; }
-.PairLbp3IceCreamSprinkles .PopitWordmark { color: #8800ff; }
-.PairLbp3IceCreamSprinkles .PopitPairChip { background-color: #c331a033; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitPairChipLabel { color: #10131a; }
-.PairLbp3IceCreamSprinkles .PopitRootRow.Active { background-color: #c331a033; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitTool.Active { background-color: #c331a0; border-color: #3bcfc1; }
-.PairLbp3IceCreamSprinkles .PopitOption.Selected { background-color: #c331a0; border-color: #3bcfc1; }
-.PairLbp3IceCreamSprinkles .PopitPageDot.On { background-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitItem.Selected { border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitTarget.Selected { border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .PopitDetail { color: #8800ff; }
-.PairLbp3IceCreamSprinkles .WindowFrame { background-color: #574C0F; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .WindowFrame.CompactHud { background-color: transparent; border-color: #c331a0; }
-.PairLbp3IceCreamSprinkles .WindowFrame .WindowTitle { background-color: #751D60; }
-.PairLbp3IceCreamSprinkles .WindowFrame .WindowTitleLabel { color: #3bcfc1; }
-.PairLbp3IceCreamSprinkles .ThemedCell { border-color: #DAC75B59; }
 
 /* Candy Jar — LittleBigPlanet 3 */
-.PairLbp3CandyJar .PopitRoot { background-color: #cc0a1dE6; border-color: #2f0514; }
-.PairLbp3CandyJar .PopitChild { background-color: #cc0a1dE6; border-color: #2f0514; }
-.PairLbp3CandyJar .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3CandyJar .PopitWordmark { color: #e6d71e; }
-.PairLbp3CandyJar .PopitPairChip { background-color: #2f051433; border-color: #2f0514; }
-.PairLbp3CandyJar .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3CandyJar .PopitRootRow.Active { background-color: #2f051433; border-color: #2f0514; }
-.PairLbp3CandyJar .PopitTool.Active { background-color: #2f0514; border-color: #fff600; }
-.PairLbp3CandyJar .PopitOption.Selected { background-color: #2f0514; border-color: #fff600; }
-.PairLbp3CandyJar .PopitPageDot.On { background-color: #2f0514; }
-.PairLbp3CandyJar .PopitItem.Selected { border-color: #2f0514; }
-.PairLbp3CandyJar .PopitTarget.Selected { border-color: #2f0514; }
-.PairLbp3CandyJar .PopitDetail { color: #e6d71e; }
-.PairLbp3CandyJar .WindowFrame { background-color: #56040C; border-color: #2f0514; }
-.PairLbp3CandyJar .WindowFrame.CompactHud { background-color: transparent; border-color: #2f0514; }
-.PairLbp3CandyJar .WindowFrame .WindowTitle { background-color: #1C030C; }
-.PairLbp3CandyJar .WindowFrame .WindowTitleLabel { color: #fff600; }
-.PairLbp3CandyJar .ThemedCell { border-color: #D9475659; }
 
 /* Forest Surprise — LittleBigPlanet 3 */
-.PairLbp3ForestSurprise .PopitRoot { background-color: #c800ccE6; border-color: #000000; }
-.PairLbp3ForestSurprise .PopitChild { background-color: #c800ccE6; border-color: #000000; }
-.PairLbp3ForestSurprise .PopitHeaderTitle { color: #e6d764; }
-.PairLbp3ForestSurprise .PopitWordmark { color: #e6d764; }
-.PairLbp3ForestSurprise .PopitPairChip { background-color: #00000033; border-color: #000000; }
-.PairLbp3ForestSurprise .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3ForestSurprise .PopitRootRow.Active { background-color: #00000033; border-color: #000000; }
-.PairLbp3ForestSurprise .PopitTool.Active { background-color: #000000; border-color: #ffc600; }
-.PairLbp3ForestSurprise .PopitOption.Selected { background-color: #000000; border-color: #ffc600; }
-.PairLbp3ForestSurprise .PopitPageDot.On { background-color: #000000; }
-.PairLbp3ForestSurprise .PopitItem.Selected { border-color: #000000; }
-.PairLbp3ForestSurprise .PopitTarget.Selected { border-color: #000000; }
-.PairLbp3ForestSurprise .PopitDetail { color: #e6d764; }
-.PairLbp3ForestSurprise .WindowFrame { background-color: #540056; border-color: #000000; }
-.PairLbp3ForestSurprise .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
-.PairLbp3ForestSurprise .WindowFrame .WindowTitle { background-color: #000000; }
-.PairLbp3ForestSurprise .WindowFrame .WindowTitleLabel { color: #ffc600; }
-.PairLbp3ForestSurprise .ThemedCell { border-color: #D640D959; }
 
 /* Sliced Bread — LittleBigPlanet 3 */
-.PairLbp3SlicedBread .PopitRoot { background-color: #f5d7d7E6; border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitChild { background-color: #f5d7d7E6; border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3SlicedBread .PopitWordmark { color: #e60f64; }
-.PairLbp3SlicedBread .PopitPairChip { background-color: #aab95a33; border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitPairChipLabel { color: #10131a; }
-.PairLbp3SlicedBread .PopitRootRow.Active { background-color: #aab95a33; border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitTool.Active { background-color: #aab95a; border-color: #64c8e6; }
-.PairLbp3SlicedBread .PopitOption.Selected { background-color: #aab95a; border-color: #64c8e6; }
-.PairLbp3SlicedBread .PopitPageDot.On { background-color: #aab95a; }
-.PairLbp3SlicedBread .PopitItem.Selected { border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitTarget.Selected { border-color: #aab95a; }
-.PairLbp3SlicedBread .PopitDetail { color: #e60f64; }
-.PairLbp3SlicedBread .WindowFrame { background-color: #675A5A; border-color: #aab95a; }
-.PairLbp3SlicedBread .WindowFrame.CompactHud { background-color: transparent; border-color: #aab95a; }
-.PairLbp3SlicedBread .WindowFrame .WindowTitle { background-color: #666F36; }
-.PairLbp3SlicedBread .WindowFrame .WindowTitleLabel { color: #64c8e6; }
-.PairLbp3SlicedBread .ThemedCell { border-color: #F8E1E159; }
 
 /* Moonlight — LittleBigPlanet 3 */
-.PairLbp3Moonlight .PopitRoot { background-color: #0b60ffE6; border-color: #a09687; }
-.PairLbp3Moonlight .PopitChild { background-color: #0b60ffE6; border-color: #a09687; }
-.PairLbp3Moonlight .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3Moonlight .PopitWordmark { color: #e60f64; }
-.PairLbp3Moonlight .PopitPairChip { background-color: #a0968733; border-color: #a09687; }
-.PairLbp3Moonlight .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3Moonlight .PopitRootRow.Active { background-color: #a0968733; border-color: #a09687; }
-.PairLbp3Moonlight .PopitTool.Active { background-color: #a09687; border-color: #e1e1e6; }
-.PairLbp3Moonlight .PopitOption.Selected { background-color: #a09687; border-color: #e1e1e6; }
-.PairLbp3Moonlight .PopitPageDot.On { background-color: #a09687; }
-.PairLbp3Moonlight .PopitItem.Selected { border-color: #a09687; }
-.PairLbp3Moonlight .PopitTarget.Selected { border-color: #a09687; }
-.PairLbp3Moonlight .PopitDetail { color: #e60f64; }
-.PairLbp3Moonlight .WindowFrame { background-color: #05286B; border-color: #a09687; }
-.PairLbp3Moonlight .WindowFrame.CompactHud { background-color: transparent; border-color: #a09687; }
-.PairLbp3Moonlight .WindowFrame .WindowTitle { background-color: #605A51; }
-.PairLbp3Moonlight .WindowFrame .WindowTitleLabel { color: #e1e1e6; }
-.PairLbp3Moonlight .ThemedCell { border-color: #4888FF59; }
 
 /* Meditation — LittleBigPlanet 3 */
-.PairLbp3Meditation .PopitRoot { background-color: #755f1cE6; border-color: #200202; }
-.PairLbp3Meditation .PopitChild { background-color: #755f1cE6; border-color: #200202; }
-.PairLbp3Meditation .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3Meditation .PopitWordmark { color: #e6d71e; }
-.PairLbp3Meditation .PopitPairChip { background-color: #20020233; border-color: #200202; }
-.PairLbp3Meditation .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3Meditation .PopitRootRow.Active { background-color: #20020233; border-color: #200202; }
-.PairLbp3Meditation .PopitTool.Active { background-color: #200202; border-color: #ffb400; }
-.PairLbp3Meditation .PopitOption.Selected { background-color: #200202; border-color: #ffb400; }
-.PairLbp3Meditation .PopitPageDot.On { background-color: #200202; }
-.PairLbp3Meditation .PopitItem.Selected { border-color: #200202; }
-.PairLbp3Meditation .PopitTarget.Selected { border-color: #200202; }
-.PairLbp3Meditation .PopitDetail { color: #e6d71e; }
-.PairLbp3Meditation .WindowFrame { background-color: #31280C; border-color: #200202; }
-.PairLbp3Meditation .WindowFrame.CompactHud { background-color: transparent; border-color: #200202; }
-.PairLbp3Meditation .WindowFrame .WindowTitle { background-color: #130101; }
-.PairLbp3Meditation .WindowFrame .WindowTitleLabel { color: #ffb400; }
-.PairLbp3Meditation .ThemedCell { border-color: #98875559; }
 
 /* Rack Attack — LittleBigPlanet 3 */
-.PairLbp3RackAttack .PopitRoot { background-color: #ff871dE6; border-color: #48b24f; }
-.PairLbp3RackAttack .PopitChild { background-color: #ff871dE6; border-color: #48b24f; }
-.PairLbp3RackAttack .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3RackAttack .PopitWordmark { color: #e60f64; }
-.PairLbp3RackAttack .PopitPairChip { background-color: #48b24f33; border-color: #48b24f; }
-.PairLbp3RackAttack .PopitPairChipLabel { color: #10131a; }
-.PairLbp3RackAttack .PopitRootRow.Active { background-color: #48b24f33; border-color: #48b24f; }
-.PairLbp3RackAttack .PopitTool.Active { background-color: #48b24f; border-color: #fff000; }
-.PairLbp3RackAttack .PopitOption.Selected { background-color: #48b24f; border-color: #fff000; }
-.PairLbp3RackAttack .PopitPageDot.On { background-color: #48b24f; }
-.PairLbp3RackAttack .PopitItem.Selected { border-color: #48b24f; }
-.PairLbp3RackAttack .PopitTarget.Selected { border-color: #48b24f; }
-.PairLbp3RackAttack .PopitDetail { color: #e60f64; }
-.PairLbp3RackAttack .WindowFrame { background-color: #6B390C; border-color: #48b24f; }
-.PairLbp3RackAttack .WindowFrame.CompactHud { background-color: transparent; border-color: #48b24f; }
-.PairLbp3RackAttack .WindowFrame .WindowTitle { background-color: #2B6B2F; }
-.PairLbp3RackAttack .WindowFrame .WindowTitleLabel { color: #fff000; }
-.PairLbp3RackAttack .ThemedCell { border-color: #FFA55659; }
 
 /* Tennis Elbow — LittleBigPlanet 3 */
-.PairLbp3TennisElbow .PopitRoot { background-color: #9142b2E6; border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitChild { background-color: #9142b2E6; border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3TennisElbow .PopitWordmark { color: #e60f64; }
-.PairLbp3TennisElbow .PopitPairChip { background-color: #10cc7533; border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3TennisElbow .PopitRootRow.Active { background-color: #10cc7533; border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitTool.Active { background-color: #10cc75; border-color: #ffea87; }
-.PairLbp3TennisElbow .PopitOption.Selected { background-color: #10cc75; border-color: #ffea87; }
-.PairLbp3TennisElbow .PopitPageDot.On { background-color: #10cc75; }
-.PairLbp3TennisElbow .PopitItem.Selected { border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitTarget.Selected { border-color: #10cc75; }
-.PairLbp3TennisElbow .PopitDetail { color: #e60f64; }
-.PairLbp3TennisElbow .WindowFrame { background-color: #3D1C4B; border-color: #10cc75; }
-.PairLbp3TennisElbow .WindowFrame.CompactHud { background-color: transparent; border-color: #10cc75; }
-.PairLbp3TennisElbow .WindowFrame .WindowTitle { background-color: #0A7A46; }
-.PairLbp3TennisElbow .WindowFrame .WindowTitleLabel { color: #ffea87; }
-.PairLbp3TennisElbow .ThemedCell { border-color: #AC71C559; }
 
 /* Volcanic Glacier — LittleBigPlanet 3 */
-.PairLbp3VolcanicGlacier .PopitRoot { background-color: #fa8228E6; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitChild { background-color: #fa8228E6; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3VolcanicGlacier .PopitWordmark { color: #e60f64; }
-.PairLbp3VolcanicGlacier .PopitPairChip { background-color: #8291d733; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitPairChipLabel { color: #10131a; }
-.PairLbp3VolcanicGlacier .PopitRootRow.Active { background-color: #8291d733; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitTool.Active { background-color: #8291d7; border-color: #c8cde6; }
-.PairLbp3VolcanicGlacier .PopitOption.Selected { background-color: #8291d7; border-color: #c8cde6; }
-.PairLbp3VolcanicGlacier .PopitPageDot.On { background-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitItem.Selected { border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitTarget.Selected { border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .PopitDetail { color: #e60f64; }
-.PairLbp3VolcanicGlacier .WindowFrame { background-color: #693711; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .WindowFrame.CompactHud { background-color: transparent; border-color: #8291d7; }
-.PairLbp3VolcanicGlacier .WindowFrame .WindowTitle { background-color: #4E5781; }
-.PairLbp3VolcanicGlacier .WindowFrame .WindowTitleLabel { color: #c8cde6; }
-.PairLbp3VolcanicGlacier .ThemedCell { border-color: #FBA15E59; }
 
 /* Dylan's Jalopy — LittleBigPlanet 3 */
-.PairLbp3DylansJalopy .PopitRoot { background-color: #13f5ffE6; border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitChild { background-color: #13f5ffE6; border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3DylansJalopy .PopitWordmark { color: #e6d71e; }
-.PairLbp3DylansJalopy .PopitPairChip { background-color: #ccb30033; border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitPairChipLabel { color: #10131a; }
-.PairLbp3DylansJalopy .PopitRootRow.Active { background-color: #ccb30033; border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitTool.Active { background-color: #ccb300; border-color: #ff1db1; }
-.PairLbp3DylansJalopy .PopitOption.Selected { background-color: #ccb300; border-color: #ff1db1; }
-.PairLbp3DylansJalopy .PopitPageDot.On { background-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitItem.Selected { border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitTarget.Selected { border-color: #ccb300; }
-.PairLbp3DylansJalopy .PopitDetail { color: #e6d71e; }
-.PairLbp3DylansJalopy .WindowFrame { background-color: #08676B; border-color: #ccb300; }
-.PairLbp3DylansJalopy .WindowFrame.CompactHud { background-color: transparent; border-color: #ccb300; }
-.PairLbp3DylansJalopy .WindowFrame .WindowTitle { background-color: #7A6B00; }
-.PairLbp3DylansJalopy .WindowFrame .WindowTitleLabel { color: #ff1db1; }
-.PairLbp3DylansJalopy .ThemedCell { border-color: #4EF8FF59; }
 
 /* Funkian — LittleBigPlanet 3 */
-.PairLbp3Funkian .PopitRoot { background-color: #be3c96E6; border-color: #000000; }
-.PairLbp3Funkian .PopitChild { background-color: #be3c96E6; border-color: #000000; }
-.PairLbp3Funkian .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3Funkian .PopitWordmark { color: #e6d71e; }
-.PairLbp3Funkian .PopitPairChip { background-color: #00000033; border-color: #000000; }
-.PairLbp3Funkian .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3Funkian .PopitRootRow.Active { background-color: #00000033; border-color: #000000; }
-.PairLbp3Funkian .PopitTool.Active { background-color: #000000; border-color: #683dbf; }
-.PairLbp3Funkian .PopitOption.Selected { background-color: #000000; border-color: #683dbf; }
-.PairLbp3Funkian .PopitPageDot.On { background-color: #000000; }
-.PairLbp3Funkian .PopitItem.Selected { border-color: #000000; }
-.PairLbp3Funkian .PopitTarget.Selected { border-color: #000000; }
-.PairLbp3Funkian .PopitDetail { color: #e6d71e; }
-.PairLbp3Funkian .WindowFrame { background-color: #50193F; border-color: #000000; }
-.PairLbp3Funkian .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
-.PairLbp3Funkian .WindowFrame .WindowTitle { background-color: #000000; }
-.PairLbp3Funkian .WindowFrame .WindowTitleLabel { color: #683dbf; }
-.PairLbp3Funkian .ThemedCell { border-color: #CE6DB059; }
 
 /* Night Time Coral — LittleBigPlanet 3 */
-.PairLbp3NightTimeCoral .PopitRoot { background-color: #5fc4c9E6; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitChild { background-color: #5fc4c9E6; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitHeaderTitle { color: #8800ff; }
-.PairLbp3NightTimeCoral .PopitWordmark { color: #8800ff; }
-.PairLbp3NightTimeCoral .PopitPairChip { background-color: #4379c933; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitPairChipLabel { color: #10131a; }
-.PairLbp3NightTimeCoral .PopitRootRow.Active { background-color: #4379c933; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitTool.Active { background-color: #4379c9; border-color: #e63f52; }
-.PairLbp3NightTimeCoral .PopitOption.Selected { background-color: #4379c9; border-color: #e63f52; }
-.PairLbp3NightTimeCoral .PopitPageDot.On { background-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitItem.Selected { border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitTarget.Selected { border-color: #4379c9; }
-.PairLbp3NightTimeCoral .PopitDetail { color: #8800ff; }
-.PairLbp3NightTimeCoral .WindowFrame { background-color: #285254; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .WindowFrame.CompactHud { background-color: transparent; border-color: #4379c9; }
-.PairLbp3NightTimeCoral .WindowFrame .WindowTitle { background-color: #284979; }
-.PairLbp3NightTimeCoral .WindowFrame .WindowTitleLabel { color: #e63f52; }
-.PairLbp3NightTimeCoral .ThemedCell { border-color: #87D3D659; }
 
 /* Twit Twoo — LittleBigPlanet 3 */
-.PairLbp3TwitTwoo .PopitRoot { background-color: #424242E6; border-color: #000000; }
-.PairLbp3TwitTwoo .PopitChild { background-color: #424242E6; border-color: #000000; }
-.PairLbp3TwitTwoo .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3TwitTwoo .PopitWordmark { color: #e60f64; }
-.PairLbp3TwitTwoo .PopitPairChip { background-color: #00000033; border-color: #000000; }
-.PairLbp3TwitTwoo .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3TwitTwoo .PopitRootRow.Active { background-color: #00000033; border-color: #000000; }
-.PairLbp3TwitTwoo .PopitTool.Active { background-color: #000000; border-color: #0a0a0a; }
-.PairLbp3TwitTwoo .PopitOption.Selected { background-color: #000000; border-color: #0a0a0a; }
-.PairLbp3TwitTwoo .PopitPageDot.On { background-color: #000000; }
-.PairLbp3TwitTwoo .PopitItem.Selected { border-color: #000000; }
-.PairLbp3TwitTwoo .PopitTarget.Selected { border-color: #000000; }
-.PairLbp3TwitTwoo .PopitDetail { color: #e60f64; }
-.PairLbp3TwitTwoo .WindowFrame { background-color: #1C1C1C; border-color: #000000; }
-.PairLbp3TwitTwoo .WindowFrame.CompactHud { background-color: transparent; border-color: #000000; }
-.PairLbp3TwitTwoo .WindowFrame .WindowTitle { background-color: #000000; }
-.PairLbp3TwitTwoo .WindowFrame .WindowTitleLabel { color: #0a0a0a; }
-.PairLbp3TwitTwoo .ThemedCell { border-color: #71717159; }
 
 /* Candy Floss — LittleBigPlanet 3 */
-.PairLbp3CandyFloss .PopitRoot { background-color: #f190acE6; border-color: #d61880; }
-.PairLbp3CandyFloss .PopitChild { background-color: #f190acE6; border-color: #d61880; }
-.PairLbp3CandyFloss .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3CandyFloss .PopitWordmark { color: #e6d71e; }
-.PairLbp3CandyFloss .PopitPairChip { background-color: #d6188033; border-color: #d61880; }
-.PairLbp3CandyFloss .PopitPairChipLabel { color: #10131a; }
-.PairLbp3CandyFloss .PopitRootRow.Active { background-color: #d6188033; border-color: #d61880; }
-.PairLbp3CandyFloss .PopitTool.Active { background-color: #d61880; border-color: #e244c4; }
-.PairLbp3CandyFloss .PopitOption.Selected { background-color: #d61880; border-color: #e244c4; }
-.PairLbp3CandyFloss .PopitPageDot.On { background-color: #d61880; }
-.PairLbp3CandyFloss .PopitItem.Selected { border-color: #d61880; }
-.PairLbp3CandyFloss .PopitTarget.Selected { border-color: #d61880; }
-.PairLbp3CandyFloss .PopitDetail { color: #e6d71e; }
-.PairLbp3CandyFloss .WindowFrame { background-color: #653C48; border-color: #d61880; }
-.PairLbp3CandyFloss .WindowFrame.CompactHud { background-color: transparent; border-color: #d61880; }
-.PairLbp3CandyFloss .WindowFrame .WindowTitle { background-color: #800E4D; }
-.PairLbp3CandyFloss .WindowFrame .WindowTitleLabel { color: #e244c4; }
-.PairLbp3CandyFloss .ThemedCell { border-color: #F4ACC159; }
 
 /* Berry Fish Cake — LittleBigPlanet 3 */
-.PairLbp3BerryFishCake .PopitRoot { background-color: #ef4d70E6; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitChild { background-color: #ef4d70E6; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitHeaderTitle { color: #e6d764; }
-.PairLbp3BerryFishCake .PopitWordmark { color: #e6d764; }
-.PairLbp3BerryFishCake .PopitPairChip { background-color: #3b3b3c33; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3BerryFishCake .PopitRootRow.Active { background-color: #3b3b3c33; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitTool.Active { background-color: #3b3b3c; border-color: #231f20; }
-.PairLbp3BerryFishCake .PopitOption.Selected { background-color: #3b3b3c; border-color: #231f20; }
-.PairLbp3BerryFishCake .PopitPageDot.On { background-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitItem.Selected { border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitTarget.Selected { border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .PopitDetail { color: #e6d764; }
-.PairLbp3BerryFishCake .WindowFrame { background-color: #64202F; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .WindowFrame.CompactHud { background-color: transparent; border-color: #3b3b3c; }
-.PairLbp3BerryFishCake .WindowFrame .WindowTitle { background-color: #232324; }
-.PairLbp3BerryFishCake .WindowFrame .WindowTitleLabel { color: #231f20; }
-.PairLbp3BerryFishCake .ThemedCell { border-color: #F37A9459; }
 
 /* Crispy Leaf — LittleBigPlanet 3 */
-.PairLbp3CrispyLeaf .PopitRoot { background-color: #22b573E6; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitChild { background-color: #22b573E6; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3CrispyLeaf .PopitWordmark { color: #e60f64; }
-.PairLbp3CrispyLeaf .PopitPairChip { background-color: #c5c5c533; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitPairChipLabel { color: #10131a; }
-.PairLbp3CrispyLeaf .PopitRootRow.Active { background-color: #c5c5c533; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitTool.Active { background-color: #c5c5c5; border-color: #e6e6e6; }
-.PairLbp3CrispyLeaf .PopitOption.Selected { background-color: #c5c5c5; border-color: #e6e6e6; }
-.PairLbp3CrispyLeaf .PopitPageDot.On { background-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitItem.Selected { border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitTarget.Selected { border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .PopitDetail { color: #e60f64; }
-.PairLbp3CrispyLeaf .WindowFrame { background-color: #0E4C30; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .WindowFrame.CompactHud { background-color: transparent; border-color: #c5c5c5; }
-.PairLbp3CrispyLeaf .WindowFrame .WindowTitle { background-color: #767676; }
-.PairLbp3CrispyLeaf .WindowFrame .WindowTitleLabel { color: #e6e6e6; }
-.PairLbp3CrispyLeaf .ThemedCell { border-color: #59C89659; }
 
 /* Brittle Thistle — LittleBigPlanet 3 */
-.PairLbp3BrittleThistle .PopitRoot { background-color: #00bbbbE6; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitChild { background-color: #00bbbbE6; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitHeaderTitle { color: #e6d764; }
-.PairLbp3BrittleThistle .PopitWordmark { color: #e6d764; }
-.PairLbp3BrittleThistle .PopitPairChip { background-color: #bf1d4f33; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitPairChipLabel { color: #10131a; }
-.PairLbp3BrittleThistle .PopitRootRow.Active { background-color: #bf1d4f33; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitTool.Active { background-color: #bf1d4f; border-color: #eb2c3b; }
-.PairLbp3BrittleThistle .PopitOption.Selected { background-color: #bf1d4f; border-color: #eb2c3b; }
-.PairLbp3BrittleThistle .PopitPageDot.On { background-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitItem.Selected { border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitTarget.Selected { border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .PopitDetail { color: #e6d764; }
-.PairLbp3BrittleThistle .WindowFrame { background-color: #004F4F; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .WindowFrame.CompactHud { background-color: transparent; border-color: #bf1d4f; }
-.PairLbp3BrittleThistle .WindowFrame .WindowTitle { background-color: #73112F; }
-.PairLbp3BrittleThistle .WindowFrame .WindowTitleLabel { color: #eb2c3b; }
-.PairLbp3BrittleThistle .ThemedCell { border-color: #40CCCC59; }
 
 /* Mint-Choc — LittleBigPlanet 3 */
-.PairLbp3MintChoc .PopitRoot { background-color: #aed180E6; border-color: #3a2228; }
-.PairLbp3MintChoc .PopitChild { background-color: #aed180E6; border-color: #3a2228; }
-.PairLbp3MintChoc .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3MintChoc .PopitWordmark { color: #e6d71e; }
-.PairLbp3MintChoc .PopitPairChip { background-color: #3a222833; border-color: #3a2228; }
-.PairLbp3MintChoc .PopitPairChipLabel { color: #10131a; }
-.PairLbp3MintChoc .PopitRootRow.Active { background-color: #3a222833; border-color: #3a2228; }
-.PairLbp3MintChoc .PopitTool.Active { background-color: #3a2228; border-color: #684050; }
-.PairLbp3MintChoc .PopitOption.Selected { background-color: #3a2228; border-color: #684050; }
-.PairLbp3MintChoc .PopitPageDot.On { background-color: #3a2228; }
-.PairLbp3MintChoc .PopitItem.Selected { border-color: #3a2228; }
-.PairLbp3MintChoc .PopitTarget.Selected { border-color: #3a2228; }
-.PairLbp3MintChoc .PopitDetail { color: #e6d71e; }
-.PairLbp3MintChoc .WindowFrame { background-color: #495836; border-color: #3a2228; }
-.PairLbp3MintChoc .WindowFrame.CompactHud { background-color: transparent; border-color: #3a2228; }
-.PairLbp3MintChoc .WindowFrame .WindowTitle { background-color: #231418; }
-.PairLbp3MintChoc .WindowFrame .WindowTitleLabel { color: #684050; }
-.PairLbp3MintChoc .ThemedCell { border-color: #C2DCA059; }
 
 /* Orchid Agent — LittleBigPlanet 3 */
-.PairLbp3OrchidAgent .PopitRoot { background-color: #ff4399E6; border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitChild { background-color: #ff4399E6; border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3OrchidAgent .PopitWordmark { color: #e6d71e; }
-.PairLbp3OrchidAgent .PopitPairChip { background-color: #341e5f33; border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3OrchidAgent .PopitRootRow.Active { background-color: #341e5f33; border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitTool.Active { background-color: #341e5f; border-color: #683dbf; }
-.PairLbp3OrchidAgent .PopitOption.Selected { background-color: #341e5f; border-color: #683dbf; }
-.PairLbp3OrchidAgent .PopitPageDot.On { background-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitItem.Selected { border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitTarget.Selected { border-color: #341e5f; }
-.PairLbp3OrchidAgent .PopitDetail { color: #e6d71e; }
-.PairLbp3OrchidAgent .WindowFrame { background-color: #6B1C40; border-color: #341e5f; }
-.PairLbp3OrchidAgent .WindowFrame.CompactHud { background-color: transparent; border-color: #341e5f; }
-.PairLbp3OrchidAgent .WindowFrame .WindowTitle { background-color: #1F1239; }
-.PairLbp3OrchidAgent .WindowFrame .WindowTitleLabel { color: #683dbf; }
-.PairLbp3OrchidAgent .ThemedCell { border-color: #FF72B259; }
 
 /* Bon's Bons — LittleBigPlanet 3 */
-.PairLbp3BonsBons .PopitRoot { background-color: #ef8031E6; border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitChild { background-color: #ef8031E6; border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3BonsBons .PopitWordmark { color: #e60f64; }
-.PairLbp3BonsBons .PopitPairChip { background-color: #5fae4d33; border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitPairChipLabel { color: #10131a; }
-.PairLbp3BonsBons .PopitRootRow.Active { background-color: #5fae4d33; border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitTool.Active { background-color: #5fae4d; border-color: #abc638; }
-.PairLbp3BonsBons .PopitOption.Selected { background-color: #5fae4d; border-color: #abc638; }
-.PairLbp3BonsBons .PopitPageDot.On { background-color: #5fae4d; }
-.PairLbp3BonsBons .PopitItem.Selected { border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitTarget.Selected { border-color: #5fae4d; }
-.PairLbp3BonsBons .PopitDetail { color: #e60f64; }
-.PairLbp3BonsBons .WindowFrame { background-color: #643615; border-color: #5fae4d; }
-.PairLbp3BonsBons .WindowFrame.CompactHud { background-color: transparent; border-color: #5fae4d; }
-.PairLbp3BonsBons .WindowFrame .WindowTitle { background-color: #39682E; }
-.PairLbp3BonsBons .WindowFrame .WindowTitleLabel { color: #abc638; }
-.PairLbp3BonsBons .ThemedCell { border-color: #F3A06459; }
 
 /* Distant Light — LittleBigPlanet 3 */
-.PairLbp3DistantLight .PopitRoot { background-color: #00a99dE6; border-color: #d31818; }
-.PairLbp3DistantLight .PopitChild { background-color: #00a99dE6; border-color: #d31818; }
-.PairLbp3DistantLight .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3DistantLight .PopitWordmark { color: #e6d71e; }
-.PairLbp3DistantLight .PopitPairChip { background-color: #d3181833; border-color: #d31818; }
-.PairLbp3DistantLight .PopitPairChipLabel { color: #f4f2ea; }
-.PairLbp3DistantLight .PopitRootRow.Active { background-color: #d3181833; border-color: #d31818; }
-.PairLbp3DistantLight .PopitTool.Active { background-color: #d31818; border-color: #2e3192; }
-.PairLbp3DistantLight .PopitOption.Selected { background-color: #d31818; border-color: #2e3192; }
-.PairLbp3DistantLight .PopitPageDot.On { background-color: #d31818; }
-.PairLbp3DistantLight .PopitItem.Selected { border-color: #d31818; }
-.PairLbp3DistantLight .PopitTarget.Selected { border-color: #d31818; }
-.PairLbp3DistantLight .PopitDetail { color: #e6d71e; }
-.PairLbp3DistantLight .WindowFrame { background-color: #004742; border-color: #d31818; }
-.PairLbp3DistantLight .WindowFrame.CompactHud { background-color: transparent; border-color: #d31818; }
-.PairLbp3DistantLight .WindowFrame .WindowTitle { background-color: #7F0E0E; }
-.PairLbp3DistantLight .WindowFrame .WindowTitleLabel { color: #2e3192; }
-.PairLbp3DistantLight .ThemedCell { border-color: #40BEB659; }
 
 /* Gingery Ninja — LittleBigPlanet 3 */
-.PairLbp3GingeryNinja .PopitRoot { background-color: #e2cc00E6; border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitChild { background-color: #e2cc00E6; border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitHeaderTitle { color: #e60f64; }
-.PairLbp3GingeryNinja .PopitWordmark { color: #e60f64; }
-.PairLbp3GingeryNinja .PopitPairChip { background-color: #f15a2333; border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitPairChipLabel { color: #10131a; }
-.PairLbp3GingeryNinja .PopitRootRow.Active { background-color: #f15a2333; border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitTool.Active { background-color: #f15a23; border-color: #f76c41; }
-.PairLbp3GingeryNinja .PopitOption.Selected { background-color: #f15a23; border-color: #f76c41; }
-.PairLbp3GingeryNinja .PopitPageDot.On { background-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitItem.Selected { border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitTarget.Selected { border-color: #f15a23; }
-.PairLbp3GingeryNinja .PopitDetail { color: #e60f64; }
-.PairLbp3GingeryNinja .WindowFrame { background-color: #5F5600; border-color: #f15a23; }
-.PairLbp3GingeryNinja .WindowFrame.CompactHud { background-color: transparent; border-color: #f15a23; }
-.PairLbp3GingeryNinja .WindowFrame .WindowTitle { background-color: #913615; }
-.PairLbp3GingeryNinja .WindowFrame .WindowTitleLabel { color: #f76c41; }
-.PairLbp3GingeryNinja .ThemedCell { border-color: #E9D94059; }
 
 /* Precious Melody — LittleBigPlanet 3 */
-.PairLbp3PreciousMelody .PopitRoot { background-color: #91c1bbE6; border-color: #009599; }
-.PairLbp3PreciousMelody .PopitChild { background-color: #91c1bbE6; border-color: #009599; }
-.PairLbp3PreciousMelody .PopitHeaderTitle { color: #e6d71e; }
-.PairLbp3PreciousMelody .PopitWordmark { color: #e6d71e; }
-.PairLbp3PreciousMelody .PopitPairChip { background-color: #00959933; border-color: #009599; }
-.PairLbp3PreciousMelody .PopitPairChipLabel { color: #10131a; }
-.PairLbp3PreciousMelody .PopitRootRow.Active { background-color: #00959933; border-color: #009599; }
-.PairLbp3PreciousMelody .PopitTool.Active { background-color: #009599; border-color: #00b2a1; }
-.PairLbp3PreciousMelody .PopitOption.Selected { background-color: #009599; border-color: #00b2a1; }
-.PairLbp3PreciousMelody .PopitPageDot.On { background-color: #009599; }
-.PairLbp3PreciousMelody .PopitItem.Selected { border-color: #009599; }
-.PairLbp3PreciousMelody .PopitTarget.Selected { border-color: #009599; }
-.PairLbp3PreciousMelody .PopitDetail { color: #e6d71e; }
-.PairLbp3PreciousMelody .WindowFrame { background-color: #3D514F; border-color: #009599; }
-.PairLbp3PreciousMelody .WindowFrame.CompactHud { background-color: transparent; border-color: #009599; }
-.PairLbp3PreciousMelody .WindowFrame .WindowTitle { background-color: #00595C; }
-.PairLbp3PreciousMelody .WindowFrame .WindowTitleLabel { color: #00b2a1; }
-.PairLbp3PreciousMelody .ThemedCell { border-color: #ACD0CC59; }

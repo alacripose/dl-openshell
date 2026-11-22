@@ -1,9 +1,10 @@
-# Picker order. The family register is the default shell palette; Popit is the LBP3 form and
-# an optional palette, not the shell's default colour. Extensions are applied to their base by
-# load-order, not by this file. Each scheme carries colour slots only; its geometry comes from
-# forms/<form>.form.
-family
+# Picker order, and the pinned baseline first. The owner's ruling: the Popit shell is the
+# pinned baseline, so every other shape and theme is an option that comes after it. A scheme
+# carries colour slots only; its geometry comes from forms/<form>.form, and the pinned contour
+# in openlock_pinned.css is the shape every option is read against.
 popit
+brass
+family
 deadlock
 alpha
 holo

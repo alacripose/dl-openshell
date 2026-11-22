@@ -46,16 +46,22 @@
     var CONTOUR_TRIES = 12;
 
     function contourChip(panel, tries) {
-        if (!panel || !globalThis.OpenlockContour) return;
+        if (!panel) return;
+        if (!globalThis.OpenlockContour) {
+            if (panel === taskbar) $.Msg("[Openlock] bar: the contour library is not loaded");
+            return;
+        }
         var left = (typeof tries === "number") ? tries : CONTOUR_TRIES;
         $.Schedule(0, function () {
             if (!alive(panel)) return;
             var w = Math.round(num(panel.actuallayoutwidth));
             var h = Math.round(num(panel.actuallayoutheight));
             if (w < 4 || h < 4) {
+                if (panel === taskbar) $.Msg("[Openlock] bar box is empty: " + w + "x" + h + " with " + left + " tries left");
                 if (left > 0) contourChip(panel, left - 1);
                 return;
             }
+            if (panel === taskbar) $.Msg("[Openlock] bar box: " + w + "x" + h);
             if (panel.__contourW === w && panel.__contourH === h) return;
             panel.__contourW = w;
             panel.__contourH = h;
@@ -66,6 +72,11 @@
     // The strip itself is a contoured surface, exactly as the pinned bar is: its ends carry the
     // crown, so a version label reads on a shape rather than on bare text.
     function contourBoot() {
+        if (taskbar) {
+            taskbar.style.visibility = "visible";
+            taskbar.style.width = "100%";
+            taskbar.style.height = "48px";
+        }
         contourChip(taskbar);
         contourChip(launcherBar);
         contourChip(root.FindChildTraverse("LauncherButton"));
@@ -75,6 +86,25 @@
     }
     $.Schedule(0.35, contourBoot);
     $.Schedule(1.2, contourBoot);
+
+    // A bar with no box is a bar nobody can see, so the chain is measured and said out loud: every
+    // ancestor of the strip from the strip to the client root, with the box each one was given.
+    function barChainReport() {
+        if (!taskbar) return;
+        var parts = [];
+        var node = taskbar;
+        var depth = 0;
+        while (node && depth < 14) {
+            var id = "?";
+            try { id = node.id ? node.id : ""; } catch (e) {}
+            if (!id) { try { id = (node.GetAttributeString ? node.GetAttributeString("class", "") : "") || "-"; } catch (e) { id = "-"; } }
+            parts.push(id + ":" + Math.round(num(node.actuallayoutwidth)) + "x" + Math.round(num(node.actuallayoutheight)));
+            try { node = node.GetParent(); } catch (e) { node = null; }
+            depth += 1;
+        }
+        $.Msg("[Openlock] bar chain: " + parts.join(" < "));
+    }
+    $.Schedule(1.6, barChainReport);
 
     function paintBarChips() {
         var ids = ["DashboardButton", "WindowsButton", "Clock"];
@@ -5265,15 +5295,13 @@
         taskbar.style.visibility = "collapse";
     }
 
+    // The bar does not fade away: the pinned client keeps its strip on screen, and a bar that
+    // hides is indistinguishable from a bar that failed to draw.
     function hideTaskbar() {
-        if (!taskbar || preloadActive || !expanded || taskbarHiding) return;
-        taskbarHiding = true;
-        taskbar.style.opacity = "0";
-        $.Schedule(0.25, function () {
-            if (!taskbarHiding) return;
-            taskbarHiding = false;
-            if (!preloadActive && expanded) taskbar.style.visibility = "collapse";
-        });
+        if (!taskbar) return;
+        taskbarHiding = false;
+        taskbar.style.visibility = "visible";
+        taskbar.style.opacity = "1";
     }
 
     function render() {
@@ -5285,7 +5313,7 @@
             globalThis.OpenlockLayoutPass.setOpen(!!expanded);
         }
         if (launcherBar) launcherBar.style.visibility = "visible";
-        if (taskbar) taskbar.style.visibility = (expanded || preloadActive) ? "visible" : "collapse";
+        if (taskbar) taskbar.style.visibility = "visible";
 
         // Opening the shell materializes the pinned live windows. They are the customization
         // layer: once pinned, they keep their placement while the shell is closed.

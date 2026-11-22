@@ -16,9 +16,22 @@
     visibility: visible;
 }
 
-.WindowFrame .WindowCost,
-.WindowFrame .ResizeGrip {
+.WindowFrame .WindowCost {
     visibility: collapse;
+}
+
+/* A window in the pinned baseline is mutable: its title bar moves it and its four corners resize
+   it, exactly as a Popit application window does. Only the debug cost readout is retired. The
+   grips take the pinned brass so the affordance is the same ink as the plate. */
+.WindowFrame .ResizeGrip {
+    visibility: visible;
+}
+
+.WindowFrame .GripNW,
+.WindowFrame .GripNE,
+.WindowFrame .GripSW,
+.WindowFrame .GripSE {
+    border-color: #b08d57cc;
 }
 
 /* --- the pinned client's bar and plate -------------------------------- */
@@ -96,13 +109,12 @@
 .WindowFrame .WindowTitle {
     height: 36px;
     min-height: 36px;
-    flex-shrink: 0;
     padding-top: 4px;
     padding-bottom: 9px;
     padding-left: 32px;
     padding-right: 6px;
     border-bottom: 1px solid #b08d5752;
-    background: linear-gradient(180deg, #b08d5724, #b08d5705 70%, transparent);
+    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5724 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
 }
 
 /* The plate is a number for the day it returns; the collapse above still owns visibility. */
@@ -141,20 +153,19 @@
 
 /* The Popit's own controls sit on a rail with the same grammar, so there is one bar language. */
 .Taskbar {
-    background: linear-gradient(180deg, #b08d571f, transparent 55%);
-    background-color: #0f1113f2;
+    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d57a8 ), color-stop( 0.55, #b08d571f ), to( #0f1113f2 ) );
 }
 
 .Taskbar .BarStart,
 .BarStart {
     min-width: 93px;
-    justify-content: center;
+    horizontal-align: center;
 }
 
 /* A cell fills the strip's inner height, so its ink is the strip's ink. */
 .Taskbar .ShellTab,
 .Taskbar .WindowsButton {
-    align-items: center;
+    vertical-align: center;
 }
 
 .Taskbar .ShellTab:hover .ShellTabLabel,
