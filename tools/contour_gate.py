@@ -156,7 +156,7 @@ def c9_landing() -> None:
     # check the landing again. Without this the two tools call each other forever.
     if os.environ.get("OPENLOCK_CONTOUR_GENERATOR") == "1":
         return
-    gen = ROOT / "tools" / "gen_landing_shape.py"
+    gen = ROOT / "tools" / "landing.py"
     run = subprocess.run([sys.executable, str(gen), "--check"], cwd=ROOT,
                          capture_output=True, text=True, check=False)
     page = ROOT / "landing" / "index.html"

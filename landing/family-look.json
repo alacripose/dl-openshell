@@ -1,5 +1,6 @@
 {
   "schema": "openlock.landing-look/1",
+  "authority": "the shape only; the page itself is the family's record of themes and palettes",
   "machine": {
     "host": "Debian 13",
     "version": "CUA v2.7.3",
@@ -7,7 +8,17 @@
     "band": "red",
     "stars": 6,
     "axes": 9,
-    "digest": "f9b1a006662c94b9232a6eaa08a33feda653a5921565a86973d066c7074fd453"
+    "digest": "f9b1a006662c94b9232a6eaa08a33feda653a5921565a86973d066c7074fd453",
+    "client": {
+      "tool": "tools/landing.py",
+      "source": "sha256:3348dc32d4eae951e7e840435905a5362f732386fd6a7ad498e01a2ca8629de7",
+      "routes": [
+        "/api/axis/system",
+        "/api/axis/civilians",
+        "/api/axis/stars"
+      ],
+      "machine_client": "sha256:463d5c9f73ea71d19c59fda1fee1fe3e5d958432b49b69ae304e84e235542973"
+    }
   },
   "gate": {
     "checks": 8,
