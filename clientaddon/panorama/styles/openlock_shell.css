@@ -422,17 +422,20 @@
     background-color: #1b262e;
 }
 
-/* The taskbar is retired. Its strip stays in the layout so the preloader and the older package
-   schema keep a parent, but it no longer draws: the lower cloud band is the shell's only rail. */
+/* The bar is the pinned client's bar: a 48 pixel ink strip with a brass keyline, cells cut with
+   the contour and paper text on it. It is the top rail, not a floating band. */
 .Taskbar {
-    visibility: collapse;
+    visibility: visible;
 }
 
-/* The window manager is retired. A frame is an anchored page, so its title strip, cost readout
-   and resize grips no longer draw; the boundary and the page surface are what remain. The audit
-   is explicit that minimize/maximize, tiling and geometry memory are not evidence-backed Popit
-   behavior, so they are not drawn over the game either. */
-.WindowFrame .WindowTitle,
+/* The plate is the window's handle, as in the pinned client: an uppercase brass title over a
+   one pixel keyline, then the meta strip in dim text. */
+.WindowFrame .WindowTitle {
+    visibility: visible;
+}
+
+/* The cost readout and the resize grips stay retired: they are debug chrome, not the pinned
+   client's page. The title strip and the meta strip are the plate. */
 .WindowFrame .WindowCost,
 .WindowFrame .ResizeGrip {
     visibility: collapse;
@@ -1934,4 +1937,131 @@ HTMLHorizontalScrollBar .ScrollThumb {
 .WindowFrame .WindowTitle {
     background-color: transparent;
     border-bottom: 0px;
+}
+
+/* --- the pinned client's bar and plate -------------------------------- */
+/* Values from the pinned client's own stylesheet: a 48 pixel strip, cells inset 3 by 16,
+   paper text at 13, an uppercase brass title over a keyline, and dim meta text. The palette is
+   the client's ink and brass, so the game shell and the desktop shell read as one surface. */
+.Taskbar {
+    height: 48px;
+    margin-top: 8px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 18px;
+    padding-right: 18px;
+    background-color: #0f1113f2;
+    border-bottom: 1px solid #b08d5742;
+}
+
+.TabStrip {
+    height: 38px;
+}
+
+.Taskbar .ShellTab,
+.ShellTab {
+    height: 34px;
+    padding: 3px 14px;
+    margin-right: 5px;
+}
+
+.Taskbar .ShellTabLabel,
+.ShellTab .ShellTabLabel {
+    color: #e6dbc2;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+}
+
+.ShellTab.Active .ShellTabLabel {
+    color: #d9b779;
+}
+
+.ShellTab.Pinned .ShellTabLabel {
+    color: #b08d57;
+}
+
+.Taskbar .WindowsButton,
+.Taskbar .Clock,
+.WindowsButton,
+.Clock {
+    height: 34px;
+    padding: 3px 16px;
+}
+
+.Taskbar .WindowsButtonLabel,
+.Taskbar .Clock,
+.WindowsButtonLabel,
+.Clock {
+    color: #e6dbc2;
+    font-size: 13px;
+}
+
+.Taskbar .VersionLabel,
+.VersionLabel {
+    color: #8b8778;
+    font-size: 11px;
+}
+
+.WindowFrame {
+    border: 0px;
+    border-top: 0px;
+}
+
+.WindowFrame .WindowTitle {
+    height: 34px;
+    padding-left: 18px;
+    padding-right: 6px;
+    border-bottom: 1px solid #b08d5752;
+    background: linear-gradient(180deg, #b08d5724, #b08d5705 70%, transparent);
+}
+
+.WindowFrame .WindowTitleLabel {
+    color: #d9b779;
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.WindowFrame .WindowMeta {
+    height: 18px;
+    padding-left: 18px;
+    border-bottom: 1px solid #b08d5732;
+    background-color: #0f1113ee;
+}
+
+.WindowFrame .WindowMetaLabel {
+    color: #8b8778;
+    font-size: 11px;
+}
+
+.WindowFrame .WindowBody {
+    color: #e6dbc2;
+}
+
+.ContourInk {
+    background-color: #b08d57a8;
+}
+
+.ContourFill {
+    background-color: #0f1113f2;
+}
+
+/* The Popit's own controls sit on a rail with the same grammar, so there is one bar language. */
+.CloudBar {
+    padding: 5px 14px;
+    border: 0px;
+    border-radius: 0px;
+    background-color: #0f1113e8;
+}
+
+.CloudBar .CloudControl {
+    height: 30px;
+    border: 0px;
+    border-radius: 0px;
+    background-color: transparent;
+}
+
+.CloudBar .CloudControl Label {
+    color: #e6dbc2;
+    font-size: 12px;
 }

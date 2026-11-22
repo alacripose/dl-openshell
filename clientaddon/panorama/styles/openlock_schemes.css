@@ -3969,9 +3969,9 @@
 }
 
 /* iOS 6 SpringBoard chrome form (forms/ios.form). */
-.FormIos .WindowFrame { border-radius: 6px; }
+.FormIos .WindowFrame { border-radius: 0px; }
 .FormIos .ThemedCell { border-radius: 6px; }
-.FormIos .WindowFrame { border-width: 1px; }
+.FormIos .WindowFrame { border-width: 0px; }
 .FormIos .WindowTitle { height: 30px; }
 .FormIos .WindowTitle { padding-left: 8px; }
 .FormIos .WindowTitle { padding-right: 4px; }
@@ -3993,8 +3993,8 @@
 .FormIos .PreloadStrip { width: 60%; }
 .FormIos .ShellTab { margin-right: 4px; }
 .FormIos .ShellTab { padding: 3px 10px; }
-.FormIos .ShellTab { border-radius: 12px; }
-.FormIos .ShellTab.Active { border-radius: 12px; }
+.FormIos .ShellTab { border-radius: 0px; }
+.FormIos .ShellTab.Active { border-radius: 0px; }
 .FormIos .LauncherButton { border-radius: 12px; }
 .FormIos .LauncherButton { padding: 4px 10px; }
 .FormIos .SchemeButton { width: 20px; }
@@ -4010,7 +4010,7 @@
 .FormIos .PickerCancel { border-radius: 10px; }
 
 /* Material Design 1 chrome form (forms/material.form). */
-.FormMaterial .WindowFrame { border-radius: 2px; }
+.FormMaterial .WindowFrame { border-radius: 0px; }
 .FormMaterial .ThemedCell { border-radius: 2px; }
 .FormMaterial .WindowTitle { height: 30px; }
 .FormMaterial .WindowTitle { padding-left: 8px; }
@@ -4051,13 +4051,13 @@
 .FormPopit .WindowFrame { border-radius: 0px; }
 .FormPopit .WindowFrame { border-width: 0px; }
 .FormPopit.RendererPopit .WindowFrame { border-radius: 0px; }
-.FormPopit .WindowTitle { height: 30px; }
-.FormPopit .WindowTitle { padding-left: 10px; }
+.FormPopit .WindowTitle { height: 34px; }
+.FormPopit .WindowTitle { padding-left: 18px; }
 .FormPopit .WindowTitle { padding-right: 6px; }
 .FormPopit .WindowTitle { border-top-left-radius: 0px; }
 .FormPopit .WindowTitle { border-top-right-radius: 0px; }
 .FormPopit .WindowTitleLabel { margin-left: 24px; }
-.FormPopit .WindowTitleLabel { font-size: 13px; }
+.FormPopit .WindowTitleLabel { font-size: 15px; }
 .FormPopit .WindowTitleLabel { letter-spacing: 0.4px; }
 .FormPopit .WindowButton { width: 20px; }
 .FormPopit .WindowButton { height: 20px; }
@@ -4065,16 +4065,16 @@
 .FormPopit .WindowButton { border-radius: 10px; }
 .FormPopit .WindowButton { border-width: 2px; }
 .FormPopit .WindowButton Label { font-size: 12px; }
-.FormPopit .WindowMeta { height: 16px; }
-.FormPopit .WindowMeta { padding-left: 10px; }
+.FormPopit .WindowMeta { height: 18px; }
+.FormPopit .WindowMeta { padding-left: 18px; }
 .FormPopit .WindowMeta { border-bottom-width: 2px; }
 .FormPopit .WindowBody { padding: 8px; }
 .FormPopit .ThemedCell { border-radius: 10px; }
-.FormPopit .Taskbar { height: 30px; }
+.FormPopit .Taskbar { height: 48px; }
 .FormPopit .TabStrip { margin-left: 96px; }
 .FormPopit .PreloadStrip { margin-left: 96px; }
 .FormPopit .ShellTab { margin-right: 4px; }
-.FormPopit .ShellTab { padding: 4px 12px; }
+.FormPopit .ShellTab { padding: 3px 14px; }
 .FormPopit .ShellTab { border-radius: 0px; }
 .FormPopit .ShellTab { border-width: 0px; }
 .FormPopit .ShellTab.Active { border-radius: 0px; }
@@ -4141,9 +4141,9 @@
 .FormPopit .PopitDetail { font-size: 10px; }
 
 /* TouchWiz Nature UX chrome form (forms/touchwiz.form). */
-.FormTouchwiz .WindowFrame { border-radius: 8px; }
+.FormTouchwiz .WindowFrame { border-radius: 0px; }
 .FormTouchwiz .ThemedCell { border-radius: 8px; }
-.FormTouchwiz .WindowFrame { border-width: 2px; }
+.FormTouchwiz .WindowFrame { border-width: 0px; }
 .FormTouchwiz .WindowTitle { height: 30px; }
 .FormTouchwiz .WindowTitle { padding-left: 8px; }
 .FormTouchwiz .WindowTitle { padding-right: 4px; }
@@ -4163,7 +4163,7 @@
 .FormTouchwiz .PreloadStrip { margin-left: 96px; }
 .FormTouchwiz .ShellTab { margin-right: 3px; }
 .FormTouchwiz .ShellTab { padding: 4px 10px; }
-.FormTouchwiz .ShellTab { border-radius: 4px; }
+.FormTouchwiz .ShellTab { border-radius: 0px; }
 .FormTouchwiz .ShellTab { border-bottom-width: 2px; }
 .FormTouchwiz .ShellTab.Active { border-bottom-width: 2px; }
 .FormTouchwiz .LauncherButton { border-radius: 4px; }

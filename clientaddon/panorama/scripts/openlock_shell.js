@@ -187,7 +187,7 @@
     var CHROME_DP = TITLE_DP + META_DP;
     var OUTLINE_DP = 1;        // the frame outline's width, drawn outside a cell's own edge
     var TASKBAR_DP = 40;       // the bar's top strip, including its margin
-    var SHELL_TOP_DP = 46;     // first row a window's title may occupy
+    var SHELL_TOP_DP = 64;     // first row a window's title may occupy, below the 48 pixel bar
     var CELL_DP = 100;
     var screenW = 1600;
     var screenH = 900;
@@ -1405,6 +1405,9 @@
                     cue("select");
                 });
                 button.AddClass("Cloud_" + control.id);
+                // A rail cell is a bar cell: the same contour the taskbar chips and the window
+                // frames take, so the shell has one surface language.
+                contourChip(button);
                 bindDwell(button, control.title, "Cloud rail. " + control.title + ".", "");
             })(CLOUD_CONTROLS[c]);
         }

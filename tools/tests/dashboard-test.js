@@ -127,13 +127,17 @@ load('clientaddon/panorama/scripts/openlock_audio.js');
 load('clientaddon/panorama/scripts/openlock_popit.js');
 load('clientaddon/panorama/scripts/openlock_layout.js');
 load('clientaddon/panorama/scripts/openlock_shell.js');
-
 let checks = 0;
 function check(cond, name) {
     checks++;
     if (!cond) throw new Error('FAILED: ' + name);
     console.log('ok ' + checks + ' - ' + name);
 }
+// The shell may not arrange game panels without consent. These tests exercise the arranging
+// shell, so they grant what the Settings surface grants in the client.
+check(globalThis.OpenlockLayoutConsent() === false, 'layout consent starts off');
+globalThis.OpenlockAllowLayout(true);
+check(globalThis.OpenlockLayoutConsent() === true, 'the settings surface grants layout consent');
 function texts(panel) {
     const out = [];
     const walk = p => {
@@ -243,7 +247,8 @@ if (!nudgeDispatch) {
     throw new Error('no layout dispatch after nudge; frames=' + JSON.stringify(dispatched.slice(-4)));
 }
 const nudgedSnapshot = String(nudgeDispatch[1]).split('|')[1].slice('layout:'.length);
-check(/@abilities,12,46,420,140(?:@|$)/.test(nudgedSnapshot),
+// The bar is 48 pixels tall at an 8 pixel margin, so a window's first row is 64.
+check(/@abilities,12,64,420,140(?:@|$)/.test(nudgedSnapshot),
     'the nudge moved Abilities by one 8 dp square in the saved row: ' + nudgedSnapshot.slice(0, 160));
 
 // The grid step re-lays the canvas instead of scaling it.
@@ -340,7 +345,7 @@ check(!!layoutDispatch, 'save dispatches a layout snapshot to the host');
 const snapshot = String(layoutDispatch[1]).split('|')[1].slice('layout:'.length);
 check(/@popit=columns:4;width:356;frame:lbp3;mode:create;order:/.test(snapshot),
     'the legacy popit profile row is still emitted for older readers: ' + snapshot.slice(0, 120));
-check(/@abilities,12,46,420,140,m[0-6]c[0-6]d[0-4]r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)(?:@|$)/.test(snapshot),
+check(/@abilities,12,64,420,140,m[0-6]c[0-6]d[0-4]r(-1|0|6|12|18)b(-1|0|1|2|3)o(-1|75|90|100)(?:@|$)/.test(snapshot),
     'the painted cell carries its Popit style in the saved row: ' + snapshot.slice(0, 180));
 
 // Closing releases the reservation. The next placement asks the pass while it is closed and gets

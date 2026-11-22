@@ -9,13 +9,13 @@ form	popit
 	rule	.WindowFrame	border-radius	0px
 	rule	.WindowFrame	border-width	0px
 	rule	.WindowFrame	border-radius	0px	popit
-	rule	.WindowTitle	height	30px
-	rule	.WindowTitle	padding-left	10px
+	rule	.WindowTitle	height	34px
+	rule	.WindowTitle	padding-left	18px
 	rule	.WindowTitle	padding-right	6px
 	rule	.WindowTitle	border-top-left-radius	0px
 	rule	.WindowTitle	border-top-right-radius	0px
 	rule	.WindowTitleLabel	margin-left	24px
-	rule	.WindowTitleLabel	font-size	13px
+	rule	.WindowTitleLabel	font-size	15px
 	rule	.WindowTitleLabel	letter-spacing	0.4px
 	rule	.WindowButton	width	20px
 	rule	.WindowButton	height	20px
@@ -23,19 +23,19 @@ form	popit
 	rule	.WindowButton	border-radius	10px
 	rule	.WindowButton	border-width	2px
 	rule	.WindowButton Label	font-size	12px
-	rule	.WindowMeta	height	16px
-	rule	.WindowMeta	padding-left	10px
+	rule	.WindowMeta	height	18px
+	rule	.WindowMeta	padding-left	18px
 	rule	.WindowMeta	border-bottom-width	2px
 	rule	.WindowBody	padding	8px
 	# A themed live cell (a game drawable picked in the Picker) follows the same silhouette as
 	# this form's windows. Only the radius is written: a border width would reflow the game's
 	# own layout around a component it did not ask to resize.
 	rule	.ThemedCell	border-radius	10px
-	rule	.Taskbar	height	30px
+	rule	.Taskbar	height	48px
 	rule	.TabStrip	margin-left	96px
 	rule	.PreloadStrip	margin-left	96px
 	rule	.ShellTab	margin-right	4px
-	rule	.ShellTab	padding	4px 12px
+	rule	.ShellTab	padding	3px 14px
 	rule	.ShellTab	border-radius	0px
 	rule	.ShellTab	border-width	0px
 	rule	.ShellTab.Active	border-radius	0px
