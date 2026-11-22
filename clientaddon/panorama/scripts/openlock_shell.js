@@ -5933,15 +5933,18 @@
                 beginPointerDrag(id, mode, arguments);
             });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
-            // This client's release build dispatches a press on a hittable panel as `onactivate`,
-            // not `onmousedown`: the bar's cells answer their presses and a window's grip answered
-            // nothing, so no drag or corner resize could be started there. The same press now starts
-            // the poll; a press that arrives while a drag is running is ignored, and the poll still
-            // owns the release.
-            panel.SetPanelEvent("onactivate", function () {
+            // This client's release build dispatches a press on a hittable panel as `onmouseactivate`
+            // — the event `addControl` binds and the bar's cells answer — and does not dispatch
+            // `onmousedown` to a window frame. A grip therefore answered nothing and no corner drag
+            // could begin. The same press now starts the poll; a press during a drag is ignored and
+            // the poll still owns the release.
+            function pressStart(args) {
                 if (pointerDrag) return;
-                beginPointerDrag(id, mode, arguments);
-            });
+                $.Msg("[Openlock] drag press: ", mode, " on ", id);
+                beginPointerDrag(id, mode, args);
+            }
+            panel.SetPanelEvent("onmouseactivate", function () { pressStart(arguments); });
+            panel.SetPanelEvent("onactivate", function () { pressStart(arguments); });
             // A mousemove over the chrome is the CSDK10 restore path: that client has no cursor
             // probe, so onmouseover alone can be missed while the title is shrinking.
             panel.SetPanelEvent("onmousemove", function () {
