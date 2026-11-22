@@ -22,8 +22,6 @@ noreply, and `example.com` is a documentation domain; anything else that matches
 
 from __future__ import annotations
 
-import os
-
 import argparse
 import json
 import re
@@ -147,9 +145,18 @@ def scan_line(path: str, number: int, line: str) -> list[dict]:
 
 
 def git(*arguments: str) -> str:
-    return subprocess.run(
-        ["git", *arguments], cwd=ROOT, capture_output=True, text=True, check=False
-    ).stdout
+    """Git's output as text. A binary diff is decoded with replacement rather than raising, because a
+    history scan reads every blob the repository has ever held, including the ones that are not text."""
+    result = subprocess.run(
+        ["git", *arguments],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return result.stdout or ""
 
 
 def resolve_root(start: Path) -> Path:
@@ -239,7 +246,7 @@ PLANTS = [
     ("vendor-key", "s" + "k-" + "b" * 32),
     ("bearer-token", "Authorization: Bearer " + "c" * 40),
     ("assigned-secret", 'api_key = "' + "d" * 24 + '"'),
-    ("home-path-windows", os.path.expanduser(r"~\Documents\file.txt")),
+    ("home-path-windows", r"<home>\Documents\file.txt"),
     ("home-path-posix", "<home>/project/file"),
     ("email-address", "<person>"),
     ("private-address", "<host>"),
