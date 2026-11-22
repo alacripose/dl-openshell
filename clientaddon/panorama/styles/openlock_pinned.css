@@ -200,6 +200,13 @@
     horizontal-align: center;
 }
 
+/* The button's inset is the label's, like every other cell: a padding on the host as well put the
+   Start cell at 102 px against the reference's 93. */
+.Taskbar .WindowsButton,
+.WindowsButton {
+    padding: 0px;
+}
+
 /* A cell fills the strip's inner height, so its ink is the strip's ink. */
 .Taskbar .ShellTab,
 .Taskbar .WindowsButton {
@@ -345,7 +352,9 @@
 .Taskbar .BarStart,
 .BarStart {
     min-width: 92.8px;
-    padding: 3px 16px;
+    /* The inset belongs to the label: a padding here as well took the Start cell to 102 px
+       where the reference's is 92.8. */
+    padding: 0px;
     margin: 0px 5.76px 0px 0px;
     horizontal-align: center;
     letter-spacing: 0.96px;
