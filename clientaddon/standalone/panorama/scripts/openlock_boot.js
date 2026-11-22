@@ -21,41 +21,55 @@
 
         // Deadworks' UI channel owns the shell when a server has mounted it. Yielding keeps one
         // shell, but this path is the standalone one: no server, no host, the shell still mounts.
-        var hud = root;
+        //
+        // The behaviour this file is fed runs inside a component (<CitadelHud>), and a component's
+        // own root is not laid out: walking to the outermost ancestor landed the shell in a 0x0
+        // panel, where every child measured 0x0 and drew nothing. So the ancestors are collected,
+        // the shipped anchor is looked for at each one, and a created host goes on the outermost
+        // ancestor that actually has a box.
+        var chain = [];
+        var node = root;
         var depth = 0;
-        while (hud && depth < 30) {
+        while (node && depth < 30) {
+            chain.push(node);
             var parent = null;
-            try { parent = hud.GetParent(); } catch (e) { break; }
+            try { parent = node.GetParent(); } catch (e) { break; }
             if (!parent) break;
-            hud = parent;
-            depth++;
+            node = parent;
+            depth += 1;
         }
-        if (!hud) {
+        if (!chain.length) {
             log("no HUD root; stock HUD untouched");
             return;
         }
 
+        var outer = chain[chain.length - 1];
         var existing = null;
-        try { existing = hud.FindChildTraverse("DWHost_openlock-shell"); } catch (e) {}
+        try { existing = outer.FindChildTraverse("DWHost_openlock-shell"); } catch (e) {}
+        if (!existing) {
+            for (var ci = 0; ci < chain.length && !existing; ci += 1) {
+                try { existing = chain[ci].FindChildTraverse("DWHost_openlock-shell"); } catch (e) {}
+            }
+        }
         if (existing) {
             log("Deadworks host owns the shell; yielding");
             return;
         }
 
-        if (globalThis.__openlockShellMounted) {
-            log("already mounted this session; yielding");
-            return;
-        }
-
         // base_hud ships the anchor. Keeping the lookup means a client whose base_hud revision
-        // dropped the panel still mounts: the fallback is a panel created on the HUD root.
+        // dropped the panel still mounts.
         var host = null;
-        try { host = hud.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
-        if (!host) {
-            try { host = root.FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        for (var ai = 0; ai < chain.length && !host; ai += 1) {
+            try { host = chain[ai].FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
+        }
+        var carrier = outer;
+        for (var bi = 0; bi < chain.length; bi += 1) {
+            var w = 0;
+            try { w = Math.round(chain[bi].actuallayoutwidth); } catch (e) { w = 0; }
+            if (w > 0) { carrier = chain[bi]; break; }
         }
         if (!host) {
-            try { host = $.CreatePanel("Panel", hud, "OpenlockStandaloneHost"); } catch (e) {
+            try { host = $.CreatePanel("Panel", carrier, "OpenlockStandaloneHost"); } catch (e) {
                 log("anchor create threw: " + String(e) + "; stock HUD untouched");
                 return;
             }
@@ -91,7 +105,6 @@
             return;
         }
 
-        globalThis.__openlockShellMounted = true;
         log("shell mounted from base_hud without a server");
     } catch (e) {
         log("REFUSED: " + String(e) + "; stock HUD untouched");
