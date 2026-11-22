@@ -62,11 +62,40 @@
         for (var ai = 0; ai < chain.length && !host; ai += 1) {
             try { host = chain[ai].FindChildTraverse("OpenlockStandaloneHost"); } catch (e) {}
         }
-        var carrier = outer;
-        for (var bi = 0; bi < chain.length; bi += 1) {
+        var carrier = null;
+        for (var bi = 0; bi < chain.length && !carrier; bi += 1) {
             var w = 0;
             try { w = Math.round(chain[bi].actuallayoutwidth); } catch (e) { w = 0; }
-            if (w > 0) { carrier = chain[bi]; break; }
+            if (w > 0) carrier = chain[bi];
+        }
+        // A component root is not laid out and neither are its ancestors, so the box that is on
+        // screen belongs to a panel the component built. The nearest laid-out descendant is where
+        // a host can draw; without one the client would get an invisible shell over a live HUD.
+        if (!carrier) {
+            var queue = [outer];
+            var seen = 0;
+            while (queue.length && !carrier && seen < 200) {
+                var head = queue.shift();
+                seen += 1;
+                var children = [];
+                try { children = head.Children ? head.Children() : []; } catch (e) { children = []; }
+                for (var qi = 0; qi < children.length; qi += 1) {
+                    var kid = children[qi];
+                    var kw = 0;
+                    var kh = 0;
+                    try { kw = Math.round(kid.actuallayoutwidth); kh = Math.round(kid.actuallayoutheight); } catch (e) { kw = 0; }
+                    if (kw > 0 && kh > 0) { carrier = kid; break; }
+                    queue.push(kid);
+                }
+            }
+        }
+        if (!carrier) {
+            // Last resort: the outermost ancestor, with its box stated so a child can fill it.
+            carrier = outer;
+            try {
+                carrier.style.width = "100%";
+                carrier.style.height = "100%";
+            } catch (e) {}
         }
         if (!host) {
             try { host = $.CreatePanel("Panel", carrier, "OpenlockStandaloneHost"); } catch (e) {
