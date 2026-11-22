@@ -1057,14 +1057,32 @@ def read_build(gameinfo: Path) -> dict:
                 build["gameVersion"] = raw.split("=", 1)[1].strip()
                 break
 
+    # The pinned baseline's modern identity leads the label: the shell names the build it carries
+    # in the family form `name@<revision>+blake3:<hex>`, not by the baseline's own project name.
+    baseline_path = ROOT / "docs" / "family-baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.exists() else {}
+    build["baseline"] = baseline
+
+    # A bar label needs the hash, not the whole 64 hex: the short identity keeps the revision and
+    # the first eight of the blake3, and the record keeps the full string for the dwell text.
+    identity = baseline.get("identity", "")
+    short = identity
+    if "+blake3:" in identity:
+        head, digest = identity.split("+blake3:", 1)
+        short = head + "+blake3:" + digest[:8]
+    build["identity"] = identity
+    build["identityShort"] = short
+
     label = []
+    if short:
+        label.append(short)
     if build["version"]:
         label.append("v" + build["version"])
     if build["commit"]:
         label.append(build["commit"] + ("+" if build["dirty"] else ""))
     if build["gameVersion"]:
         label.append("game " + build["gameVersion"])
-    build["label"] = "  ·  ".join(label) or "openlock"
+    build["label"] = " / ".join(label) or "openlock"
     return build
 
 

@@ -60,6 +60,11 @@ form	popit
 	# bowed rails. Panorama cannot draw that custom Bezier path, so the four corners carry the
 	# closest approximation the renderer supports (larger top/bottom radii than the sides). It is
 	# an approximation, not the contour, and the C++/renderer work is not claimed here.
+	rule	.WindowFrame	padding	11px 8px
+	rule	.WindowFrame	background-color	transparent
+	rule	.WindowTitle	background-color	transparent
+	rule	.WindowMeta	background-color	transparent
+	rule	.WindowBody	background-color	transparent
 	rule	.PopitRoot	border-radius	26px 22px 26px 22px
 	rule	.PopitChild	border-radius	26px 22px 26px 22px
 	rule	.PopitRootRow	border-radius	14px

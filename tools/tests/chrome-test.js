@@ -154,7 +154,6 @@ load('clientaddon/panorama/scripts/openlock_split.js');
 // the server-authored paths below would never run.
 load('clientaddon/panorama/scripts/openlock_delivery.js');
 load('clientaddon/panorama/scripts/openlock_shell.js');
-
 function advance(ms) {
     nowMs += ms;
     let guard = 0;
@@ -174,6 +173,11 @@ function check(cond, name) {
     if (!cond) throw new Error('FAILED: ' + name);
     console.log('ok ' + checks + ' - ' + name);
 }
+// The shell may not arrange game panels without consent. These tests exercise the arranging
+// shell, so they grant what the Settings surface grants in the client.
+check(globalThis.OpenlockLayoutConsent() === false, 'layout consent starts off');
+globalThis.OpenlockAllowLayout(true);
+check(globalThis.OpenlockLayoutConsent() === true, 'the settings surface grants layout consent');
 function texts(panel) {
     const out = [];
     const walk = p => {
@@ -352,13 +356,16 @@ check(Math.abs((parseFloat(frame.style.width) || 0) - frozen.width) < 1 &&
 for (let i = 0; i < 8; i++) advance(400);
 // The taskbar is retired; the lower cloud band is the only rail and it carries the Popit's own
 // interface controls. A package arriving must not put a window entry back on it.
+// The lower shelf is withdrawn: the pinned client has no cloud band, so the Popit's controls are
+// actions by name rather than a drawn rail, and every one of them still answers.
 const cloudBar = root.FindChildTraverse('CloudBar');
-const cloudControls = cloudBar ? cloudBar.FindChildrenWithClassTraverse('CloudControl') : [];
-check(!!cloudBar && cloudControls.length === 6,
-    'the cloud rail carries the Popit interface controls: ' + cloudControls.length);
-check(cloudControls.length === 0 || root.FindChildrenWithClassTraverse('ShellTab')
-    .filter(t => t.GetParent() === cloudBar).length === 0,
-    'no window entry is drawn on the cloud rail');
+check(!cloudBar, 'the withdrawn cloud shelf is not drawn: ' + (cloudBar ? 'present' : 'absent'));
+const ran = ['prev-page', 'next-page', 'prev-cell', 'next-cell', 'section', 'popit']
+    .map(id => globalThis.runPopitAction(id));
+check(ran.length === 6 && ran.every(Boolean),
+    'every Popit action answers by name: ' + ran.filter(Boolean).length + '/6');
+check(globalThis.runPopitAction('not-an-action') === false,
+    'an action that does not exist is refused by name');
 const streamTree = [{
     tag: 'Panel', id: 'StreamProof', class: 'StreamProof', children: [
         { tag: 'Label', id: 'StreamProofLabel', text: 'streamed package proof', children: [] }
@@ -658,17 +665,20 @@ check(sliverFrame.x === 620 && sliverFrame.h === 60,
 // A pair is a live surface choice, not a Popit-only skin: the generated slot map is scoped by a
 // class on the shell root, so it reaches the window manager's frames and dressed cells. A slug
 // the generated table does not carry is refused rather than added, and Classic removes it.
-check(globalThis.OpenlockPair('lbp1-yellow-fuchsia') === 'PairLbp1YellowFuchsia',
-    'the chosen pair resolves to the generated class');
-check(root.HasClass('PairLbp1YellowFuchsia'), 'the shell root carries the chosen pair');
-check(globalThis.OpenlockPair('not-a-pair') === 'PairLbp1YellowFuchsia' &&
-    root.HasClass('PairLbp1YellowFuchsia'),
-    'an unknown pair slug cannot put an unstyled class on the root');
-check(globalThis.OpenlockPair('lbp3-cool-island') === 'PairLbp3CoolIsland' &&
-    root.HasClass('PairLbp3CoolIsland') && !root.HasClass('PairLbp1YellowFuchsia'),
-    'switching pairs replaces exactly one class on the root');
-check(globalThis.OpenlockPair('') === '' && !root.HasClass('PairLbp3CoolIsland'),
-    'Classic removes the pair class and the scheme returns');
+// One theme system. A palette entry is a scheme: there is no second pair class to keep in step,
+// and the palette page lists exactly the scheme registry.
+check(globalThis.OpenlockScheme('alpha') !== undefined && root.HasClass('SchemeAlpha'),
+    'a palette entry applies the scheme class');
+const schemeBefore = Array.from(root.classes).filter(c => c.indexOf('Scheme') === 0).join(',');
+globalThis.OpenlockScheme('not-a-scheme');
+check(Array.from(root.classes).filter(c => c.indexOf('Scheme') === 0).join(',') === schemeBefore,
+    'an unknown scheme cannot replace the active one');
+globalThis.OpenlockScheme('popit');
+check(root.HasClass('SchemePopit') && !root.HasClass('SchemeAlpha'),
+    'switching schemes replaces exactly one class on the root');
+const paletteIds = globalThis.OpenlockPopitPairs.pairs.map(p => p.id);
+check(paletteIds.indexOf('family') >= 0 && paletteIds.indexOf('lbp1-yellow-fuchsia') < 0,
+    'the palette page lists schemes, not the retired pair table');
 
 // Two cell schemas. A game cell the player has not dressed stays in the Deadlock layout; the shell
 // draws its boundary and no title, controls or fill. Dressing it with the Popit promotes it to a
@@ -685,6 +695,17 @@ check(/\.ShellRoot \.WindowFrame\.DeadlockCell[\s\S]{0,200}?border:\s*0px/.test(
 check(/\.ShellRoot \.WindowFrame\.DeadlockCell\.Focused/.test(sheet) &&
     /\.ShellRoot \.WindowFrame\.DeadlockCell\.Pinned/.test(sheet),
     'a focused or pinned Deadlock cell still draws no boundary');
-check(/\.CloudControl\s*\{/.test(sheet), 'the rail styles the cloud controls');
+check(!/\.CloudControl\s*\{/.test(sheet) && !/\.CloudBar\s*\{/.test(sheet),
+    'the withdrawn cloud shelf leaves no style behind');
+
+// One theme system: the Popit's palette page lists the shell's schemes, and a palette entry
+// applies the scheme class rather than a second pair class.
+check(typeof globalThis.OpenlockPopitPairs.pairs[0].game === 'string' ||
+    Array.isArray(globalThis.OpenlockPopitPairs.pairs),
+    'the palette page has a registry');
+check(/\.BuildHashChip\s*\{/.test(read('clientaddon/panorama/styles/openlock_shell.css')),
+    'the top strip is a build-hash chip');
+check(/\.LauncherBar \.LauncherButton/.test(read('clientaddon/panorama/styles/openlock_shell.css')),
+    'the launcher and its switches no longer draw');
 
 console.log('chrome-test OK ' + checks + ' checks');

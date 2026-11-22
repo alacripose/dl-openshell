@@ -1,0 +1,10 @@
+{
+  "schema": "openlock.family-baseline/1",
+  "name": "dl-openshell",
+  "repo": "F:/Documents/popit-shell",
+  "commit": "e507d355153c8b7c9e5c6ea312555c1323a2588d",
+  "revision": "e507d355",
+  "files": 28,
+  "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
+  "blake3": "4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c"
+}

@@ -247,7 +247,6 @@ if (!nudgeDispatch) {
     throw new Error('no layout dispatch after nudge; frames=' + JSON.stringify(dispatched.slice(-4)));
 }
 const nudgedSnapshot = String(nudgeDispatch[1]).split('|')[1].slice('layout:'.length);
-// The bar is 48 pixels tall at an 8 pixel margin, so a window's first row is 64.
 check(/@abilities,12,64,420,140(?:@|$)/.test(nudgedSnapshot),
     'the nudge moved Abilities by one 8 dp square in the saved row: ' + nudgedSnapshot.slice(0, 160));
 

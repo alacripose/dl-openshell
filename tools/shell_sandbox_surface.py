@@ -27,6 +27,9 @@ SCRIPT_FILES = (
     "clientaddon/panorama/scripts/openlock_layout.js",
     "clientaddon/panorama/scripts/openlock_split.js",
     "clientaddon/panorama/scripts/openlock_delivery.js",
+    # The contour is drawn by the shell, so the fixture carries the shape and its runtime.
+    "clientaddon/panorama/scripts/openlock_contour_data.js",
+    "clientaddon/panorama/scripts/openlock_contour.js",
     "clientaddon/panorama/scripts/openlock_shell.js",
 )
 STYLE_FILES = (
@@ -36,6 +39,8 @@ STYLE_FILES = (
     # stale dist copy) is what lets the browser witness show the same Popit surface the
     # generator just built.
     "clientaddon/panorama/styles/openlock_schemes.css",
+    # The pin loads last, exactly as it does in the game.
+    "clientaddon/panorama/styles/openlock_pinned.css",
 )
 
 ADAPTER_CSS = r"""

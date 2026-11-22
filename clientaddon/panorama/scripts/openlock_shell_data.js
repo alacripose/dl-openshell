@@ -11723,10 +11723,10 @@ var SHELL = {
       "kind": "game",
       "surface": "citadel/gameinfo.gi",
       "line": 1,
-      "plan": "load the shell UI into citadel · game · release shape · D:/SteamLibrary/steamapps/common/Deadlock",
+      "plan": "load the shell UI into citadel · game · dev shape · D:/SteamLibrary/steamapps/common/Deadlock",
       "state": "loaded",
       "why": "",
-      "detail": "renderer panorama at game/citadel/panorama · release shape · D:/SteamLibrary/steamapps/common/Deadlock"
+      "detail": "renderer panorama at game/citadel/panorama · dev shape · D:/SteamLibrary/steamapps/common/Deadlock"
     },
     {
       "id": "game:citadel@<home>/Downloads/Reduced_CSDK_13",
@@ -11734,8 +11734,8 @@ var SHELL = {
       "surface": "citadel/gameinfo.gi",
       "line": 1,
       "plan": "load the shell UI into citadel · game · release shape · <home>/Downloads/Reduced_CSDK_13",
-      "state": "loaded",
-      "why": "",
+      "state": "planned",
+      "why": "the shell is not installed in this tree",
       "detail": "renderer panorama at content/citadel/panorama · release shape · <home>/Downloads/Reduced_CSDK_13"
     },
     {
@@ -11753,10 +11753,10 @@ var SHELL = {
       "kind": "game",
       "surface": "citadel/gameinfo.gi",
       "line": 1,
-      "plan": "load the installer host into citadel · tools · dev shape · D:<home>crity/Downloads/Reduced_CSDK_12",
+      "plan": "load the installer host into citadel · tools · release shape · D:<home>crity/Downloads/Reduced_CSDK_12",
       "state": "loaded",
       "why": "",
-      "detail": "renderer panorama at content/citadel/panorama · dev shape · D:<home>crity/Downloads/Reduced_CSDK_12"
+      "detail": "renderer panorama at content/citadel/panorama · release shape · D:<home>crity/Downloads/Reduced_CSDK_12"
     },
     {
       "id": "game:citadel@H:/SteamLibrary/steamapps/common/Deadlock",
@@ -11874,15 +11874,22 @@ var SHELL = {
   "searchPaths": [
     {
       "kind": "Game",
+      "path": "citadel/addons/mods",
+      "line": 73,
+      "exists": true,
+      "mounts": "panorama tree"
+    },
+    {
+      "kind": "Game",
       "path": "citadel",
-      "line": 75,
+      "line": 78,
       "exists": true,
       "mounts": "vpk"
     },
     {
       "kind": "Game",
       "path": "core",
-      "line": 76,
+      "line": 79,
       "exists": true,
       "mounts": "vpk"
     }
@@ -11914,24 +11921,24 @@ var SHELL = {
     {
       "path": "D:/SteamLibrary/steamapps/common/Deadlock",
       "kind": "tools",
-      "shell": "installed, not mounted",
-      "vpkBytes": 0,
+      "shell": "mounted",
+      "vpkBytes": 2620413,
       "toolsPresent": 1,
       "toolsTotal": 3,
-      "version": "2026-11-11 19:09:55",
+      "version": "2026-11-21 21:52:16",
       "build": {
-        "grade": "player",
+        "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-11-11 19:09:55",
-        "vpkBytes": 2245254
+        "finishedAt": "2026-11-21 21:52:16",
+        "vpkBytes": 2620413
       },
       "exe": "D:/SteamLibrary/steamapps/common/Deadlock/game/bin/win64/deadlock.exe"
     },
     {
       "path": "<home>/Downloads/Reduced_CSDK_13",
       "kind": "tools",
-      "shell": "mounted",
+      "shell": "not installed",
       "vpkBytes": 0,
       "toolsPresent": 2,
       "toolsTotal": 3,
@@ -11946,12 +11953,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 2,
       "toolsTotal": 3,
-      "version": "2026-10-30 01:57:20",
+      "version": "2026-11-21 21:51:53",
       "build": {
         "grade": "dev",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-10-30 01:57:20",
+        "finishedAt": "2026-11-21 21:51:53",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Documents/Documents/deadlockpreview/Project8Staging/Reduced_CSDK_10/game/bin/win64/project8.exe"
@@ -11963,12 +11970,12 @@ var SHELL = {
       "vpkBytes": 0,
       "toolsPresent": 3,
       "toolsTotal": 3,
-      "version": "2026-10-30 01:57:39",
+      "version": "2026-11-21 21:52:16",
       "build": {
-        "grade": "dev",
+        "grade": "player",
         "stage": "installed",
         "state": "ok",
-        "finishedAt": "2026-10-30 01:57:39",
+        "finishedAt": "2026-11-21 21:52:16",
         "vpkBytes": 0
       },
       "exe": "D:<home>crity/Downloads/Reduced_CSDK_12/game/bin/win64/deadlock.exe"
@@ -11992,9 +11999,9 @@ var SHELL = {
       "role": "game",
       "compatible": true,
       "why": "",
-      "shell": "installed, not mounted",
+      "shell": "mounted",
       "panorama": "game/citadel/panorama",
-      "shape": "release"
+      "shape": "dev"
     },
     {
       "path": "<home>/Downloads/Reduced_CSDK_13",
@@ -12002,7 +12009,7 @@ var SHELL = {
       "role": "game",
       "compatible": true,
       "why": "",
-      "shell": "mounted",
+      "shell": "not installed",
       "panorama": "content/citadel/panorama",
       "shape": "release"
     },
@@ -12024,7 +12031,7 @@ var SHELL = {
       "why": "",
       "shell": "installed, not mounted",
       "panorama": "content/citadel/panorama",
-      "shape": "dev"
+      "shape": "release"
     },
     {
       "path": "H:/SteamLibrary/steamapps/common/Deadlock",
@@ -12307,6 +12314,7 @@ var SHELL = {
     "panorama/layout/hero_testing/teach_zipline.xml",
     "panorama/layout/hero_testing/teach_zipline_dismount.xml",
     "panorama/layout/hero_testing/triggered_panel.xml",
+    "panorama/layout/hero_videos/hero_video_tengu.xml",
     "panorama/layout/hideout/hideout_in_world_label.xml",
     "panorama/layout/hideout/hideout_in_world_ranked.xml",
     "panorama/layout/hideout/hideout_in_world_text_label.xml",
@@ -12414,6 +12422,9 @@ var SHELL = {
     "panorama/layout/movie.xml",
     "panorama/layout/number_entry.xml",
     "panorama/layout/objectives_map.xml",
+    "panorama/layout/openlock_hud.xml",
+    "panorama/layout/openlock_shell.xml",
+    "panorama/layout/openlock_shell_server.xml",
     "panorama/layout/players_list.xml",
     "panorama/layout/players_list_entry.xml",
     "panorama/layout/playofthegame/citadel_hud_playofthegame.xml",
@@ -12539,15 +12550,27 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "2b50da8",
+    "commit": "ecee2bb",
     "branch": "main",
     "dirty": true,
-    "sourceDigest": "4c5a19a3fe6807c2675dcd5652731904479adbb12be649d0e1da144c51aa19f8",
-    "gameVersion": "6861",
-    "generatedAt": "2026-11-12 00:25",
-    "grade": "player",
+    "sourceDigest": "82cee78ee7217462d8c7b6b14efac64c5379cbb66c8a553117d43f615d4dc91c",
+    "gameVersion": "6864",
+    "generatedAt": "2026-11-21 21:57",
+    "grade": "dev",
     "deadlockRevision": "11170534",
-    "label": "v0.7.0  ·  2b50da8+  ·  game 6861"
+    "baseline": {
+      "schema": "openlock.family-baseline/1",
+      "name": "dl-openshell",
+      "repo": "F:/Documents/popit-shell",
+      "commit": "e507d355153c8b7c9e5c6ea312555c1323a2588d",
+      "revision": "e507d355",
+      "files": 28,
+      "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
+      "blake3": "4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c"
+    },
+    "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
+    "identityShort": "dl-openshell@e507d355+blake3:4a6e012e",
+    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / ecee2bb+ / game 6864"
   },
   "themes": {
     "default": "family",
@@ -12775,13 +12798,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -13182,6 +13210,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -13493,13 +13596,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -13900,6 +14008,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -14196,13 +14379,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -14603,6 +14791,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -14904,13 +15167,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -15311,6 +15579,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -15622,13 +15965,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -16029,6 +16377,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -16340,13 +16763,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -16747,6 +17175,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -17058,13 +17561,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -17465,6 +17973,81 @@ var SHELL = {
             "selector": ".PopitResetLabel",
             "property": "color",
             "role": "alert"
+          },
+          {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
           },
           {
             "selector": ".PopitEmpty",
@@ -17776,13 +18359,18 @@ var SHELL = {
           },
           {
             "selector": ".WindowFrame",
-            "property": "background-color",
-            "role": "body"
-          },
-          {
-            "selector": ".WindowFrame",
             "property": "border-color",
             "role": "border"
+          },
+          {
+            "selector": ".ContourInk",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".ContourFill",
+            "property": "background-color",
+            "role": "body"
           },
           {
             "selector": ".WindowTitle",
@@ -18185,6 +18773,81 @@ var SHELL = {
             "role": "alert"
           },
           {
+            "selector": ".PopitWordmark",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitHeader",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitSectionLabel",
+            "property": "color",
+            "role": "accent"
+          },
+          {
+            "selector": ".PopitSectionRule",
+            "property": "border-bottom-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPageDot",
+            "property": "background-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitPairChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitPairChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairDot",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "background-color",
+            "role": "panel"
+          },
+          {
+            "selector": ".PopitClassicChip",
+            "property": "border-color",
+            "role": "border"
+          },
+          {
+            "selector": ".PopitClassicChipLabel",
+            "property": "color",
+            "role": "ink"
+          },
+          {
+            "selector": ".PopitPairSwatch",
+            "property": "border-color",
+            "role": "borderStrong"
+          },
+          {
+            "selector": ".PopitPairGame",
+            "property": "color",
+            "role": "muted"
+          },
+          {
+            "selector": ".PopitPairNote",
+            "property": "color",
+            "role": "muted"
+          },
+          {
             "selector": ".PopitEmpty",
             "property": "color",
             "role": "muted"
@@ -18317,49 +18980,49 @@ var SHELL = {
   },
   "buildState": {
     "format": "openlock.build/c0fe71e57305319a492946bbe18ea9dd",
-    "grade": "player",
+    "grade": "dev",
     "stage": "installed",
     "state": "ok",
-    "startedAt": "2026-11-11 19:09:16",
-    "updatedAt": "2026-11-11 19:09:55",
-    "finishedAt": "2026-11-11 19:09:55",
+    "startedAt": "2026-11-21 21:51:05",
+    "updatedAt": "2026-11-21 21:52:16",
+    "finishedAt": "2026-11-21 21:52:16",
     "vpk": "dist/openlock_ui/pak01_dir.vpk",
-    "vpkBytes": 2245254,
-    "resources": 22,
+    "vpkBytes": 2620413,
+    "resources": 27,
     "path": "citadel/addons/mods/pak01_dir.vpk",
     "stages": [
       {
         "name": "prepare",
         "state": "ok",
-        "startedAt": "19:09:16",
-        "finishedAt": "19:09:31"
+        "startedAt": "21:51:05",
+        "finishedAt": "21:51:15"
       },
       {
         "name": "compile",
         "state": "ok",
-        "startedAt": "19:09:31",
-        "finishedAt": "19:09:53"
+        "startedAt": "21:51:15",
+        "finishedAt": "21:51:35"
       },
       {
         "name": "pack",
         "state": "ok",
-        "startedAt": "19:09:55",
-        "finishedAt": "19:09:55"
+        "startedAt": "21:51:36",
+        "finishedAt": "21:51:37"
       },
       {
         "name": "install",
         "state": "ok",
-        "startedAt": "19:09:55",
-        "finishedAt": "19:09:55"
+        "startedAt": "21:51:37",
+        "finishedAt": "21:51:37"
       },
       {
         "name": "installed",
         "state": "ok",
-        "startedAt": "19:09:55",
-        "finishedAt": "19:09:55"
+        "startedAt": "21:51:37",
+        "finishedAt": "21:52:16"
       }
     ],
-    "message": "installed 2245254 bytes",
+    "message": "installed 2620413 bytes",
     "packages": []
   },
   "update": {

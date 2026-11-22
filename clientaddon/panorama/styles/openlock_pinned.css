@@ -1,0 +1,200 @@
+/* The pinned client's look, written as the last layer.
+   The generated palettes and the form geometry are data: they colour the shell from a scheme.
+   This file is the shape's own pin, so it loads after them and names the numbers the desktop
+   client draws: a 48 pixel ink bar with its brass keyline, cells inset 3 by 16 with paper text
+   at 13, an uppercase brass plate over a keyline, and dim meta text. Changing a number here is
+   changing the family's look, so tools/contour_gate.py reads docs/family-look.json against it. */
+
+/* The bar is the Popit bar and it draws in game: a 48 pixel ink strip with a brass keyline. */
+.Taskbar {
+    visibility: visible;
+}
+
+/* The window base is the Popit plate: an uppercase brass title over a keyline, then the dim meta
+   strip. The cost readout and resize grips stay retired, because they are debug chrome. */
+.WindowFrame .WindowTitle {
+    visibility: visible;
+}
+
+.WindowFrame .WindowCost,
+.WindowFrame .ResizeGrip {
+    visibility: collapse;
+}
+
+/* --- the pinned client's bar and plate -------------------------------- */
+/* Values read from the Popit shell's own source at its own bar height: BAR_HEIGHT 48, cells at
+   ink 3 by 16 with paper text at 13.44, the plate's unit 5.4 giving a 19.44 uppercase brass-lit
+   title at 1.1 units of tracking over a keyline at 32 per cent brass, and dim text at 11.34.
+   The palette is the client's ink and brass, so the game shell and the desktop shell read as
+   one surface. Settings are in F:/Documents/popit-shell/ui/bar.css and ui/style.css. */
+.Taskbar {
+    height: 48px;
+    margin-top: 0px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 18px;
+    padding-right: 18px;
+    background-color: #0f1113f2;
+    border-bottom: 1px solid #b08d5742;
+}
+
+.TabStrip {
+    height: 38px;
+}
+
+.Taskbar .ShellTab,
+.ShellTab {
+    height: 38px;
+    padding: 3px 16px;
+    margin-right: 6px;
+}
+
+.Taskbar .ShellTabLabel,
+.ShellTab .ShellTabLabel {
+    color: #e6dbc2;
+    font-size: 13px;
+    letter-spacing: 0.35px;
+}
+
+.ShellTab.Active .ShellTabLabel {
+    color: #d9b779;
+}
+
+.ShellTab.Pinned .ShellTabLabel {
+    color: #b08d57;
+}
+
+.Taskbar .WindowsButton,
+.Taskbar .Clock,
+.WindowsButton,
+.Clock {
+    height: 38px;
+    padding: 3px 16px;
+}
+
+.Taskbar .WindowsButtonLabel,
+.Taskbar .Clock,
+.WindowsButtonLabel,
+.Clock {
+    color: #e6dbc2;
+    font-size: 13px;
+}
+
+.Taskbar .VersionLabel,
+.VersionLabel {
+    color: #8b8778;
+    font-size: 11px;
+}
+
+.WindowFrame {
+    border: 0px;
+    border-top: 0px;
+}
+
+/* The plate is inset by the frame's contour padding, so its wash cannot reach the crown and
+   the silhouette behind it stays whole. */
+.WindowFrame .WindowTitle {
+    height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+    padding-top: 4px;
+    padding-bottom: 9px;
+    padding-left: 32px;
+    padding-right: 6px;
+    border-bottom: 1px solid #b08d5752;
+    background: linear-gradient(180deg, #b08d5724, #b08d5705 70%, transparent);
+}
+
+/* The plate is a number for the day it returns; the collapse above still owns visibility. */
+
+.WindowFrame .WindowTitleLabel {
+    color: #d9b779;
+    font-size: 19px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+}
+
+.WindowFrame .WindowMeta {
+    height: 18px;
+    padding-left: 18px;
+    border-bottom: 1px solid #b08d5732;
+    background-color: #0f1113ee;
+}
+
+.WindowFrame .WindowMetaLabel {
+    color: #8b8778;
+    font-size: 11px;
+}
+
+.WindowFrame .WindowBody {
+    color: #e6dbc2;
+    font-size: 13px;
+}
+
+.ContourInk {
+    background-color: #b08d57a8;
+}
+
+.ContourFill {
+    background-color: #0f1113f2;
+}
+
+/* The Popit's own controls sit on a rail with the same grammar, so there is one bar language. */
+.Taskbar {
+    background: linear-gradient(180deg, #b08d571f, transparent 55%);
+    background-color: #0f1113f2;
+}
+
+.Taskbar .BarStart,
+.BarStart {
+    min-width: 93px;
+    justify-content: center;
+}
+
+/* A cell fills the strip's inner height, so its ink is the strip's ink. */
+.Taskbar .ShellTab,
+.Taskbar .WindowsButton {
+    align-items: center;
+}
+
+.Taskbar .ShellTab:hover .ShellTabLabel,
+.Taskbar .WindowsButton:hover .WindowsButtonLabel,
+.Taskbar .BarStart:hover .WindowsButtonLabel {
+    color: #d9b779;
+}
+
+.Taskbar .ShellTab.Active {
+    background-color: #b08d5729;
+}
+
+/* The launcher is the shell's start surface: a plate over the ink, not a floating chip. */
+.LauncherBar {
+    padding: 4px 10px 5px 32px;
+    border: 0px;
+    border-radius: 0px;
+    border-left: 1px solid #b08d5752;
+    background-color: #0f1113ee;
+}
+
+.LauncherBar .LauncherButton,
+.LauncherBar .SchemeButton {
+    height: 26px;
+    padding: 3px 10px;
+    border: 0px;
+    border-radius: 0px;
+    background-color: transparent;
+}
+
+.LauncherBar .LauncherLabel {
+    color: #d9b779;
+    font-size: 13px;
+    letter-spacing: 2.6px;
+    text-transform: uppercase;
+}
+
+.LauncherBar .SchemeLabel {
+    color: #b08d57;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}

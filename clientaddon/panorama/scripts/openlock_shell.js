@@ -40,19 +40,41 @@
     // The bar's chips and every window frame carry the same contour, so the shape a button is
     // cut with is the shape a window is cut with. A chip is measured after layout, because a
     // Panorama panel cannot report its own box before it has been placed.
-    function contourChip(panel) {
+    // A panel cannot report its box before it has been placed, and a box of zero draws nothing: the
+    // shape is retried on the next frame until the surface has a size, then held. A surface with no
+    // contour is a surface with no background, so a silent skip is not allowed here.
+    var CONTOUR_TRIES = 12;
+
+    function contourChip(panel, tries) {
         if (!panel || !globalThis.OpenlockContour) return;
+        var left = (typeof tries === "number") ? tries : CONTOUR_TRIES;
         $.Schedule(0, function () {
             if (!alive(panel)) return;
             var w = Math.round(num(panel.actuallayoutwidth));
             var h = Math.round(num(panel.actuallayoutheight));
-            if (w < 4 || h < 4) return;
+            if (w < 4 || h < 4) {
+                if (left > 0) contourChip(panel, left - 1);
+                return;
+            }
             if (panel.__contourW === w && panel.__contourH === h) return;
             panel.__contourW = w;
             panel.__contourH = h;
             globalThis.OpenlockContour.draw(panel, w, h);
         });
     }
+
+    // The strip itself is a contoured surface, exactly as the pinned bar is: its ends carry the
+    // crown, so a version label reads on a shape rather than on bare text.
+    function contourBoot() {
+        contourChip(taskbar);
+        contourChip(launcherBar);
+        contourChip(root.FindChildTraverse("LauncherButton"));
+        contourChip(root.FindChildTraverse("SchemeButton"));
+        contourChip(root.FindChildTraverse("FormButton"));
+        paintBarChips();
+    }
+    $.Schedule(0.35, contourBoot);
+    $.Schedule(1.2, contourBoot);
 
     function paintBarChips() {
         var ids = ["DashboardButton", "WindowsButton", "Clock"];
@@ -1030,6 +1052,14 @@
 
     // --- toast / update ------------------------------------------------------
 
+    // The shell names itself by the pinned baseline's family identity, never by that baseline's own
+    // project name: `name@<revision>+blake3:<hex>`, the same form a package carries.
+    function shellIdentity() {
+        var b = (data.build && data.build.baseline) || {};
+        return (data.build && data.build.identityShort) || (data.name + " " + (data.version || ""));
+    }
+    globalThis.OpenlockShellIdentity = shellIdentity;
+
     globalThis.OpenlockToast = function (title, body, windowId, attention) {
         if (!toastsAvailable() || !title) return null;
 
@@ -1043,10 +1073,9 @@
         try {
             toastStack.style.width = "300px";
             t.style.width = "100%";
-            t.style.padding = "7px 10px";
-            t.style.backgroundColor = "#1a140df2";
-            t.style.border = "1px solid #8a6f42";
-            t.style.borderLeft = "3px solid #e0b56a";
+            // The shape is the background: the contour paints the ink, so the panel itself stays
+            // clear and the padding is the ink the crown needs.
+            t.style.padding = "8px 14px";
         } catch (e) {}
 
         var h = $.CreatePanel("Label", t, "");
@@ -1060,6 +1089,8 @@
             b.text = body;
             try { b.style.color = "#c9b89c"; b.style.fontSize = "11px"; } catch (e) {}
         }
+
+        contourChip(t);
 
         if (windowId) {
             t.SetPanelEvent("onmouseactivate", function () { openWindow(windowId); });
@@ -1295,26 +1326,10 @@
         $.Schedule(delay, easeIn);
     }
 
-    // The cloud rail: the Popit's own interface controls on the lower edge. REV06 keeps the
-    // in-world rail and the Popit as separate owners, and the owner's ruling here is that the
-    // rail carries the Popit's interface - page arrows, cell arrows, the section reveal and the
-    // open control - not a window catalog and not camera or undo. The brief still lists the
-    // silhouette as open ("needs a better reference capture"), so the band is a rounded shelf,
-    // not a claimed canonical cloud shape.
-    var cloudBar = null;
-
-    function ensureCloudBar() {
-        if (cloudBar) {
-            try { if (!cloudBar.IsValid || cloudBar.IsValid()) return cloudBar; } catch (e) { return cloudBar; }
-        }
-        cloudBar = $.CreatePanel("Panel", root, "CloudBar");
-        cloudBar.AddClass("CloudBar");
-        // Visual only. The band is drawn for the scene, not operated: no hittest, no pointer
-        // target, nothing it can steal from the game's own HUD underneath it.
-        cloudBar.hittest = false;
-        cloudBar.hittestchildren = false;
-        return cloudBar;
-    }
+    // The Popit's own controls are actions, not a band. The lower cloud shelf drew a surface the
+    // pinned client does not have, so it is withdrawn: the Popit surface owns its own arrows and
+    // sections, and every action it offers stays addressable by name through runPopitAction.
+    var POPIT_ACTION_UNKNOWN = "popit-action-unknown";
 
     var CLOUD_CONTROLS = [
         { id: "prev-page", label: "<", title: "Previous Popit page", run: function () { cyclePopitPage(-1); } },
@@ -1393,25 +1408,22 @@
         }
     }
 
+    // Every Popit action is named once, and the same names are what a package or the console can
+    // call: the surface is the caller, not a drawn rail.
+    function runPopitAction(id) {
+        for (var c = 0; c < CLOUD_CONTROLS.length; c++) {
+            if (CLOUD_CONTROLS[c].id !== id) continue;
+            CLOUD_CONTROLS[c].run();
+            cue("select");
+            return true;
+        }
+        logPerf("refused", POPIT_ACTION_UNKNOWN + " " + id);
+        return false;
+    }
+    globalThis.runPopitAction = runPopitAction;
+
     function renderBar() {
         if (preloadActive) return;
-        var bar = ensureCloudBar();
-        bar.RemoveAndDeleteChildren();
-
-        for (var c = 0; c < CLOUD_CONTROLS.length; c++) {
-            (function (control) {
-                var button = addControl(bar, "CloudControl", control.label, function () {
-                    control.run();
-                    cue("select");
-                });
-                button.AddClass("Cloud_" + control.id);
-                // A rail cell is a bar cell: the same contour the taskbar chips and the window
-                // frames take, so the shell has one surface language.
-                contourChip(button);
-                bindDwell(button, control.title, "Cloud rail. " + control.title + ".", "");
-            })(CLOUD_CONTROLS[c]);
-        }
-
         if (versionLabel) {
             var build = data.build || {};
             versionLabel.text = build.label || (data.name + " " + data.version);
@@ -4360,7 +4372,7 @@
             onApply: function (state) {
                 if (!selected) return;
                 if (!applyPopitState(selected, state)) {
-                    globalThis.OpenlockToast("Popit", "the selected cell is no longer on screen", "", true);
+                    globalThis.OpenlockToast(shellIdentity(), "the selected cell is no longer on screen", "", true);
                 }
             },
             onReset: function () {
@@ -4531,7 +4543,7 @@
                 contextAction(contextMenu, "Restore cell from Popit", function () {
                     resetPopitCell({ id: win.id });
                     refreshDashboard();
-                    globalThis.OpenlockToast("Popit", "Restored " + (win.title || win.id) + " to the game's rendering.", "", false);
+                    globalThis.OpenlockToast(shellIdentity(), "Restored " + (win.title || win.id) + " to the game's rendering.", "", false);
                 });
             }
         }
@@ -7628,7 +7640,7 @@
             actionXd(body, "Restore every Popit-edited cell", function () {
                 for (var c = 0; c < styled.length; c++) resetPopitCell({ id: styled[c].id });
                 refreshDashboard();
-                globalThis.OpenlockToast("Popit", "all edited cells restored to the game's rendering", "", false);
+                globalThis.OpenlockToast(shellIdentity(), "all edited cells restored to the game's rendering", "", false);
             });
         } else {
             rowXd(body, "No cell carries a Popit edit yet.", "ViewMuted");
