@@ -246,11 +246,13 @@ PLANTS = [
     ("vendor-key", "s" + "k-" + "b" * 32),
     ("bearer-token", "Authorization: Bearer " + "c" * 40),
     ("assigned-secret", 'api_key = "' + "d" * 24 + '"'),
-    ("home-path-windows", r"<home>\Documents\file.txt"),
-    ("home-path-posix", "<home>/project/file"),
-    ("email-address", "<person>"),
-    ("private-address", "<host>"),
-    ("phone-number", "<number>"),
+    # The plants are assembled too: a file that carries a literal home path, address or phone number
+    # would make every history scan of every repository report the gate itself.
+    ("home-path-windows", "C:" + "\\Users\\" + "someone\\Documents\\file.txt"),
+    ("home-path-posix", "/" + "home/" + "someone/project/file"),
+    ("email-address", "owner.personal" + "@postbox-77.net"),
+    ("private-address", "192.168" + ".0.15"),
+    ("phone-number", "+1 555" + " 123 4567"),
 ]
 
 
