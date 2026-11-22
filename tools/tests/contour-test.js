@@ -182,19 +182,25 @@ for (const surface of [frame, chip]) {
     const tall = ink.filter((row) => row.height !== 1);
     ok(tall.length === 0, `${surface.width}x${surface.height} has a slice taller than one pixel`);
 
-    const reference = flattenedLoop(surface.width, surface.height, data.look.constants.frame_pad,
-        Math.min(data.look.corner_px.height, surface.height / 2));
+    // The pinned application draws the silhouette on a surface inflated by the overhang and places
+    // it back over the host, so the frame's stroke is whole at the host's edge. The reference model
+    // takes the same box and the same shift; the profile and its tolerance are unchanged.
+    const over = typeof contour.overhang === "function" ? contour.overhang() : 0;
+    const drawnW = surface.width + 2 * over;
+    const drawnH = surface.height + 2 * over;
+    const reference = flattenedLoop(drawnW, drawnH, data.look.constants.frame_pad,
+        Math.min(data.look.corner_px.height, drawnH / 2));
     const band = reference.band;
     let compared = 0;
     for (const row of ink) {
         // Only the crown rows carry the curve; the rail is one panel across the span.
         if (row.top + row.height > band && row.top < surface.height - band) continue;
         const y = row.top + 0.5;
-        const expected = spanFromPolygon(reference.polygon, y);
+        const expected = spanFromPolygon(reference.polygon, y + over);
         if (!expected) continue;
         compared += 1;
-        const left = Math.round(expected.left);
-        const right = Math.round(expected.right);
+        const left = Math.round(expected.left) - over;
+        const right = Math.round(expected.right) - over;
         ok(Math.abs(row.left - left) <= 1 && Math.abs(row.left + row.width - right) <= 1,
             `${surface.width}x${surface.height} row ${y} is ${row.left}..${row.left + row.width}, the profile says ${left}..${right}`);
     }

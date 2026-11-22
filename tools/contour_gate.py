@@ -126,15 +126,21 @@ def c5_no_radius() -> None:
 
 def c6_outline() -> None:
     runtime = RUNTIME.read_text(encoding="utf-8")
-    # The ink is drawn at the box and the fill at one pixel in, which is what keeps both halves
-    # of the stroke inside the surface rather than cut by it.
-    holds = "everyRow(kids, width, height, 0, 0, strokeClass, 0)" in runtime \
-        and "everyRow(kids, width - 2 * pads.stroke, height - 2 * pads.stroke," in runtime
+    # The pinned application draws the silhouette on a surface inflated by the overhang and places it
+    # back over the host, so the frame lands on the host's own edge with both halves of its stroke
+    # inside the clip; the fill is the same shape one stroke in. The clip pad has to sit inside the
+    # frame pad for the same reason.
+    holds = "everyRow(kids, outerW, outerH, -OVERHANG, -OVERHANG, strokeClass, 0)" in runtime \
+        and "everyRow(kids, outerW - 2 * pads.stroke, outerH - 2 * pads.stroke," in runtime \
+        and "-OVERHANG + pads.stroke, -OVERHANG + pads.stroke, fillClass, slots)" in runtime
     holds = holds and "padsOf(look)" in runtime
     look = json.loads(LOOK.read_text(encoding="utf-8"))
     holds = holds and look["constants"]["clip_pad"] < look["constants"]["frame_pad"]
+    overhang = re.search(r"var OVERHANG = (\d+);", runtime)
+    holds = holds and bool(overhang) and int(overhang.group(1)) >= look["constants"]["clip_pad"]
     check("outline-not-clipped", "the ink is the outer edge and the fill is inset by the stroke",
-          holds, str(RUNTIME.relative_to(ROOT)), "ink at 0, fill at 1" if holds else "the fill is not inset")
+          holds, str(RUNTIME.relative_to(ROOT)),
+          "ink on the host edge over the clip pad, fill one stroke in" if holds else "the fill is not inset")
 
 
 def c7_tested() -> None:

@@ -149,16 +149,20 @@
         return text;
     }
 
-    // The count is the reference's totals line: the number of rows in brass, the word in dim, and
-    // the shown count only while a query is narrowing the list.
+    // The count is the reference's totals line: the number of rows in brass, the word in dim, then
+    // the shown count. The reference always states both totals, so the line does not change shape
+    // when a query narrows the list; only the shown number moves.
     function setCounts(record, rows, shown, filtered) {
         if (!record || !record.counts) return;
         if (record.countValue && record.countValue.text !== String(rows)) record.countValue.text = String(rows);
         if (record.countShown && record.countShown.text !== String(shown)) record.countShown.text = String(shown);
+        // A single row is one row: the totals line is prose, and "1 rows" is not.
+        var word = Number(rows) === 1 ? "row" : "rows";
+        if (record.countWord && record.countWord.text !== word) record.countWord.text = word;
         setChildVisibility(record, "plate", record.plate, rows > 0);
-        setChildVisibility(record, "countDot", record.countDot, filtered);
-        setChildVisibility(record, "countShown", record.countShown, filtered);
-        setChildVisibility(record, "countShownWord", record.countShownWord, filtered);
+        setChildVisibility(record, "countDot", record.countDot, true);
+        setChildVisibility(record, "countShown", record.countShown, true);
+        setChildVisibility(record, "countShownWord", record.countShownWord, true);
     }
 
     // filterFrame is the plate's one action: a row whose own text holds the query stays, every
@@ -345,7 +349,10 @@
     $.Schedule(50, barMetrics);
 
     function paintBarChips() {
-        var ids = ["DashboardButton", "WindowsButton", "Clock"];
+        // The clock is a readout, not a chip: it is a Label, so slices added to it are its children
+        // and paint after its own text — a contoured clock drew an empty cell. Start and the windows
+        // control are panels and take the ink; the clock takes the same box and dim type instead.
+        var ids = ["DashboardButton", "WindowsButton"];
         for (var i = 0; i < ids.length; i += 1) contourChip(root.FindChildTraverse(ids[i]));
         if (strip && strip.GetChildCount) {
             var tabs = kidsOf(strip);
@@ -5186,10 +5193,10 @@
         var counts = $.CreatePanel("Panel", plate, "");
         counts.AddClass("WindowCounts");
         var countValue = countLabel(counts, "WindowCountValue", "0");
-        countLabel(counts, "WindowCountWord", " rows");
-        var countDot = countLabel(counts, "WindowCountDot", "  ·  ");
+        var countWord = countLabel(counts, "WindowCountWord", "rows");
+        var countDot = countLabel(counts, "WindowCountDot", "·");
         var countShown = countLabel(counts, "WindowCountValue", "0");
-        var countShownWord = countLabel(counts, "WindowCountWord", " shown");
+        var countShownWord = countLabel(counts, "WindowCountWord", "shown");
         var findRow = $.CreatePanel("Panel", plate, "");
         findRow.AddClass("WindowFindRow");
         var findLabel = $.CreatePanel("Label", findRow, "");
@@ -5264,6 +5271,7 @@
             countValue: countValue,
             countShown: countShown,
             countDot: countDot,
+            countWord: countWord,
             countShownWord: countShownWord,
             findRow: findRow,
             find: findEntry,
@@ -6162,7 +6170,30 @@
 
     // --- shell views ---------------------------------------------------------
 
-    function rowXd(body, text, cls) {
+    // The reference's card is two lines: the row's own text, then a meta line that names what the
+    // row is. A window's kind is its lane, so the line reads "shell window" instead of repeating
+    // the id the row already carries.
+    function laneKind(entry) {
+        var lane = String((entry && entry.lane) || "shell");
+        if (lane === "hud") return "hud window";
+        if (lane === "game") return "game screen";
+        return "shell window";
+    }
+
+    // A meta line is the card's second line, and only a card that has one takes the reference's
+    // 8u box: a row without a kind keeps the pin's 22 px card.
+    function cardMeta(box, kind) {
+        var text = String(kind == null ? "" : kind).replace(/^\s+|\s+$/g, "");
+        if (!text) return null;
+        box.AddClass("HasMeta");
+        var meta = $.CreatePanel("Label", box, "");
+        meta.AddClass("ViewMeta");
+        meta.text = text;
+        meta.hittest = false;
+        return meta;
+    }
+
+    function rowXd(body, text, cls, kind) {
         // Every line in a window is a surface too: the ground takes the contour, the Label keeps the
         // text. A row drawn as a bare Label is a rectangle inside a contoured frame.
         var box = $.CreatePanel("Panel", body, "");
@@ -6175,6 +6206,7 @@
         l.AddClass(cls || "ViewLine");
         l.AddClass("ViewRow");
         l.text = text;
+        if ((cls || "") !== "ViewHeading") cardMeta(box, kind);
         contourChip(box);
         return l;
     }
@@ -6190,7 +6222,10 @@
     // control: it keeps its text (which is the name a reader and the game's UI both see), takes
     // the pointer itself, and owns the activation handler. A row built as an unnamed Panel with a
     // hit-test-disabled label is addressable only by position, which is the defect this replaces.
-    function actionRow(body, text, fn, id) {
+    // A card's leading mark is drawn, not typed into the row: the reference puts a brass-lit ▶ in its
+    // own column, and a row whose text starts with a bullet reads as a radio instead. `state` is
+    // undefined for a plain action and true/false for a card that reports whether it is chosen.
+    function actionRow(body, text, fn, id, kind, state) {
         // The row is a surface, so it takes the contour like a bar cell: a ground panel that owns the
         // shape, and the Label inside it that keeps the text, the pointer and the handler.
         var box = $.CreatePanel("Panel", body, "");
@@ -6200,12 +6235,24 @@
         row.AddClass("ViewAction");
         row.AddClass("ViewRow");
         row.text = text;
+        if (state !== undefined) {
+            box.AddClass("HasGlyph");
+            // The mark is drawn, not typed: the shell's chrome has no codepoint glyphs, so the card's
+            // leading wedge is a small contoured panel in brass-lit, the same way the bar's controls
+            // are shapes rather than characters.
+            var glyph = $.CreatePanel("Panel", box, "");
+            glyph.AddClass("ViewGlyph");
+            glyph.hittest = false;
+            contourChip(glyph);
+            if (state) box.AddClass("On");
+        }
         row.hittest = true;
         row.SetPanelEvent("onmouseactivate", function () {
             lastInteractionAt = Date.now();
             markRow(box);
             fn();
         });
+        cardMeta(box, kind);
         contourChip(box);
         return row;
     }
@@ -7811,10 +7858,10 @@
         for (var i = 0; i < data.windows.length; i++) {
             (function (entry) {
                 var active = entry.id === win.id;
-                actionRow(body, (active ? "●  " : "○  ") + entry.title + "  ·  " + entry.id, function () {
+                actionRow(body, entry.title + "  ·  " + entry.id, function () {
                     dashSelected = entry.id;
                     refreshDashboard();
-                }, "openlock-row-" + String(entry.id).replace(/[^A-Za-z0-9_-]/g, "_"));
+                }, "openlock-row-" + String(entry.id).replace(/[^A-Za-z0-9_-]/g, "_"), laneKind(entry), !!active);
             })(data.windows[i]);
         }
 
@@ -8507,10 +8554,14 @@
         function tick() {
             if (clockLabel) {
                 try {
+                    // The bar's clock is the reference's readout: the day and month, then the time.
                     var now = new Date();
                     var h = now.getHours();
                     var m = now.getMinutes();
-                    clockLabel.text = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+                    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    var day = now.getDate();
+                    clockLabel.text = (day < 10 ? "0" : "") + day + " " + months[now.getMonth()] + "  " +
+                        (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
                 } catch (e) {
                     clockLabel.text = "--:--";
                 }

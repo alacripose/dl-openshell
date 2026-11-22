@@ -75,6 +75,33 @@ ADAPTER_CSS = r"""
   .WindowFindEntry { display: block; width: 100%; height: 22px; box-sizing: border-box;
     font: inherit; outline: none; }
   .ViewRowBox { position: relative; display: block; box-sizing: border-box; }
+  /* Panorama's `ignore-parent-flow` + left/top alignment is absolute placement: the contour's
+     rows and rails are panels positioned by their own margins, so the adapter must take them out
+     of the flow. Left in flow they stack full width and draw stripes instead of a silhouette. */
+  .WindowFrame > .ContourSlices, .ViewRowBox > .ContourSlices, .WindowFindBox > .ContourSlices,
+  .ViewAction > .ContourSlices, .ShellTab > .ContourSlices, .WindowsButton > .ContourSlices,
+  .BarStart > .ContourSlices, .Clock > .ContourSlices { position: absolute; left: 0; top: 0; z-index: 0; }
+  .ContourSlices > * { position: absolute; left: 0; top: 0; }
+  /* A slice layer is placed against its own surface, so that surface has to be the containing
+     block; a Label host would otherwise anchor the silhouette to the bar behind it. */
+  .ShellTab, .WindowsButton, .BarStart, .Clock, .ViewRowBox, .WindowFindBox { position: relative; }
+  /* A positioned slice layer paints above a static label in CSS; Panorama paints in child order and
+     the layer is the first child. The label is lifted here so a bar cell's text reads. */
+  .ShellTabLabel, .WindowsButtonLabel, .LauncherLabel, .SchemeLabel { position: relative; z-index: 1; }
+  /* A Panorama label with a fixed height draws one line and ellipsises; a block in CSS would
+     wrap its text past that height. */
+  .VersionLabel, .WindowTitleLabel, .ShellTabLabel, .WindowsButtonLabel { white-space: nowrap; overflow: hidden; }
+  /* A positioned panel paints above in-flow content in CSS, while a Panorama panel paints in child
+     order. The silhouette is the first child and must stay behind the text, so the content is
+     lifted over it here. */
+  .WindowFrame > .WindowTitle, .WindowFrame > .WindowPlate, .WindowFrame > .WindowMeta,
+  .WindowFrame > .WindowBody, .WindowFrame > .WindowRefusal,
+  .ViewRowBox > .ViewAction, .ViewRowBox > .ViewLine, .ViewRowBox > .ViewMuted,
+  .ViewRowBox > .ViewMeta, .ViewRowBox > .ViewHeading,
+  .WindowFindBox > .WindowFindEntry { position: relative; z-index: 1; }
+  /* A Panorama Label is a block in its parent's flow; a span is inline and would not stack the
+     card's two lines. */
+  .ViewAction, .ViewLine, .ViewMuted, .ViewMeta, .ViewHeading, .ViewGlyph { display: block; }
   .WindowMeta { display: block; flex: 0 0 17px; height: 17px; box-sizing: border-box;
     overflow: hidden; }
   .WindowFrame.CompactHud .WindowMeta { display: none; }
@@ -194,6 +221,31 @@ def translate_css(source: str) -> str:
     css = re.sub(r"overflow:\s*clip\s*;", "overflow: hidden;", css)
     css = re.sub(r"overflow:\s*squish\s+scroll\s*;", "overflow: auto;", css)
     css = re.sub(r"ignore-parent-flow:\s*true\s*;", "position: absolute;", css)
+    # Panorama paints with `gradient( linear, from( C ), color-stop( p, C ), to( C ) )`; a browser
+    # reads `linear-gradient`. Without this the bar's brass wash was dropped in the witness and the
+    # strip rendered as flat ink, which is not the look the sheet declares.
+    stop = re.compile(
+        r"background-color:\s*gradient\(\s*linear\s*,\s*[\d.]+%\s+[\d.]+%\s*,\s*[\d.]+%\s+[\d.]+%\s*,(?P<stops>[^;]*)\)"
+    )
+
+    def to_linear(match):
+        parts = []
+        tokens = re.finditer(
+            r"from\(\s*(#[0-9a-fA-F]{3,8})\s*\)|color-stop\(\s*([\d.]+)\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)|to\(\s*(#[0-9a-fA-F]{3,8})\s*\)",
+            match.group("stops"),
+        )
+        for token in tokens:
+            if token.group(1):
+                parts.append(token.group(1) + " 0%")
+            elif token.group(3):
+                parts.append(token.group(3) + " " + str(round(float(token.group(2)) * 100, 2)) + "%")
+            elif token.group(4):
+                parts.append(token.group(4) + " 100%")
+        if not parts:
+            return match.group(0)
+        return "background-image: linear-gradient(180deg, " + ", ".join(parts) + ")"
+
+    css = stop.sub(to_linear, css)
     return css
 
 
@@ -361,7 +413,9 @@ def measurement_script() -> str:
       var title = frame.querySelector('.WindowTitle');
       if (!title) { fail(issues, id + ': no title strip'); return; }
       var t = box(title);
-      var expected = frame.classList.contains('CompactHud') && !frame.classList.contains('Focused') ? 16 : 30;
+      // The pin is `pins/contour-pin.json` (model-forge), `surfaces.plate.title_px`: the start
+      // window's plate is 36, cut from the corner band, and a compact HUD keeps its 16 px strip.
+      var expected = frame.classList.contains('CompactHud') && !frame.classList.contains('Focused') ? 16 : 36;
       if (Math.abs(t.h - expected) > 1) fail(issues, id + ': title height ' + Math.round(t.h) + ' != ' + expected);
       var buttons = Array.prototype.slice.call(frame.querySelectorAll('.WindowButton'));
       if (buttons.length < 4) fail(issues, id + ': ' + buttons.length + ' window controls, expected at least 4');
@@ -369,8 +423,11 @@ def measurement_script() -> str:
         var b = box(button);
         var narrow = frame.classList.contains('Narrow');
         var compact = frame.classList.contains('CompactHud');
-        var expectedW = narrow ? 8 : (compact ? 14 : 26);
-        var expectedH = narrow ? 8 : (compact ? 14 : 22);
+        // `surfaces.plate.control_px`: the pin's plate carries 20x20 controls in the `.FormPopit`
+        // form this build ships (the 26x22 this probe expected was any-form geometry read from the
+        // reference at its own scale).
+        var expectedW = narrow ? 8 : (compact ? 14 : 20);
+        var expectedH = narrow ? 8 : (compact ? 14 : 20);
         if (Math.abs(b.w - expectedW) > 1 || Math.abs(b.h - expectedH) > 1) {
           fail(issues, id + ': control ' + (button.className || '?') + ' is ' +
             Math.round(b.w) + 'x' + Math.round(b.h) + ', expected ' + expectedW + 'x' + expectedH);
@@ -381,6 +438,23 @@ def measurement_script() -> str:
           fail(issues, id + ': a control has no drawn shape');
         }
       });
+      // `surfaces.plate.row_px` = 22: a one-line row is the pin's card, and a row that carries its
+      // second line (the reference's meta line) is `surfaces.plate.card_px` = 43.2. The row band is
+      // what the pin measures; a card is the same row with the meta line inside it.
+      if (!frame.classList.contains('CompactHud')) {
+        Array.prototype.slice.call(frame.querySelectorAll('.ViewRowBox')).forEach(function (row) {
+          if (row.classList.contains('ViewHead')) return;
+          // Only a row a reader can choose is the pin's card; an informational line takes the
+          // height its text needs and is not a control.
+          if (!row.querySelector('.ViewAction')) return;
+          var r = box(row);
+          var wants = row.classList.contains('HasMeta') ? 43.2 : 22;
+          if (r.h > 0 && Math.abs(r.h - wants) > 1.5) {
+            fail(issues, id + ': row "' + (row.textContent || '').trim().slice(0, 24) +
+              '" is ' + Math.round(r.h) + ' high, expected ' + wants);
+          }
+        });
+      }
       var grips = Array.prototype.slice.call(frame.querySelectorAll('.ResizeGrip')).filter(function (grip) {
         var style = getComputedStyle(grip);
         return style.display !== 'none' && style.visibility !== 'hidden' &&
@@ -420,6 +494,16 @@ def measurement_script() -> str:
           fail(issues, 'a streamed XML Button is not hit-testable');
         }
       }
+    }
+    // `bar_metrics start=93 startx=18`: the bar's Start cell is the pin's own measured width, and
+    // it is the first thing the pointer meets on the left of the strip.
+    var startCell = document.querySelector('.BarStart') || document.querySelector('.WindowsButton');
+    if (!startCell) {
+      fail(issues, 'the bar has no Start cell');
+    } else {
+      var sc = box(startCell);
+      if (Math.abs(sc.w - 93) > 1) fail(issues, 'the Start cell is ' + Math.round(sc.w) + ' wide, expected 93');
+      if (Math.abs(sc.x - 18) > 1) fail(issues, 'the Start cell starts at ' + Math.round(sc.x) + ', expected 18');
     }
     // A game window/cell stream is the running client's surface. The installer witness never
     // opens one, so a StreamedXml frame here means the sandbox booted a game package.

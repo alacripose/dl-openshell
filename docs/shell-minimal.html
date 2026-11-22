@@ -1821,12 +1821,19 @@ HTMLHorizontalScrollBar .ScrollThumb {
    crowns, one rail across the span between them. No part of the shape is scaled, so a taskbar
    chip and a window read as one form at two sizes and the outline is never cut by a clip.
    `tools/gen_contour_slices.py` writes the data; `openlock_contour.js` draws it. */
+/* The silhouette is drawn on a surface one pixel larger than the box it frames, and it is
+   positioned back over that box: the reference keeps the clip half a pixel outside the frame so
+   the frame's stroke is never cut in half at a boundary, and this is the same application in whole
+   pixels. The layer never clips, so a crown that reaches the edge keeps every one of its rows. */
 .ContourSlices {
     position: absolute;
     horizontal-align: left;
     vertical-align: top;
     width: 100%;
     height: 100%;
+    /* The size, margin and overhang are the painter's (it knows the surface's box); the layer only
+       refuses to clip, so a crown that reaches the edge keeps every row it draws. */
+    clip: false;
 }
 
 .ContourInk {
@@ -6863,10 +6870,9 @@ HTMLHorizontalScrollBar .ScrollThumb {
 }
 
 /* The window base is the Popit plate: an uppercase brass title over a keyline, then the dim meta
-   strip. The cost readout and resize grips stay retired, because they are debug chrome. */
-.WindowFrame .WindowTitle {
-    visibility: visible;
-}
+   strip. The cost readout stays retired, because it is debug chrome. The title's own visibility is
+   the frame's: declaring `visible` here re-showed a collapsed window's title strip, and every
+   hidden frame stacked its plate over the one on screen. */
 
 .WindowFrame .WindowCost {
     display: none;
@@ -6988,7 +6994,7 @@ HTMLHorizontalScrollBar .ScrollThumb {
     padding-left: 32px;
     padding-right: 6px;
     border-bottom: 1px solid #b08d5752;
-    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5724 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
+    background-image: linear-gradient(180deg, #b08d5724 0%, #b08d5705 70.0%, #00000000 100%);
 }
 
 /* The plate is a number for the day it returns; the collapse above still owns visibility. */
@@ -7055,6 +7061,13 @@ HTMLHorizontalScrollBar .ScrollThumb {
     background-color: #b08d574d;
 }
 
+/* The clock is a Label, so its slices are its children and paint after its own text. Its frame is an
+   ink rail at the edges; the fill stays clear, or the readout would be covered by its own ground. */
+.Taskbar .Clock .ContourFill,
+.Clock .ContourFill {
+    background-color: transparent;
+}
+
 /* A window that carries the contour paints nothing of its own: the ink ground is the contour's own
    fill, so the body meets the crown instead of a rectangle cutting across it. */
 .ShellRoot .WindowFrame,
@@ -7066,7 +7079,7 @@ HTMLHorizontalScrollBar .ScrollThumb {
 
 /* The Popit's own controls sit on a rail with the same grammar, so there is one bar language. */
 .Taskbar {
-    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d57a8 ), color-stop( 0.55, #b08d571f ), to( #0f1113f2 ) );
+    background-image: linear-gradient(180deg, #b08d57a8 0%, #b08d571f 55.0%, #0f1113f2 100%);
 }
 
 .Taskbar .BarStart,
@@ -7145,10 +7158,13 @@ HTMLHorizontalScrollBar .ScrollThumb {
    (u * 1.6), title 19.44 (u * 3.6) with 5.94 tracking (u * 1.1), keyline at 32 per cent brass, and
    a body painted opaque through the contour (#0f1113 under two ink washes). The schemes still
    recolour by role; these declare the surface the reference draws. */
+/* The strip is the brass wash over ink and nothing else: the reference draws no keyline under it,
+   and the one that sat here read as a border the accepted bar does not have. */
 .Taskbar {
     height: 48px;
     padding: 5.12px 17.6px 5.12px 17.6px;
-    background-color: gradient( linear, 0% 0%, 0% 55%, from( #b08d571f ), to( #0f1113 ) );
+    background-image: linear-gradient(180deg, #b08d571f 0%, #0f1113 100%);
+    border-bottom: 0px;
 }
 
 .Taskbar .TabStrip,
@@ -7265,6 +7281,12 @@ HTMLHorizontalScrollBar .ScrollThumb {
     background-color: #302a1f;
 }
 
+/* The chosen card states itself twice, as the reference does: the brass fill and the ink lit to
+   brass-lit, so a reader sees the choice in the outline as well as in the paint. */
+.ShellRoot .WindowFrame .ViewRowBox.On .ContourInk {
+    background-color: #d9b779;
+}
+
 .ShellRoot .ViewRowBox .ViewAction,
 .ShellRoot .ViewAction,
 .ShellRoot .ViewAction:hover {
@@ -7315,6 +7337,56 @@ HTMLHorizontalScrollBar .ScrollThumb {
 .ShellRoot .ViewRowBox .ViewMuted {
     color: #8b8778;
     font-size: 11.34px;
+}
+
+/* The reference card is two lines: its name row, then a meta line that names what the row is (an
+   installed app, a portal tool). The meta line is the reference's 1.9u at 0.08u of tracking in
+   brass, and a card that has one takes the reference's 8u box; a row without a kind keeps the
+   pin's 22 px card and its `band=7` crown. */
+.ShellRoot .WindowFrame .ViewRowBox.HasMeta {
+    min-height: 43.2px;
+}
+
+.ShellRoot .ViewRowBox.HasMeta .ViewAction,
+.ShellRoot .ViewRowBox.HasMeta .ViewLine,
+.ShellRoot .ViewRowBox.HasMeta .ViewMuted {
+    padding: 4px 10px 0px 10px;
+}
+
+.ShellRoot .ViewRowBox .ViewMeta {
+    padding: 1px 10px 4px 10px;
+    color: #b08d57;
+    font-size: 10.26px;
+    letter-spacing: 0.37px;
+    text-transform: uppercase;
+}
+
+/* A card that reports a state carries the reference's leading mark: a brass-lit ▶ 17 px inside the
+   box, with the name and its meta line starting at 33. The mark is drawn, so the row's own text
+   stays whole and nothing is dropped to fit it. */
+.ShellRoot .ViewRowBox .ViewGlyph {
+    position: absolute;
+    left: 17px;
+    top: 5px;
+    width: 9px;
+    height: 11px;
+}
+
+/* The mark is a shape: the contour profile in brass-lit, so a card's leading wedge is drawn by the
+   same nine slices as every other surface and no codepoint is typed into the chrome. */
+.ShellRoot .ViewRowBox .ViewGlyph .ContourInk,
+.ShellRoot .ViewRowBox .ViewGlyph .ContourFill {
+    background-color: #d9b779;
+}
+
+.ShellRoot .ViewRowBox.HasGlyph .ViewAction,
+.ShellRoot .ViewRowBox.HasGlyph .ViewLine,
+.ShellRoot .ViewRowBox.HasGlyph .ViewMuted {
+    padding-left: 33px;
+}
+
+.ShellRoot .ViewRowBox.HasGlyph .ViewMeta {
+    padding-left: 33px;
 }
 
 /* A heading names a group; it is not a card and a reader cannot choose it. It is drawn as the
@@ -7394,10 +7466,15 @@ HTMLHorizontalScrollBar .ScrollThumb {
     horizontal-align: center;
 }
 
+/* The build readout is one line in the strip, like every other cell's text: at a narrow bar it
+   wrapped to three and drew over the clock. */
 .Taskbar .VersionLabel,
 .VersionLabel {
+    height: 16px;
+    max-width: 180px;
     color: #8b8778;
     font-size: 11.34px;
+    text-overflow: ellipsis;
     background-color: transparent;
     border: 0px;
     padding: 3px 16px;
@@ -7424,11 +7501,21 @@ HTMLHorizontalScrollBar .ScrollThumb {
     background-color: #d9b779;
 }
 
+/* The plate's side ink is the reference's `--ink-x` at 0.9: the shell sets `--ink-x` from the
+   contour's own corner (10 px), so the drawn padding is 9, which is what the reference renders.
+   The earlier 36 here was the stylesheet's unused `--ink-x: 40px` default read as if it were the
+   laid-out value; `windowScale` replaces it before the plate is placed. */
 .WindowFrame .WindowTitle {
     height: 36px;
-    padding: 3.78px 36px 8.64px 36px;
-    background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5724 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
+    padding: 3.78px 9px 8.64px 9px;
+    background-image: linear-gradient(180deg, #b08d5724 0%, #b08d5705 70.0%, #00000000 100%);
     border-bottom: 1px solid #b08d5752;
+}
+
+/* The northwest grip is a 10 px mark inset 6, so the title text starts just clear of it: 9 px of
+   plate ink plus 8 leaves the glyph row whole. The reference has no grips and no such margin. */
+.WindowFrame .WindowTitleLabel {
+    margin-left: 8px;
 }
 
 .WindowFrame .WindowTitleLabel {
@@ -7457,7 +7544,7 @@ HTMLHorizontalScrollBar .ScrollThumb {
 .WindowFrame .WindowPlate {
     width: 100%;
     height: fit-content;
-    padding: 0px 36px 6px 36px;
+    padding: 0px 9px 6px 9px;
     display: flex; flex-direction: column;
     background-color: transparent;
 }
@@ -7478,6 +7565,17 @@ HTMLHorizontalScrollBar .ScrollThumb {
 .WindowFrame .WindowCountDot {
     color: #8b8778;
     font-size: 11.34px;
+}
+
+/* The gap between a number and its word is a margin, not a leading space: a label trims the space
+   at its start and the totals read "30rows". */
+.WindowFrame .WindowCountWord {
+    margin-left: 3px;
+}
+
+.WindowFrame .WindowCountDot {
+    margin-left: 6px;
+    margin-right: 6px;
 }
 
 .WindowFrame .WindowFindRow {
@@ -7552,6 +7650,33 @@ HTMLHorizontalScrollBar .ScrollThumb {
   .WindowFindEntry { display: block; width: 100%; height: 22px; box-sizing: border-box;
     font: inherit; outline: none; }
   .ViewRowBox { position: relative; display: block; box-sizing: border-box; }
+  /* Panorama's `ignore-parent-flow` + left/top alignment is absolute placement: the contour's
+     rows and rails are panels positioned by their own margins, so the adapter must take them out
+     of the flow. Left in flow they stack full width and draw stripes instead of a silhouette. */
+  .WindowFrame > .ContourSlices, .ViewRowBox > .ContourSlices, .WindowFindBox > .ContourSlices,
+  .ViewAction > .ContourSlices, .ShellTab > .ContourSlices, .WindowsButton > .ContourSlices,
+  .BarStart > .ContourSlices, .Clock > .ContourSlices { position: absolute; left: 0; top: 0; z-index: 0; }
+  .ContourSlices > * { position: absolute; left: 0; top: 0; }
+  /* A slice layer is placed against its own surface, so that surface has to be the containing
+     block; a Label host would otherwise anchor the silhouette to the bar behind it. */
+  .ShellTab, .WindowsButton, .BarStart, .Clock, .ViewRowBox, .WindowFindBox { position: relative; }
+  /* A positioned slice layer paints above a static label in CSS; Panorama paints in child order and
+     the layer is the first child. The label is lifted here so a bar cell's text reads. */
+  .ShellTabLabel, .WindowsButtonLabel, .LauncherLabel, .SchemeLabel { position: relative; z-index: 1; }
+  /* A Panorama label with a fixed height draws one line and ellipsises; a block in CSS would
+     wrap its text past that height. */
+  .VersionLabel, .WindowTitleLabel, .ShellTabLabel, .WindowsButtonLabel { white-space: nowrap; overflow: hidden; }
+  /* A positioned panel paints above in-flow content in CSS, while a Panorama panel paints in child
+     order. The silhouette is the first child and must stay behind the text, so the content is
+     lifted over it here. */
+  .WindowFrame > .WindowTitle, .WindowFrame > .WindowPlate, .WindowFrame > .WindowMeta,
+  .WindowFrame > .WindowBody, .WindowFrame > .WindowRefusal,
+  .ViewRowBox > .ViewAction, .ViewRowBox > .ViewLine, .ViewRowBox > .ViewMuted,
+  .ViewRowBox > .ViewMeta, .ViewRowBox > .ViewHeading,
+  .WindowFindBox > .WindowFindEntry { position: relative; z-index: 1; }
+  /* A Panorama Label is a block in its parent's flow; a span is inline and would not stack the
+     card's two lines. */
+  .ViewAction, .ViewLine, .ViewMuted, .ViewMeta, .ViewHeading, .ViewGlyph { display: block; }
   .WindowMeta { display: block; flex: 0 0 17px; height: 17px; box-sizing: border-box;
     overflow: hidden; }
   .WindowFrame.CompactHud .WindowMeta { display: none; }
@@ -10723,6 +10848,12 @@ var OpenlockContourData = {
         };
     }
 
+    // The pinned application draws the silhouette on a surface one pixel larger than the thing it
+    // frames: the reference's clip sits at half a pixel outside the frame, so the frame's own stroke
+    // is never cut in half at a boundary. A whole pixel is the closest this renderer can place it, and
+    // it is the difference between a frame that reaches the box's edge and one that reads as clipped.
+    var OVERHANG = 1;
+
     function paint(layer, width, height, strokeClass, fillClass) {
         if (!data) return false;
         if (width < 4 || height < 4) {
@@ -10731,17 +10862,21 @@ var OpenlockContourData = {
         }
         var look = data.look;
         var pads = padsOf(look);
-        var corner = Math.min(look.corner_px.height, height / 2);
+        // The drawn surface is the host inflated by the overhang, so the frame lands on the host's own
+        // edge with both halves of its stroke inside the clip, exactly as the reference applies it.
+        var outerW = width + 2 * OVERHANG;
+        var outerH = height + 2 * OVERHANG;
+        var corner = Math.min(look.corner_px.height, outerH / 2);
         // One shared padding arithmetic for every surface: the frame sits at the pin's frame pad, the
         // ink is one stroke wide, and the fill starts at pad plus stroke. A cell, a window crown and a
         // window row all come through here, so none of them carries its own numbers.
-        var shape = loopFor(width, height, pads.frame, corner);
+        var shape = loopFor(outerW, outerH, pads.frame, corner);
         var band = shape.band;
-        if (band * 2 > height) {
+        if (band * 2 > outerH) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
         }
-        var inner = loopFor(Math.max(4, width - 2 * pads.stroke), Math.max(4, height - 2 * pads.stroke),
+        var inner = loopFor(Math.max(4, outerW - 2 * pads.stroke), Math.max(4, outerH - 2 * pads.stroke),
             pads.frame, corner);
         // The stroke is an outline: two crowns and two side lines, one pixel each. The fill is a
         // whole surface: two crowns and the span between them. A stroke painted as a slab is what
@@ -10826,11 +10961,11 @@ var OpenlockContourData = {
         var interior = false;
         function shapeFor(w, h) { return useInner ? innerShape : outerShape; }
 
-        var drawnOuter = everyRow(kids, width, height, 0, 0, strokeClass, 0);
+        var drawnOuter = everyRow(kids, outerW, outerH, -OVERHANG, -OVERHANG, strokeClass, 0);
         interior = true;
         useInner = true;
-        var drawnInner = everyRow(kids, width - 2 * pads.stroke, height - 2 * pads.stroke,
-            pads.stroke, pads.stroke, fillClass, slots);
+        var drawnInner = everyRow(kids, outerW - 2 * pads.stroke, outerH - 2 * pads.stroke,
+            -OVERHANG + pads.stroke, -OVERHANG + pads.stroke, fillClass, slots);
         if (drawnOuter === 0 || drawnInner === 0) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
@@ -10840,7 +10975,16 @@ var OpenlockContourData = {
 
     function layerFor(host) {
         if (host.HasClass && host.HasClass("ContourSlices")) return host;
-        var existing = host.FindChildTraverse ? host.FindChildTraverse("ContourSlices") : null;
+        // A layer belongs to its own host, so only a DIRECT child counts. A descendant search found
+        // the card's leading mark's layer and painted the card's silhouette inside that mark.
+        var existing = null;
+        var kids = 0;
+        try { kids = host.GetChildCount ? host.GetChildCount() : 0; } catch (e) { kids = 0; }
+        for (var k = 0; k < kids; k += 1) {
+            var kid = null;
+            try { kid = host.GetChild(k); } catch (e2) { kid = null; }
+            if (kid && kid.HasClass && kid.HasClass("ContourSlices")) { existing = kid; break; }
+        }
         if (existing) return existing;
         var layer = $.CreatePanel("Panel", host, "ContourSlices");
         layer.AddClass("ContourSlices");
@@ -10872,6 +11016,13 @@ var OpenlockContourData = {
             return false;
         }
         var layer = layerFor(host);
+        // The silhouette's surface is the host plus the overhang on each side, placed back over the
+        // host: the frame then lands on the host's own edge with both halves of its stroke inside the
+        // clip, which is how the reference applies it.
+        setStyle(layer, "width", (w + 2 * OVERHANG) + "px");
+        setStyle(layer, "height", (h + 2 * OVERHANG) + "px");
+        setStyle(layer, "marginLeft", (-OVERHANG) + "px");
+        setStyle(layer, "marginTop", (-OVERHANG) + "px");
         // Panorama panels have no Children(): the engine's accessors are GetChildCount/GetChild,
         // and asking for Children() left every previous slice in place.
         var count = 0;
@@ -10899,6 +11050,9 @@ var OpenlockContourData = {
     globalThis.OpenlockContour = {
         draw: draw,
         pads: function () { return data ? padsOf(data.look) : { clip: 0.5, frame: 1.5, stroke: 1 }; },
+        // The drawn surface is this many pixels larger than the host on each side, and the caller
+        // that models the geometry has to know it.
+        overhang: function () { return OVERHANG; },
         refuse: refuse,
         refusals: function () { return refused.slice(); },
         band: function (height) {
@@ -11066,16 +11220,20 @@ var OpenlockContourData = {
         return text;
     }
 
-    // The count is the reference's totals line: the number of rows in brass, the word in dim, and
-    // the shown count only while a query is narrowing the list.
+    // The count is the reference's totals line: the number of rows in brass, the word in dim, then
+    // the shown count. The reference always states both totals, so the line does not change shape
+    // when a query narrows the list; only the shown number moves.
     function setCounts(record, rows, shown, filtered) {
         if (!record || !record.counts) return;
         if (record.countValue && record.countValue.text !== String(rows)) record.countValue.text = String(rows);
         if (record.countShown && record.countShown.text !== String(shown)) record.countShown.text = String(shown);
+        // A single row is one row: the totals line is prose, and "1 rows" is not.
+        var word = Number(rows) === 1 ? "row" : "rows";
+        if (record.countWord && record.countWord.text !== word) record.countWord.text = word;
         setChildVisibility(record, "plate", record.plate, rows > 0);
-        setChildVisibility(record, "countDot", record.countDot, filtered);
-        setChildVisibility(record, "countShown", record.countShown, filtered);
-        setChildVisibility(record, "countShownWord", record.countShownWord, filtered);
+        setChildVisibility(record, "countDot", record.countDot, true);
+        setChildVisibility(record, "countShown", record.countShown, true);
+        setChildVisibility(record, "countShownWord", record.countShownWord, true);
     }
 
     // filterFrame is the plate's one action: a row whose own text holds the query stays, every
@@ -11262,7 +11420,10 @@ var OpenlockContourData = {
     $.Schedule(50, barMetrics);
 
     function paintBarChips() {
-        var ids = ["DashboardButton", "WindowsButton", "Clock"];
+        // The clock is a readout, not a chip: it is a Label, so slices added to it are its children
+        // and paint after its own text — a contoured clock drew an empty cell. Start and the windows
+        // control are panels and take the ink; the clock takes the same box and dim type instead.
+        var ids = ["DashboardButton", "WindowsButton"];
         for (var i = 0; i < ids.length; i += 1) contourChip(root.FindChildTraverse(ids[i]));
         if (strip && strip.GetChildCount) {
             var tabs = kidsOf(strip);
@@ -16103,10 +16264,10 @@ var OpenlockContourData = {
         var counts = $.CreatePanel("Panel", plate, "");
         counts.AddClass("WindowCounts");
         var countValue = countLabel(counts, "WindowCountValue", "0");
-        countLabel(counts, "WindowCountWord", " rows");
-        var countDot = countLabel(counts, "WindowCountDot", "  ·  ");
+        var countWord = countLabel(counts, "WindowCountWord", "rows");
+        var countDot = countLabel(counts, "WindowCountDot", "·");
         var countShown = countLabel(counts, "WindowCountValue", "0");
-        var countShownWord = countLabel(counts, "WindowCountWord", " shown");
+        var countShownWord = countLabel(counts, "WindowCountWord", "shown");
         var findRow = $.CreatePanel("Panel", plate, "");
         findRow.AddClass("WindowFindRow");
         var findLabel = $.CreatePanel("Label", findRow, "");
@@ -16181,6 +16342,7 @@ var OpenlockContourData = {
             countValue: countValue,
             countShown: countShown,
             countDot: countDot,
+            countWord: countWord,
             countShownWord: countShownWord,
             findRow: findRow,
             find: findEntry,
@@ -17079,7 +17241,30 @@ var OpenlockContourData = {
 
     // --- shell views ---------------------------------------------------------
 
-    function rowXd(body, text, cls) {
+    // The reference's card is two lines: the row's own text, then a meta line that names what the
+    // row is. A window's kind is its lane, so the line reads "shell window" instead of repeating
+    // the id the row already carries.
+    function laneKind(entry) {
+        var lane = String((entry && entry.lane) || "shell");
+        if (lane === "hud") return "hud window";
+        if (lane === "game") return "game screen";
+        return "shell window";
+    }
+
+    // A meta line is the card's second line, and only a card that has one takes the reference's
+    // 8u box: a row without a kind keeps the pin's 22 px card.
+    function cardMeta(box, kind) {
+        var text = String(kind == null ? "" : kind).replace(/^\s+|\s+$/g, "");
+        if (!text) return null;
+        box.AddClass("HasMeta");
+        var meta = $.CreatePanel("Label", box, "");
+        meta.AddClass("ViewMeta");
+        meta.text = text;
+        meta.hittest = false;
+        return meta;
+    }
+
+    function rowXd(body, text, cls, kind) {
         // Every line in a window is a surface too: the ground takes the contour, the Label keeps the
         // text. A row drawn as a bare Label is a rectangle inside a contoured frame.
         var box = $.CreatePanel("Panel", body, "");
@@ -17092,6 +17277,7 @@ var OpenlockContourData = {
         l.AddClass(cls || "ViewLine");
         l.AddClass("ViewRow");
         l.text = text;
+        if ((cls || "") !== "ViewHeading") cardMeta(box, kind);
         contourChip(box);
         return l;
     }
@@ -17107,7 +17293,10 @@ var OpenlockContourData = {
     // control: it keeps its text (which is the name a reader and the game's UI both see), takes
     // the pointer itself, and owns the activation handler. A row built as an unnamed Panel with a
     // hit-test-disabled label is addressable only by position, which is the defect this replaces.
-    function actionRow(body, text, fn, id) {
+    // A card's leading mark is drawn, not typed into the row: the reference puts a brass-lit ▶ in its
+    // own column, and a row whose text starts with a bullet reads as a radio instead. `state` is
+    // undefined for a plain action and true/false for a card that reports whether it is chosen.
+    function actionRow(body, text, fn, id, kind, state) {
         // The row is a surface, so it takes the contour like a bar cell: a ground panel that owns the
         // shape, and the Label inside it that keeps the text, the pointer and the handler.
         var box = $.CreatePanel("Panel", body, "");
@@ -17117,12 +17306,24 @@ var OpenlockContourData = {
         row.AddClass("ViewAction");
         row.AddClass("ViewRow");
         row.text = text;
+        if (state !== undefined) {
+            box.AddClass("HasGlyph");
+            // The mark is drawn, not typed: the shell's chrome has no codepoint glyphs, so the card's
+            // leading wedge is a small contoured panel in brass-lit, the same way the bar's controls
+            // are shapes rather than characters.
+            var glyph = $.CreatePanel("Panel", box, "");
+            glyph.AddClass("ViewGlyph");
+            glyph.hittest = false;
+            contourChip(glyph);
+            if (state) box.AddClass("On");
+        }
         row.hittest = true;
         row.SetPanelEvent("onmouseactivate", function () {
             lastInteractionAt = Date.now();
             markRow(box);
             fn();
         });
+        cardMeta(box, kind);
         contourChip(box);
         return row;
     }
@@ -18728,10 +18929,10 @@ var OpenlockContourData = {
         for (var i = 0; i < data.windows.length; i++) {
             (function (entry) {
                 var active = entry.id === win.id;
-                actionRow(body, (active ? "●  " : "○  ") + entry.title + "  ·  " + entry.id, function () {
+                actionRow(body, entry.title + "  ·  " + entry.id, function () {
                     dashSelected = entry.id;
                     refreshDashboard();
-                }, "openlock-row-" + String(entry.id).replace(/[^A-Za-z0-9_-]/g, "_"));
+                }, "openlock-row-" + String(entry.id).replace(/[^A-Za-z0-9_-]/g, "_"), laneKind(entry), !!active);
             })(data.windows[i]);
         }
 
@@ -19424,10 +19625,14 @@ var OpenlockContourData = {
         function tick() {
             if (clockLabel) {
                 try {
+                    // The bar's clock is the reference's readout: the day and month, then the time.
                     var now = new Date();
                     var h = now.getHours();
                     var m = now.getMinutes();
-                    clockLabel.text = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+                    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    var day = now.getDate();
+                    clockLabel.text = (day < 10 ? "0" : "") + day + " " + months[now.getMonth()] + "  " +
+                        (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
                 } catch (e) {
                     clockLabel.text = "--:--";
                 }
@@ -20005,7 +20210,7 @@ var OpenlockContourData = {
 </script>
 
 <script>
-  document.documentElement.setAttribute('data-shell-sandbox', '2026-11-22 11:37 UTC');
+  document.documentElement.setAttribute('data-shell-sandbox', '2026-11-22 12:13 UTC');
 </script>
 
 <script>
@@ -20166,7 +20371,9 @@ var OpenlockContourData = {
       var title = frame.querySelector('.WindowTitle');
       if (!title) { fail(issues, id + ': no title strip'); return; }
       var t = box(title);
-      var expected = frame.classList.contains('CompactHud') && !frame.classList.contains('Focused') ? 16 : 30;
+      // The pin is `pins/contour-pin.json` (model-forge), `surfaces.plate.title_px`: the start
+      // window's plate is 36, cut from the corner band, and a compact HUD keeps its 16 px strip.
+      var expected = frame.classList.contains('CompactHud') && !frame.classList.contains('Focused') ? 16 : 36;
       if (Math.abs(t.h - expected) > 1) fail(issues, id + ': title height ' + Math.round(t.h) + ' != ' + expected);
       var buttons = Array.prototype.slice.call(frame.querySelectorAll('.WindowButton'));
       if (buttons.length < 4) fail(issues, id + ': ' + buttons.length + ' window controls, expected at least 4');
@@ -20174,8 +20381,11 @@ var OpenlockContourData = {
         var b = box(button);
         var narrow = frame.classList.contains('Narrow');
         var compact = frame.classList.contains('CompactHud');
-        var expectedW = narrow ? 8 : (compact ? 14 : 26);
-        var expectedH = narrow ? 8 : (compact ? 14 : 22);
+        // `surfaces.plate.control_px`: the pin's plate carries 20x20 controls in the `.FormPopit`
+        // form this build ships (the 26x22 this probe expected was any-form geometry read from the
+        // reference at its own scale).
+        var expectedW = narrow ? 8 : (compact ? 14 : 20);
+        var expectedH = narrow ? 8 : (compact ? 14 : 20);
         if (Math.abs(b.w - expectedW) > 1 || Math.abs(b.h - expectedH) > 1) {
           fail(issues, id + ': control ' + (button.className || '?') + ' is ' +
             Math.round(b.w) + 'x' + Math.round(b.h) + ', expected ' + expectedW + 'x' + expectedH);
@@ -20186,6 +20396,23 @@ var OpenlockContourData = {
           fail(issues, id + ': a control has no drawn shape');
         }
       });
+      // `surfaces.plate.row_px` = 22: a one-line row is the pin's card, and a row that carries its
+      // second line (the reference's meta line) is `surfaces.plate.card_px` = 43.2. The row band is
+      // what the pin measures; a card is the same row with the meta line inside it.
+      if (!frame.classList.contains('CompactHud')) {
+        Array.prototype.slice.call(frame.querySelectorAll('.ViewRowBox')).forEach(function (row) {
+          if (row.classList.contains('ViewHead')) return;
+          // Only a row a reader can choose is the pin's card; an informational line takes the
+          // height its text needs and is not a control.
+          if (!row.querySelector('.ViewAction')) return;
+          var r = box(row);
+          var wants = row.classList.contains('HasMeta') ? 43.2 : 22;
+          if (r.h > 0 && Math.abs(r.h - wants) > 1.5) {
+            fail(issues, id + ': row "' + (row.textContent || '').trim().slice(0, 24) +
+              '" is ' + Math.round(r.h) + ' high, expected ' + wants);
+          }
+        });
+      }
       var grips = Array.prototype.slice.call(frame.querySelectorAll('.ResizeGrip')).filter(function (grip) {
         var style = getComputedStyle(grip);
         return style.display !== 'none' && style.visibility !== 'hidden' &&
@@ -20225,6 +20452,16 @@ var OpenlockContourData = {
           fail(issues, 'a streamed XML Button is not hit-testable');
         }
       }
+    }
+    // `bar_metrics start=93 startx=18`: the bar's Start cell is the pin's own measured width, and
+    // it is the first thing the pointer meets on the left of the strip.
+    var startCell = document.querySelector('.BarStart') || document.querySelector('.WindowsButton');
+    if (!startCell) {
+      fail(issues, 'the bar has no Start cell');
+    } else {
+      var sc = box(startCell);
+      if (Math.abs(sc.w - 93) > 1) fail(issues, 'the Start cell is ' + Math.round(sc.w) + ' wide, expected 93');
+      if (Math.abs(sc.x - 18) > 1) fail(issues, 'the Start cell starts at ' + Math.round(sc.x) + ', expected 18');
     }
     // A game window/cell stream is the running client's surface. The installer witness never
     // opens one, so a StreamedXml frame here means the sandbox booted a game package.

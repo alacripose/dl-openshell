@@ -1814,12 +1814,19 @@ HTMLHorizontalScrollBar .ScrollThumb {
    crowns, one rail across the span between them. No part of the shape is scaled, so a taskbar
    chip and a window read as one form at two sizes and the outline is never cut by a clip.
    `tools/gen_contour_slices.py` writes the data; `openlock_contour.js` draws it. */
+/* The silhouette is drawn on a surface one pixel larger than the box it frames, and it is
+   positioned back over that box: the reference keeps the clip half a pixel outside the frame so
+   the frame's stroke is never cut in half at a boundary, and this is the same application in whole
+   pixels. The layer never clips, so a crown that reaches the edge keeps every one of its rows. */
 .ContourSlices {
     ignore-parent-flow: true;
     horizontal-align: left;
     vertical-align: top;
     width: 100%;
     height: 100%;
+    /* The size, margin and overhang are the painter's (it knows the surface's box); the layer only
+       refuses to clip, so a crown that reaches the edge keeps every row it draws. */
+    clip: false;
 }
 
 .ContourInk {

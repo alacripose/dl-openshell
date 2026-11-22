@@ -11,10 +11,9 @@
 }
 
 /* The window base is the Popit plate: an uppercase brass title over a keyline, then the dim meta
-   strip. The cost readout and resize grips stay retired, because they are debug chrome. */
-.WindowFrame .WindowTitle {
-    visibility: visible;
-}
+   strip. The cost readout stays retired, because it is debug chrome. The title's own visibility is
+   the frame's: declaring `visible` here re-showed a collapsed window's title strip, and every
+   hidden frame stacked its plate over the one on screen. */
 
 .WindowFrame .WindowCost {
     visibility: collapse;
@@ -203,6 +202,13 @@
     background-color: #b08d574d;
 }
 
+/* The clock is a Label, so its slices are its children and paint after its own text. Its frame is an
+   ink rail at the edges; the fill stays clear, or the readout would be covered by its own ground. */
+.Taskbar .Clock .ContourFill,
+.Clock .ContourFill {
+    background-color: transparent;
+}
+
 /* A window that carries the contour paints nothing of its own: the ink ground is the contour's own
    fill, so the body meets the crown instead of a rectangle cutting across it. */
 .ShellRoot .WindowFrame,
@@ -293,10 +299,13 @@
    (u * 1.6), title 19.44 (u * 3.6) with 5.94 tracking (u * 1.1), keyline at 32 per cent brass, and
    a body painted opaque through the contour (#0f1113 under two ink washes). The schemes still
    recolour by role; these declare the surface the reference draws. */
+/* The strip is the brass wash over ink and nothing else: the reference draws no keyline under it,
+   and the one that sat here read as a border the accepted bar does not have. */
 .Taskbar {
     height: 48px;
     padding: 5.12px 17.6px 5.12px 17.6px;
     background-color: gradient( linear, 0% 0%, 0% 55%, from( #b08d571f ), to( #0f1113 ) );
+    border-bottom: 0px;
 }
 
 .Taskbar .TabStrip,
@@ -413,6 +422,12 @@
     background-color: #302a1f;
 }
 
+/* The chosen card states itself twice, as the reference does: the brass fill and the ink lit to
+   brass-lit, so a reader sees the choice in the outline as well as in the paint. */
+.ShellRoot .WindowFrame .ViewRowBox.On .ContourInk {
+    background-color: #d9b779;
+}
+
 .ShellRoot .ViewRowBox .ViewAction,
 .ShellRoot .ViewAction,
 .ShellRoot .ViewAction:hover {
@@ -463,6 +478,56 @@
 .ShellRoot .ViewRowBox .ViewMuted {
     color: #8b8778;
     font-size: 11.34px;
+}
+
+/* The reference card is two lines: its name row, then a meta line that names what the row is (an
+   installed app, a portal tool). The meta line is the reference's 1.9u at 0.08u of tracking in
+   brass, and a card that has one takes the reference's 8u box; a row without a kind keeps the
+   pin's 22 px card and its `band=7` crown. */
+.ShellRoot .WindowFrame .ViewRowBox.HasMeta {
+    min-height: 43.2px;
+}
+
+.ShellRoot .ViewRowBox.HasMeta .ViewAction,
+.ShellRoot .ViewRowBox.HasMeta .ViewLine,
+.ShellRoot .ViewRowBox.HasMeta .ViewMuted {
+    padding: 4px 10px 0px 10px;
+}
+
+.ShellRoot .ViewRowBox .ViewMeta {
+    padding: 1px 10px 4px 10px;
+    color: #b08d57;
+    font-size: 10.26px;
+    letter-spacing: 0.37px;
+    text-transform: uppercase;
+}
+
+/* A card that reports a state carries the reference's leading mark: a brass-lit ▶ 17 px inside the
+   box, with the name and its meta line starting at 33. The mark is drawn, so the row's own text
+   stays whole and nothing is dropped to fit it. */
+.ShellRoot .ViewRowBox .ViewGlyph {
+    position: absolute;
+    left: 17px;
+    top: 5px;
+    width: 9px;
+    height: 11px;
+}
+
+/* The mark is a shape: the contour profile in brass-lit, so a card's leading wedge is drawn by the
+   same nine slices as every other surface and no codepoint is typed into the chrome. */
+.ShellRoot .ViewRowBox .ViewGlyph .ContourInk,
+.ShellRoot .ViewRowBox .ViewGlyph .ContourFill {
+    background-color: #d9b779;
+}
+
+.ShellRoot .ViewRowBox.HasGlyph .ViewAction,
+.ShellRoot .ViewRowBox.HasGlyph .ViewLine,
+.ShellRoot .ViewRowBox.HasGlyph .ViewMuted {
+    padding-left: 33px;
+}
+
+.ShellRoot .ViewRowBox.HasGlyph .ViewMeta {
+    padding-left: 33px;
 }
 
 /* A heading names a group; it is not a card and a reader cannot choose it. It is drawn as the
@@ -542,10 +607,15 @@
     horizontal-align: center;
 }
 
+/* The build readout is one line in the strip, like every other cell's text: at a narrow bar it
+   wrapped to three and drew over the clock. */
 .Taskbar .VersionLabel,
 .VersionLabel {
+    height: 16px;
+    max-width: 180px;
     color: #8b8778;
     font-size: 11.34px;
+    text-overflow: ellipsis;
     background-color: transparent;
     border: 0px;
     padding: 3px 16px;
@@ -572,11 +642,21 @@
     background-color: #d9b779;
 }
 
+/* The plate's side ink is the reference's `--ink-x` at 0.9: the shell sets `--ink-x` from the
+   contour's own corner (10 px), so the drawn padding is 9, which is what the reference renders.
+   The earlier 36 here was the stylesheet's unused `--ink-x: 40px` default read as if it were the
+   laid-out value; `windowScale` replaces it before the plate is placed. */
 .WindowFrame .WindowTitle {
     height: 36px;
-    padding: 3.78px 36px 8.64px 36px;
+    padding: 3.78px 9px 8.64px 9px;
     background-color: gradient( linear, 0% 0%, 0% 100%, from( #b08d5724 ), color-stop( 0.7, #b08d5705 ), to( #00000000 ) );
     border-bottom: 1px solid #b08d5752;
+}
+
+/* The northwest grip is a 10 px mark inset 6, so the title text starts just clear of it: 9 px of
+   plate ink plus 8 leaves the glyph row whole. The reference has no grips and no such margin. */
+.WindowFrame .WindowTitleLabel {
+    margin-left: 8px;
 }
 
 .WindowFrame .WindowTitleLabel {
@@ -605,7 +685,7 @@
 .WindowFrame .WindowPlate {
     width: 100%;
     height: fit-children;
-    padding: 0px 36px 6px 36px;
+    padding: 0px 9px 6px 9px;
     flow-children: down;
     background-color: transparent;
 }
@@ -626,6 +706,17 @@
 .WindowFrame .WindowCountDot {
     color: #8b8778;
     font-size: 11.34px;
+}
+
+/* The gap between a number and its word is a margin, not a leading space: a label trims the space
+   at its start and the totals read "30rows". */
+.WindowFrame .WindowCountWord {
+    margin-left: 3px;
+}
+
+.WindowFrame .WindowCountDot {
+    margin-left: 6px;
+    margin-right: 6px;
 }
 
 .WindowFrame .WindowFindRow {

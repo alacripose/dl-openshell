@@ -137,6 +137,12 @@
         };
     }
 
+    // The pinned application draws the silhouette on a surface one pixel larger than the thing it
+    // frames: the reference's clip sits at half a pixel outside the frame, so the frame's own stroke
+    // is never cut in half at a boundary. A whole pixel is the closest this renderer can place it, and
+    // it is the difference between a frame that reaches the box's edge and one that reads as clipped.
+    var OVERHANG = 1;
+
     function paint(layer, width, height, strokeClass, fillClass) {
         if (!data) return false;
         if (width < 4 || height < 4) {
@@ -145,17 +151,21 @@
         }
         var look = data.look;
         var pads = padsOf(look);
-        var corner = Math.min(look.corner_px.height, height / 2);
+        // The drawn surface is the host inflated by the overhang, so the frame lands on the host's own
+        // edge with both halves of its stroke inside the clip, exactly as the reference applies it.
+        var outerW = width + 2 * OVERHANG;
+        var outerH = height + 2 * OVERHANG;
+        var corner = Math.min(look.corner_px.height, outerH / 2);
         // One shared padding arithmetic for every surface: the frame sits at the pin's frame pad, the
         // ink is one stroke wide, and the fill starts at pad plus stroke. A cell, a window crown and a
         // window row all come through here, so none of them carries its own numbers.
-        var shape = loopFor(width, height, pads.frame, corner);
+        var shape = loopFor(outerW, outerH, pads.frame, corner);
         var band = shape.band;
-        if (band * 2 > height) {
+        if (band * 2 > outerH) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
         }
-        var inner = loopFor(Math.max(4, width - 2 * pads.stroke), Math.max(4, height - 2 * pads.stroke),
+        var inner = loopFor(Math.max(4, outerW - 2 * pads.stroke), Math.max(4, outerH - 2 * pads.stroke),
             pads.frame, corner);
         // The stroke is an outline: two crowns and two side lines, one pixel each. The fill is a
         // whole surface: two crowns and the span between them. A stroke painted as a slab is what
@@ -240,11 +250,11 @@
         var interior = false;
         function shapeFor(w, h) { return useInner ? innerShape : outerShape; }
 
-        var drawnOuter = everyRow(kids, width, height, 0, 0, strokeClass, 0);
+        var drawnOuter = everyRow(kids, outerW, outerH, -OVERHANG, -OVERHANG, strokeClass, 0);
         interior = true;
         useInner = true;
-        var drawnInner = everyRow(kids, width - 2 * pads.stroke, height - 2 * pads.stroke,
-            pads.stroke, pads.stroke, fillClass, slots);
+        var drawnInner = everyRow(kids, outerW - 2 * pads.stroke, outerH - 2 * pads.stroke,
+            -OVERHANG + pads.stroke, -OVERHANG + pads.stroke, fillClass, slots);
         if (drawnOuter === 0 || drawnInner === 0) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
@@ -254,7 +264,16 @@
 
     function layerFor(host) {
         if (host.HasClass && host.HasClass("ContourSlices")) return host;
-        var existing = host.FindChildTraverse ? host.FindChildTraverse("ContourSlices") : null;
+        // A layer belongs to its own host, so only a DIRECT child counts. A descendant search found
+        // the card's leading mark's layer and painted the card's silhouette inside that mark.
+        var existing = null;
+        var kids = 0;
+        try { kids = host.GetChildCount ? host.GetChildCount() : 0; } catch (e) { kids = 0; }
+        for (var k = 0; k < kids; k += 1) {
+            var kid = null;
+            try { kid = host.GetChild(k); } catch (e2) { kid = null; }
+            if (kid && kid.HasClass && kid.HasClass("ContourSlices")) { existing = kid; break; }
+        }
         if (existing) return existing;
         var layer = $.CreatePanel("Panel", host, "ContourSlices");
         layer.AddClass("ContourSlices");
@@ -286,6 +305,13 @@
             return false;
         }
         var layer = layerFor(host);
+        // The silhouette's surface is the host plus the overhang on each side, placed back over the
+        // host: the frame then lands on the host's own edge with both halves of its stroke inside the
+        // clip, which is how the reference applies it.
+        setStyle(layer, "width", (w + 2 * OVERHANG) + "px");
+        setStyle(layer, "height", (h + 2 * OVERHANG) + "px");
+        setStyle(layer, "marginLeft", (-OVERHANG) + "px");
+        setStyle(layer, "marginTop", (-OVERHANG) + "px");
         // Panorama panels have no Children(): the engine's accessors are GetChildCount/GetChild,
         // and asking for Children() left every previous slice in place.
         var count = 0;
@@ -313,6 +339,9 @@
     globalThis.OpenlockContour = {
         draw: draw,
         pads: function () { return data ? padsOf(data.look) : { clip: 0.5, frame: 1.5, stroke: 1 }; },
+        // The drawn surface is this many pixels larger than the host on each side, and the caller
+        // that models the geometry has to know it.
+        overhang: function () { return OVERHANG; },
         refuse: refuse,
         refusals: function () { return refused.slice(); },
         band: function (height) {
