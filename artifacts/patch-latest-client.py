@@ -1,6 +1,7 @@
+import os
 from pathlib import Path
 
-ROOT = Path(r"<home>\Documents\openlock")
+ROOT = Path(os.path.expanduser(r"~\Documents\openlock"))
 
 css_path = ROOT / "clientaddon" / "panorama" / "styles" / "openlock_shell.css"
 raw = css_path.read_bytes()

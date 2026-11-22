@@ -52,7 +52,7 @@ MACHINE = os.environ.get("FAMILY_AXIS", "http://127.0.0.1:8787")
 DISTRO = os.environ.get("FAMILY_AXIS_DISTRO", "Debian")
 READINGS = ("/api/axis/system", "/api/axis/civilians", "/api/axis/stars")
 
-PROSE_TOOL = Path("<home>/Documents/deadlock-model-forge/tools/ui_prose.py")
+PROSE_TOOL = Path(os.path.expanduser("~/Documents/deadlock-model-forge/tools/ui_prose.py"))
 PROSE_MJS = Path("F:/Documents/brass-meridian/tools/prose.mjs")
 MAX_WORDS = 18
 MAX_CHARS = 92

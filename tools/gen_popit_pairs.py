@@ -126,45 +126,9 @@ def css(data: dict) -> str:
         emphasis = pair["emphasis"]
         ink = contrast_ink(primary)
         lines.append(f"/* {pair['name']} — {pair['game']} */")
-        # The pair table carries its own role map and the prototype agrees: primary is the menu
-        # background / slab fill, secondary is the menu accent and highlight, tertiary is the
-        # second highlight, emphasis is the emphasised text. That is LBP1's shipped order. LBP3
-        # inverts it, and applying LBP3's map to these pairs painted a blue Popit magenta - the
-        # role table travels with the data so a pair is never read through another generation's
-        # map. (POPIT-AUDIT: "A port must not assume primary always means panel background.")
-        lines.append(f".{klass} .PopitRoot {{ background-color: {primary}E6; border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitChild {{ background-color: {primary}E6; border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitHeaderTitle {{ color: {emphasis}; }}")
-        lines.append(f".{klass} .PopitWordmark {{ color: {emphasis}; }}")
-        lines.append(f".{klass} .PopitPairChip {{ background-color: {secondary}33; border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitPairChipLabel {{ color: {ink}; }}")
-        lines.append(f".{klass} .PopitRootRow.Active {{ background-color: {secondary}33; border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitTool.Active {{ background-color: {secondary}; border-color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitOption.Selected {{ background-color: {secondary}; border-color: {tertiary}; }}")
-        lines.append(f".{klass} .PopitPageDot.On {{ background-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitItem.Selected {{ border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitTarget.Selected {{ border-color: {secondary}; }}")
-        lines.append(f".{klass} .PopitDetail {{ color: {emphasis}; }}")
-        # The live shell uses the same slot map the Popit Forge prototype writes into a live
-        # theme (`popit_ui/theme.py: pair_slots`): the primary shades the surface, the secondary
-        # carries the header and the outline, the tertiary is the title ink, and a quarter-white
-        # mix of the primary is the cell edge. The transforms are copied, not re-chosen, so one
-        # selection mechanism paints both the Popit and the window manager.
-        lines.append(
-            f".{klass} .WindowFrame {{ background-color: #{shade(primary, 0.42)}; "
-            f"border-color: {secondary}; }}"
-        )
-        lines.append(
-            f".{klass} .WindowFrame.CompactHud {{ background-color: transparent; "
-            f"border-color: {secondary}; }}"
-        )
-        lines.append(
-            f".{klass} .WindowFrame .WindowTitle {{ background-color: #{shade(secondary, 0.60)}; }}"
-        )
-        lines.append(f".{klass} .WindowFrame .WindowTitleLabel {{ color: {tertiary}; }}")
-        lines.append(
-            f".{klass} .ThemedCell {{ border-color: #{mix(primary, '#ffffff', 0.25)}59; }}"
-        )
+        # One painting system: the active scheme paints the Popit slab and the shell windows in
+        # openlock_schemes.css. This table is only the palette swatch data the Popit's Palette
+        # page lists, so there is no second place a window or the Popit can be coloured from.
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

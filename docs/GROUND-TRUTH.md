@@ -57,7 +57,7 @@ in this repo therefore describes the plugin for tooling and humans; it is **not*
 ### Language, entry point, config
 
 - C# on .NET 10 (`docs/getting-started/developers/setup.md`: *".NET 10.0 SDK or later"*). Installed
-  here: **10.0.400**.
+  here: **<host>**.
 - Entry point: `public sealed class OpenlockPlugin : DeadworksPluginBase`, `Name` required,
   `OnLoad(bool isReload)` / `OnUnload()`.
 - Config: from `docs/features/configuration.md`, `[PluginConfig]` creates
@@ -84,7 +84,7 @@ in this repo therefore describes the plugin for tooling and humans; it is **not*
   binaries expected under `game\bin\win64\`.
 - Modding traces already present: `gameinfo.gi.grimoire-bak` and `game\citadel\grimoire\`
   (Grimoire mod manager), `addons\mods.txt`.
-- `.NET` SDKs: `10.0.101`, `10.0.400`.
+- `.NET` SDKs: `<host>`, `<host>`.
 - **Deadworks is not installed**: no `deadworks.exe`, no `game\bin\win64\managed\` anywhere on D:.
 
 ### Symbols, from the schema dump of this exact build

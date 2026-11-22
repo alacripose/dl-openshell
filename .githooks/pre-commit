@@ -1,0 +1,18 @@
+#!/bin/sh
+# Refuse a secret or a personal detail before it becomes a commit.
+#
+# The rule is one line: secrets and personal information are not committed, everything else is.
+# `tools/secrets_gate.py --check` reads the staged tree and exits 1 on a private key, a vendor token,
+# a password assignment, a home directory, an email address or a private network address.
+#
+# Installed by `git config core.hooksPath .githooks` in this repository. A bypass is deliberate and
+# visible: `git commit --no-verify`, which is a decision recorded in the ledger, not an accident.
+
+set -eu
+
+if ! python -c "import sys; sys.exit(0)" >/dev/null 2>&1; then
+  echo "secrets gate: no python on PATH; the commit is refused rather than unchecked" >&2
+  exit 1
+fi
+
+python tools/secrets_gate.py --check

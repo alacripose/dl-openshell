@@ -1,0 +1,213 @@
+{
+  "repo": "<home>\\Documents\\openlock",
+  "at": "2026-11-20T18:11:55+00:00",
+  "file_digest": "ff4c07f091e46daee3e722de4cc9db81cb6c39ce9b74ba7d9071ff56a45dbaff",
+  "sections": 10,
+  "ladders": {
+    "evidence_grade": {
+      "A": 7,
+      "C": 2,
+      "B": 1
+    },
+    "gate_status": {
+      "current": 9,
+      "refuted": 1
+    },
+    "evidence_origin": {
+      "diagnostic": 5,
+      "owner": 5
+    }
+  },
+  "open_limits": [
+    {
+      "id": "0b8719d0ba",
+      "section": "## 2026-11-19 \u2014 a frame around a game cell traces the cell, not its paint",
+      "date": "2026-11-19",
+      "text": "- **Not checked.** No real Deadlock HUD cell was framed in the running client; the fake tree has no panel positions, so the outline arithmetic is covered by the existing frame checks rather than a new"
+    },
+    {
+      "id": "6b54391d8c",
+      "section": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "text": "- **A \"Not checked\" line is a ticket, not an apology.** It carries an id in"
+    },
+    {
+      "id": "2644af20f3",
+      "section": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "text": "`artifacts/agents-judge.json` under `open_limits`. It is closed by a later measured section that"
+    },
+    {
+      "id": "1830cca8ca",
+      "section": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "text": "- **A repeated gap is a refusal.** A limit that survives several turns without a closing attempt is"
+    },
+    {
+      "id": "f9c61bfa24",
+      "section": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "text": "`limit-stale`, and the work to close it is the ticket it already has."
+    },
+    {
+      "id": "f2e02fbccb",
+      "section": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "text": "the judge export, which states what is current, what is superseded and what is still open."
+    }
+  ],
+  "rows": [
+    {
+      "heading": "__head__",
+      "date": "",
+      "digest": "ce48a3ee12867002e5f121eb4773c962b62866ec5127f7bed27977efa2cda046",
+      "evidence_grade": "C",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## Test verification",
+      "date": "",
+      "digest": "63c7815ba98501f0979d59e7ae8f6bd6c638359c361b7b758bc5a368c39fba00",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## Dev-grade installs",
+      "date": "",
+      "digest": "b15e6af74b51af64710706cab74ae56bde3140e0634dc03c7b1336f1616e4931",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 1. Formats: upgraded and legacy",
+      "date": "",
+      "digest": "93bfc11bcb7201ff8aab466dfb6df9ffd609b227f63ad8a40f2cf3809ed74455",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [
+        "dl-enclave"
+      ],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2. Status to the shell connection",
+      "date": "",
+      "digest": "3fd1b3529ab7de3e02fcf806586d7e90fd9874a02e30ec2d4de21bceea854775",
+      "evidence_grade": "C",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 3. Resynthesizing this file",
+      "date": "",
+      "digest": "d945f75acced322abff3752a2b196d0da0883adf83ea77743f06b9699a9c8862",
+      "evidence_grade": "C",
+      "gate_status": "current",
+      "evidence_origin": "diagnostic",
+      "refusals": [
+        "agents-authority-trimmed"
+      ],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2026-11-13 \u2014 scope: the family working set, and non-authoritative system notices",
+      "date": "2026-11-13",
+      "digest": "58b4b1c9d03628dccca15445b9c3226b91a9c0ba1e57f215a971f58494f90db1",
+      "evidence_grade": "B",
+      "gate_status": "current",
+      "evidence_origin": "owner",
+      "refusals": [
+        "ala-system",
+        "alacripose-landing",
+        "db-mc-indev",
+        "deadlock-model-forge",
+        "dl-enclave",
+        "income-engine",
+        "secure-shell",
+        "shploingus-clean",
+        "shploingus-game"
+      ],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2026-11-19 \u2014 a frame around a game cell traces the cell, not its paint",
+      "date": "2026-11-19",
+      "digest": "34470748a61ab4729b9170c8fd491e68fad7364aa440be3a5074a823aee29fc3",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "owner",
+      "refusals": [],
+      "limits": [
+        "- **Not checked.** No real Deadlock HUD cell was framed in the running client; the fake tree has no panel positions, so the outline arithmetic is covered by the existing frame checks rather than a new"
+      ],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2026-11-19 \u2014 the Popit follows the two design bibles",
+      "date": "2026-11-19",
+      "digest": "69b6f6ad0988ddcc8edbd67c7478313b4031626c36ffe43f5c5edfc3c1071a1a",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "owner",
+      "refusals": [
+        "flow-children",
+        "horizontal-align",
+        "ignore-parent-flow",
+        "lbp1-yellow-fuchsia"
+      ],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2026-11-20 \u2014 agents files stay readable, and the judge reads the archive",
+      "date": "2026-11-20",
+      "digest": "496b6aaecf2974a9d20558ea357400e62762a8549872a35af2374a674a539c21",
+      "evidence_grade": "A",
+      "gate_status": "refuted",
+      "evidence_origin": "owner",
+      "refusals": [
+        "shorthand-compaction"
+      ],
+      "limits": [],
+      "superseded_by": ""
+    },
+    {
+      "heading": "## 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket",
+      "date": "2026-11-20",
+      "digest": "cbcaaf7958f90063ee016986ebdfc321c04bdb7b6ef6bc4323e7b3c6386ed40c",
+      "evidence_grade": "A",
+      "gate_status": "current",
+      "evidence_origin": "owner",
+      "refusals": [
+        "limit-stale"
+      ],
+      "limits": [
+        "- **A \"Not checked\" line is a ticket, not an apology.** It carries an id in",
+        "`artifacts/agents-judge.json` under `open_limits`. It is closed by a later measured section that",
+        "- **A repeated gap is a refusal.** A limit that survives several turns without a closing attempt is",
+        "`limit-stale`, and the work to close it is the ticket it already has.",
+        "the judge export, which states what is current, what is superseded and what is still open."
+      ],
+      "superseded_by": ""
+    }
+  ]
+}

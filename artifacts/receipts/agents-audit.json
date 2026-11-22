@@ -1,8 +1,8 @@
 {
   "format": "openlock.agents-audit/1",
   "subject": {
-    "AGENTS.md": "e323e810c76ecd8a2d1e778e9aac53f1103df07a5e01271cbd334987c14917ea",
-    "AGENTS-INDEX.md": "e06c335820fe91083b1d8e5ea91c77c3474cf132ea38b06053eb5f9e6de45708"
+    "AGENTS.md": "d8dd3eeba0b3b80be4663288812513d609a77827114c62ec304302a4a947abcb",
+    "AGENTS-INDEX.md": "1f0cca5f350128990d4788b35398377fc999f0f3bb7d661a9336bc81d3928d52"
   },
   "checker": {
     "tools/agents_audit.py": "20e772ab9e45f75484bc9a73c41e7b312c5095eb2dfe4f89c4fe01a506367106"
@@ -28,9 +28,9 @@
     },
     {
       "criterion": "A4",
-      "subject": "supersession",
-      "ok": true,
-      "detail": "no dangling supersession"
+      "subject": "line 201",
+      "ok": false,
+      "detail": "section claims a supersession without the correction: 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket"
     },
     {
       "criterion": "A5",
@@ -78,9 +78,23 @@
       "criterion": "A5",
       "subject": "line 105",
       "ok": true,
-      "detail": "74 lines, bounded"
+      "detail": "75 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 180",
+      "ok": true,
+      "detail": "21 lines, bounded"
+    },
+    {
+      "criterion": "A5",
+      "subject": "line 201",
+      "ok": true,
+      "detail": "17 lines, bounded"
     }
   ],
-  "refusals": [],
-  "ok": true
+  "refusals": [
+    "A4 line 201: section claims a supersession without the correction: 2026-11-20 \u2014 evidence is superseded, and every gap is a ticket"
+  ],
+  "ok": false
 }

@@ -24,7 +24,7 @@ from xml.sax.saxutils import escape
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 DEFAULT_GAME = Path(os.environ.get("DEADLOCK_GAME", r"D:\SteamLibrary\steamapps\common\Deadlock\game"))
-DEFAULT_SDK = Path(os.environ.get("OPENLOCK_SDK", r"<home>\Documents\Documents\Reduced_CSDK_12"))
+DEFAULT_SDK = Path(os.environ.get("OPENLOCK_SDK", os.path.expanduser(r"~\Documents\Documents\Reduced_CSDK_12")))
 PACKAGE_ID = "motd-demo"
 WINDOW_ID = "motd-panel"
 

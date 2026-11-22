@@ -23,6 +23,8 @@ The sentences and the digest of the tools that approved them are sealed in `land
 """
 from __future__ import annotations
 
+import os
+
 import hashlib
 import html
 import importlib.util
@@ -39,7 +41,7 @@ PAGE = ROOT / "landing" / "index.html"
 SEAL = ROOT / "landing" / "prose.json"
 
 PROSE_TOOLS = (
-    Path("<home>/Documents/deadlock-model-forge/tools/ui_prose.py"),
+    Path(os.path.expanduser("~/Documents/deadlock-model-forge/tools/ui_prose.py")),
     Path("F:/Documents/portal-shell/tools/ui_prose.py"),
 )
 PROSE_MJS = Path("F:/Documents/brass-meridian/tools/prose.mjs")

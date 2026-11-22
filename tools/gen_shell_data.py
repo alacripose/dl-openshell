@@ -748,8 +748,8 @@ def read_tools(gameinfo: Path):
     bases = [
         ("game/bin/win64", game / "bin" / "win64"),
         ("game/bin_tools/win64", game / "bin_tools" / "win64"),
-        ("sdk/bin/win64", Path(r"D:<home>crity/Documents/Documents/Reduced_CSDK_12/game/bin/win64")),
-        ("downloads", Path(r"<home>/Downloads")),
+        ("sdk/bin/win64", Path(os.path.expanduser(r"~/Documents/Documents/Reduced_CSDK_12/game/bin/win64"))),
+        ("downloads", Path(os.path.expanduser(r"~/Downloads"))),
     ]
     tools = ["resourcecompiler.exe", "CSDKCfgVPK.exe", "resourcecopy.exe", "Source2Viewer.exe"]
 
