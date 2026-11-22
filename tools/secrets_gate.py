@@ -214,6 +214,8 @@ def scan_history() -> list[dict]:
             digits = re.search(r"\+(\d+)", line)
             number = int(digits.group(1)) if digits else 0
             continue
+        if any(part.lstrip("/") in "/" + path for part in SKIP_PARTS):
+            continue
         if line.startswith("+") and not line.startswith("+++"):
             for finding in scan_line(path, number, line[1:]):
                 finding["commit"] = commit[:12]
