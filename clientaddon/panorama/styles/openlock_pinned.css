@@ -27,11 +27,33 @@
     visibility: visible;
 }
 
+/* The pins read as brass marks INSIDE the crown, not as squares over it: a 22 px plate in the corner
+   is the one thing still painting a rectangle across the cut, whatever the contour does underneath.
+   A 10 px mark on the crown's own ink keeps the affordance and lets the profile be the corner. */
 .WindowFrame .GripNW,
 .WindowFrame .GripNE,
 .WindowFrame .GripSW,
 .WindowFrame .GripSE {
+    width: 10px;
+    height: 10px;
     border-color: #b08d57cc;
+    background-color: #b08d57;
+}
+
+.WindowFrame .GripNW {
+    margin: 6px 0px 0px 6px;
+}
+
+.WindowFrame .GripNE {
+    margin: 6px 6px 0px 0px;
+}
+
+.WindowFrame .GripSW {
+    margin: 0px 0px 6px 6px;
+}
+
+.WindowFrame .GripSE {
+    margin: 0px 6px 6px 0px;
 }
 
 /* --- the pinned client's bar and plate -------------------------------- */
@@ -130,7 +152,7 @@
     height: 18px;
     padding-left: 18px;
     border-bottom: 1px solid #b08d5732;
-    background-color: #0f1113ee;
+    background-color: transparent;
 }
 
 .WindowFrame .WindowMetaLabel {
@@ -141,6 +163,7 @@
 .WindowFrame .WindowBody {
     color: #e6dbc2;
     font-size: 13px;
+    background-color: transparent;
 }
 
 /* The reference strokes the contour at 1 px: 42 per cent brass on a surface, 45 per cent on a bar
@@ -331,18 +354,26 @@
     background-color: #29251e;
 }
 
-/* The window's own plates sit inside the crown: a body at the frame's edge squares the corner the
-   contour just cut, because Panorama has no clip for a child. */
+/* The pinned window's inset fill is #1b1a16, four points over the bar's ink; the sheet was painting
+   the bar's own #0f1113 and the body read colder than the reference plate. */
+.ShellRoot .WindowFrame .ContourFill,
+.WindowFrame .ContourFill {
+    background-color: #1b1a16;
+}
+
+/* The window's own plates sit inside the crown: the shell sets their margins from the contour's
+   band (see plateInsets), so a plate never paints over the corner the profile cut. These margins are
+   the fallback for a frame that has not been measured yet. */
 .WindowFrame .WindowTitle {
-    margin: 2px 2px 0px 2px;
+    margin: 11px 4px 0px 4px;
 }
 
 .WindowFrame .WindowMeta {
-    margin: 0px 2px 0px 2px;
+    margin: 0px 4px 0px 4px;
 }
 
 .WindowFrame .WindowBody {
-    margin: 0px 2px 2px 2px;
+    margin: 0px 4px 11px 4px;
 }
 
 /* A window row is a surface: the same ground, the same ink, the same pads. The Label inside keeps the
@@ -411,13 +442,6 @@
 .ShellRoot .ViewRowBox .ViewAction:hover,
 .ShellRoot .ViewAction:hover {
     color: #d9b779;
-}
-
-.Taskbar .ShellTab:hover .ContourFill,
-.ShellTab:hover .ContourFill,
-.Taskbar .WindowsButton:hover .ContourFill,
-.WindowsButton:hover .ContourFill {
-    background-color: #b08d5721;
 }
 
 /* The reference's label is the window's title as it is: 13.44 paper, no case change, no tracking,

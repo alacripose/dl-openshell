@@ -76,7 +76,35 @@
             panel.__contourW = w;
             panel.__contourH = h;
             globalThis.OpenlockContour.draw(panel, w, h);
+            // A contoured frame's own plates are rectangles, and this client has no clip for a
+            // child: a plate at the frame's edge paints over the crown the contour just cut. The
+            // plate is therefore inset by the crown's own band, read from the contour, so the
+            // visible corner is the profile and a resize re-cuts both together.
+            if (panel.HasClass && panel.HasClass("WindowFrame")) plateInsets(panel);
         });
+    }
+
+    // plateInsets clears the crown band out of a window frame's plates. The band is the contour's
+    // own number (`band(h)`), never a constant here, so a 640 px window and a 220 px window inset
+    // their plates by the crown each of them actually has.
+    function plateInsets(frame) {
+        if (!globalThis.OpenlockContour || !frame) return;
+        var h = Math.round(num(frame.actuallayoutheight));
+        if (h < 4) return;
+        var band = Math.round(globalThis.OpenlockContour.band(h));
+        var side = 4;
+        var plates = [
+            ["WindowTitle", band + "px " + side + "px 0px " + side + "px"],
+            ["WindowMeta", "0px " + side + "px 0px " + side + "px"],
+            ["WindowBody", "0px " + side + "px " + band + "px " + side + "px"]
+        ];
+        for (var i = 0; i < plates.length; i += 1) {
+            var plate = null;
+            try { plate = frame.FindChildTraverse ? frame.FindChildTraverse(plates[i][0]) : null; } catch (e) { plate = null; }
+            if (!plate) continue;
+            try { plate.style.margin = plates[i][1]; plate.style.marginTop = plates[i][1].split(" ")[0]; } catch (e2) { /* not a panel */ }
+            try { plate.SetAttributeString("data-crown-inset", band + "px"); } catch (e3) { /* older Panorama */ }
+        }
     }
 
     // The strip itself is a contoured surface, exactly as the pinned bar is: its ends carry the
@@ -5905,6 +5933,15 @@
                 beginPointerDrag(id, mode, arguments);
             });
             panel.SetPanelEvent("onmouseup", function () { endPointerDrag(true); });
+            // This client's release build dispatches a press on a hittable panel as `onactivate`,
+            // not `onmousedown`: the bar's cells answer their presses and a window's grip answered
+            // nothing, so no drag or corner resize could be started there. The same press now starts
+            // the poll; a press that arrives while a drag is running is ignored, and the poll still
+            // owns the release.
+            panel.SetPanelEvent("onactivate", function () {
+                if (pointerDrag) return;
+                beginPointerDrag(id, mode, arguments);
+            });
             // A mousemove over the chrome is the CSDK10 restore path: that client has no cursor
             // probe, so onmouseover alone can be missed while the title is shrinking.
             panel.SetPanelEvent("onmousemove", function () {
