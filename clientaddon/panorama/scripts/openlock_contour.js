@@ -122,8 +122,10 @@
         try { panel.style[property] = value; } catch (e) { /* older Panorama ignores it */ }
     }
 
-    // paint draws one silhouette: the border colour as the outer shape and the fill colour as
-    // the same shape inset by the stroke. Two layers of nine slices, one outline.
+    // paint draws one silhouette: the border colour as the outer shape and the fill colour as the
+    // same shape inset by the stroke. The panels are a fixed pool that is resized in place, so a
+    // repaint never races a deferred delete and a surface cannot end up with two layers of slices
+    // (which is what painted a bar cell solid brass: the ink body drawn twice and the fill under it).
     function paint(layer, width, height, strokeClass, fillClass) {
         if (!data) return false;
         if (width < 4 || height < 4) {
@@ -132,57 +134,101 @@
         }
         var look = data.look;
         var corner = Math.min(look.corner_px.height, height / 2);
-
-        // body draws the silhouette at (offsetX, offsetY) from row strips and one rail.
-        function body(w, h, offsetX, offsetY, cls) {
-            var shape = loopFor(w, h, look.constants.frame_pad, corner);
-            var band = shape.band;
-            if (band * 2 > h) return false;
-            var rows = [];
-            for (var i = 0; i < band; i += 1) rows.push(i);
-            for (var j = h - band; j < h; j += 1) rows.push(j);
-            var drawn = 0;
-            for (var r = 0; r < rows.length; r += 1) {
-                var line = span(shape, rows[r] + 0.5);
-                // A row outside the outline is the frame pad, and it draws nothing. A row with
-                // no crossing at all is a shape that left its own box, and it is refused.
-                if (!line) continue;
-                var left = Math.max(0, Math.round(line.left));
-                var right = Math.min(w, Math.round(line.right));
-                if (right - left < 1) continue;
-                drawn += 1;
-                var strip = $.CreatePanel("Panel", layer, "");
-                strip.AddClass(cls);
-                strip.AddClass("ContourRow");
-                strip.hittest = false;
-                setStyle(strip, "ignoreParentFlow", "true");
-                setStyle(strip, "horizontalAlign", "left");
-                setStyle(strip, "verticalAlign", "top");
-                setStyle(strip, "marginLeft", (offsetX + left) + "px");
-                setStyle(strip, "marginTop", (offsetY + rows[r]) + "px");
-                setStyle(strip, "width", (right - left) + "px");
-                setStyle(strip, "height", "1px");
-            }
-            if (drawn === 0) return false;
-            var rail = $.CreatePanel("Panel", layer, "");
-            rail.AddClass(cls);
-            rail.AddClass("ContourRail");
-            rail.hittest = false;
-            setStyle(rail, "ignoreParentFlow", "true");
-            setStyle(rail, "horizontalAlign", "left");
-            setStyle(rail, "verticalAlign", "top");
-            setStyle(rail, "marginLeft", offsetX + "px");
-            setStyle(rail, "marginTop", (offsetY + band) + "px");
-            setStyle(rail, "width", w + "px");
-            setStyle(rail, "height", (h - band * 2) + "px");
-            return true;
-        }
-
-        if (!body(width, height, 0, 0, strokeClass)) {
+        var shape = loopFor(width, height, look.constants.frame_pad, corner);
+        var band = shape.band;
+        if (band * 2 > height) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
         }
-        if (!body(width - 2, height - 2, 1, 1, fillClass)) {
+        var inner = loopFor(Math.max(4, width - 2), Math.max(4, height - 2), look.constants.frame_pad, corner);
+        // The stroke is an outline: two crowns and two side lines, one pixel each. The fill is a
+        // whole surface: two crowns and the span between them. A stroke painted as a slab is what
+        // turned a bar cell solid brass — the fill is 6 per cent paper and cannot hide a slab.
+        var slots = band * 2 + 2;
+        var pool = [];
+
+        var kids = [];
+        var count = 0;
+        try { count = layer.GetChildCount ? layer.GetChildCount() : 0; } catch (e) { count = 0; }
+        for (var i = 0; i < count; i += 1) {
+            var kid = null;
+            try { kid = layer.GetChild(i); } catch (e) { kid = null; }
+            if (kid) kids.push(kid);
+        }
+        while (kids.length < slots * 2) {
+            var made = $.CreatePanel("Panel", layer, "");
+            made.hittest = false;
+            setStyle(made, "ignoreParentFlow", "true");
+            setStyle(made, "horizontalAlign", "left");
+            setStyle(made, "verticalAlign", "top");
+            kids.push(made);
+        }
+        // A pool larger than this surface needs is hidden, never drawn at a stale size.
+        for (var extra = slots * 2; extra < kids.length; extra += 1) {
+            setStyle(kids[extra], "visibility", "collapse");
+        }
+
+        // everyRow walks one silhouette's rows and rail into the pool at base, returning the
+        // number of pixels of geometry it wrote.
+        function everyRow(target, w, h, offsetX, offsetY, cls, base) {
+            var written = 0;
+            // A slot this surface does not fill is hidden first, so a leftover row from a larger
+            // repaint cannot survive at a stale offset.
+            for (var hide = 0; hide < slots; hide += 1) {
+                if (target[base + hide]) setStyle(target[base + hide], "visibility", "collapse");
+            }
+            function put(index, x, y, sw, sh) {
+                var panel = target[base + index];
+                if (!panel) return;
+                try { panel.SetHasClass(cls, true); panel.SetHasClass(cls === "ContourInk" ? "ContourFill" : "ContourInk", false); } catch (e) {
+                    panel.AddClass(cls);
+                }
+                // A row is one pixel of a crown; a rail is anything taller. The classes are the
+                // vocabulary the gate reads, so they stay whatever shape the piece is.
+                try {
+                    panel.SetHasClass("ContourRow", sh <= 1);
+                    panel.SetHasClass("ContourRail", sh > 1);
+                } catch (e2) {
+                    panel.AddClass(sh > 1 ? "ContourRail" : "ContourRow");
+                }
+                setStyle(panel, "visibility", "visible");
+                setStyle(panel, "marginLeft", Math.round(offsetX + x) + "px");
+                setStyle(panel, "marginTop", Math.round(offsetY + y) + "px");
+                setStyle(panel, "width", Math.max(1, Math.round(sw)) + "px");
+                setStyle(panel, "height", Math.max(1, Math.round(sh)) + "px");
+                written += 1;
+            }
+            for (var r = 0; r < band; r += 1) {
+                var top = span(shapeFor(w, h), r + 0.5);
+                if (top) put(r, top.left, r, top.right - top.left, 1);
+                var bottomY = h - band + r;
+                var bottom = span(shapeFor(w, h), bottomY + 0.5);
+                if (bottom) put(band + r, bottom.left, bottomY, bottom.right - bottom.left, 1);
+            }
+            var mid = span(shapeFor(w, h), h / 2);
+            if (!mid) return written;
+            if (interior) {
+                put(band * 2, mid.left, band, mid.right - mid.left, h - band * 2);
+            } else {
+                // Two side lines instead of a slab, so the outline is an ink and not a fill.
+                put(band * 2, mid.left, band, 1, h - band * 2);
+                put(band * 2 + 1, mid.right - 1, band, 1, h - band * 2);
+            }
+            return written;
+        }
+
+        // The fill is the same profile one pixel in, so the rim is the stroke and nothing else.
+        var outerShape = shape;
+        var innerShape = inner;
+        var useInner = false;
+        var interior = false;
+        function shapeFor(w, h) { return useInner ? innerShape : outerShape; }
+
+        var drawnOuter = everyRow(kids, width, height, 0, 0, strokeClass, 0);
+        interior = true;
+        useInner = true;
+        var drawnInner = everyRow(kids, width - 2, height - 2, 1, 1, fillClass, slots);
+        if (drawnOuter === 0 || drawnInner === 0) {
             refuse(layer, "contour-crown-outside-frame");
             return false;
         }
@@ -197,7 +243,17 @@
         layer.AddClass("ContourSlices");
         layer.hittest = false;
         layer.hittestchildren = false;
-        try { host.MoveChildBefore(layer, host.GetFirstChild()); } catch (e) { /* already first */ }
+        // The slices are a ground, so they go under everything the surface draws. Asking to move a
+        // panel before itself is not a no-op: it can move it to the end, and a fill over the label
+        // is what made a bar cell's text disappear.
+        try {
+            // GetChild(0) is the accessor this client actually has; GetFirstChild is not, and the
+            // throw left the slices last, painting a fill over every bar cell's label.
+            var first = null;
+            try { first = host.GetChildCount && host.GetChildCount() > 0 ? host.GetChild(0) : null; } catch (e0) { first = null; }
+            if (!first) { try { first = host.GetFirstChild ? host.GetFirstChild() : null; } catch (e1) { first = null; } }
+            if (first && first !== layer) host.MoveChildBefore(layer, first);
+        } catch (e) { /* already first */ }
         return layer;
     }
 
@@ -213,9 +269,26 @@
             return false;
         }
         var layer = layerFor(host);
-        var nodes = layer.Children ? layer.Children() : [];
-        for (var i = nodes.length - 1; i >= 0; i -= 1) nodes[i].DeleteAsync(0);
+        // Panorama panels have no Children(): the engine's accessors are GetChildCount/GetChild,
+        // and asking for Children() left every previous slice in place.
+        var count = 0;
+        try { count = layer.GetChildCount ? layer.GetChildCount() : 0; } catch (e) { count = 0; }
+        for (var i = count - 1; i >= 0; i -= 1) {
+            var node = null;
+            try { node = layer.GetChild(i); } catch (e) { node = null; }
+            if (node) { try { node.DeleteAsync(0); } catch (e2) {} }
+        }
         var ok = paint(layer, w, h, "ContourInk", "ContourFill");
+        // One line per surface, so a contour that is refused or clamped is visible in the log
+        // rather than inferred from a picture.
+        try {
+            var rows = 0;
+            try { rows = layer.GetChildCount ? layer.GetChildCount() : 0; } catch (e) { rows = 0; }
+            var who = "";
+            try { who = String(host.id || "") + "|" + String(host.GetAttributeString("class") || ""); } catch (e) { who = "?"; }
+            $.Msg("[openlock] contour " + w + "x" + h + " band=" + OpenlockContour.band(h)
+                + " slices=" + rows + " " + (ok ? "drawn" : "refused") + " on " + who);
+        } catch (e2) { /* console closed */ }
         try { host.SetAttributeString("data-contour", ok ? "slice" : "refused"); } catch (e) { /* not a panel */ }
         return ok;
     }

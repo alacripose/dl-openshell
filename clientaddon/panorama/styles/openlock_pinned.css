@@ -143,12 +143,50 @@
     font-size: 13px;
 }
 
+/* The reference strokes the contour at 1 px: 42 per cent brass on a surface, 45 per cent on a bar
+   cell, brass-lit on hover and solid brass-lit when on. The sheet was at 66 per cent everywhere,
+   which reads as a border rather than an ink. */
 .ContourInk {
-    background-color: #b08d57a8;
+    background-color: #b08d576b;
 }
 
 .ContourFill {
-    background-color: #0f1113f2;
+    background-color: #0f1113;
+}
+
+.Taskbar .ShellTab .ContourInk,
+.ShellTab .ContourInk,
+.Taskbar .WindowsButton .ContourInk,
+.WindowsButton .ContourInk {
+    background-color: #b08d5773;
+}
+
+.Taskbar .ShellTab:hover .ContourInk,
+.ShellTab:hover .ContourInk,
+.Taskbar .WindowsButton:hover .ContourInk,
+.WindowsButton:hover .ContourInk {
+    background-color: #d9b779d9;
+}
+
+.Taskbar .ShellTab.Active .ContourInk,
+.ShellTab.Active .ContourInk,
+.Taskbar .BarStart .ContourInk,
+.BarStart .ContourInk {
+    background-color: #d9b779;
+}
+
+.Taskbar .Clock .ContourInk,
+.Clock .ContourInk {
+    background-color: #b08d574d;
+}
+
+/* A window that carries the contour paints nothing of its own: the ink ground is the contour's own
+   fill, so the body meets the crown instead of a rectangle cutting across it. */
+.ShellRoot .WindowFrame,
+.ShellRoot .WindowFrame.HudRole,
+.ShellRoot .WindowFrame.PanelWindow,
+.ShellRoot .WindowFrame.Focused {
+    background-color: transparent;
 }
 
 /* The Popit's own controls sit on a rail with the same grammar, so there is one bar language. */
@@ -240,36 +278,68 @@
     height: 36px;
     min-width: 64px;
     max-width: 224px;
-    padding: 3px 16px;
+    /* The contour is a ground inside the cell, and a ground inherits the host's padding: at 3 by 16
+       the slices started 16 px in and the crown was cut off by the cell's own edge. The inset belongs
+       to the label now, and the shape gets the whole 36 px box. */
+    padding: 0px;
+    min-height: 36px;
     margin: 0px 5.76px 0px 0px;
-    background-color: #e6dbc20f;
+    /* No rectangle behind the shape: the cell's paint is its contour fill, exactly as the
+       reference clips each cell to its own path. A background here would square off the corners. */
+    background-color: transparent;
     border: 0px;
     vertical-align: center;
 }
 
-.Taskbar .ShellTab.Active,
-.ShellTab.Active {
-    background-color: #b08d5729;
+/* A fill is one surface directly under the ink, so it has to be opaque: the reference's six per
+   cent paper is composited over the bar because there the clip removes everything else, and here the
+   ink sits under the fill rather than around it. The value is the paper at six per cent over the
+   bar's own ink, which is what the reference renders. */
+.Taskbar .ShellTab .ContourFill,
+.ShellTab .ContourFill,
+.Taskbar .WindowsButton .ContourFill,
+.WindowsButton .ContourFill,
+.Taskbar .Clock .ContourFill,
+.Clock .ContourFill {
+    background-color: #1b1a16;
 }
 
-.Taskbar .ShellTab:hover,
-.ShellTab:hover,
-.Taskbar .WindowsButton:hover,
-.WindowsButton:hover {
+.Taskbar .ShellTab.Active .ContourFill,
+.ShellTab.Active .ContourFill {
+    background-color: #2a2519;
+}
+
+.Taskbar .ShellTab:hover .ContourFill,
+.ShellTab:hover .ContourFill,
+.Taskbar .WindowsButton:hover .ContourFill,
+.WindowsButton:hover .ContourFill {
     background-color: #b08d5721;
 }
 
+/* The reference's label is the window's title as it is: 13.44 paper, no case change, no tracking,
+   one line with an ellipsis. Our sheet had bold actives and 12 px dim text on the base rule. */
 .Taskbar .ShellTabLabel,
 .ShellTabLabel,
 .Taskbar .WindowsButtonLabel,
 .WindowsButtonLabel {
     color: #e6dbc2;
     font-size: 13.44px;
+    letter-spacing: 0px;
+    text-transform: none;
+    font-weight: normal;
+    padding: 3px 16px;
 }
 
 .Taskbar .ShellTab.Active .ShellTabLabel,
 .ShellTab.Active .ShellTabLabel {
     color: #d9b779;
+    font-weight: normal;
+}
+
+/* The reference marks a minimized window with a brass "▁ " before its title. */
+.Taskbar .ShellTab .ShellTabLabel,
+.ShellTabLabel {
+    text-overflow: ellipsis;
 }
 
 .Taskbar .BarStart,
@@ -347,5 +417,8 @@
 
 .WindowFrame .WindowBody,
 .WindowBody {
-    background-color: #0f1113;
+    /* The reference paints two radial washes over the ink. This is the direct attempt at the first
+       one; the client's report says whether the property survives, so the substitute below is only
+       used when it does not. */
+    background-color: gradient( radial, 8% -12%, 0% 0%, 92% 112%, from( #2a2418 ), to( #00000000 ) );
 }

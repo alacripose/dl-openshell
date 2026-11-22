@@ -63,6 +63,16 @@
             }
             if (panel === taskbar) $.Msg("[Openlock] bar box: " + w + "x" + h);
             if (panel.__contourW === w && panel.__contourH === h) return;
+            // The shell contours its own surfaces. A tracked game panel is the game's rectangle at
+            // its own size, it is rewritten every frame, and cutting a 1900 px crown for it spent
+            // the frame budget on a shape nobody sees.
+            if (w > 1200 || h > 900) {
+                if (!panel.__contourTooLarge) {
+                    panel.__contourTooLarge = true;
+                    $.Msg("[Openlock] contour skipped on a " + w + "x" + h + " panel: not a shell surface");
+                }
+                return;
+            }
             panel.__contourW = w;
             panel.__contourH = h;
             globalThis.OpenlockContour.draw(panel, w, h);
@@ -182,12 +192,23 @@
             };
             var startPos = start ? posOf(start) : [-1, -1];
             var firstPos = first ? posOf(first) : [-1, -1];
-            var gap = (startPos[0] >= 0 && firstPos[0] >= 0)
-                ? (firstPos[0] - (startPos[0] + w(start))) : -1;
+            // Unrounded, because the reference's gap is 5.76 and rounding a measurement of it would
+            // report the rounding rather than the layout.
+            var rawOf = function (panel) {
+                try {
+                    var pos = panel.GetPositionWithinWindow();
+                    var px = pos && (pos[0] !== undefined ? pos[0] : pos.x);
+                    return num(px);
+                } catch (e) { return -1; }
+            };
+            var startRaw = start ? rawOf(start) : -1;
+            var firstRaw = first ? rawOf(first) : -1;
+            var gapExact = (startRaw >= 0 && firstRaw >= 0) ? (firstRaw - (startRaw + num(start.actuallayoutwidth))) : -1;
             $.Msg("[Openlock] bar metrics: bar=" + w(bar) + "x" + Math.round(num(bar.actuallayoutheight))
-                + " start=" + w(start) + " tab0=" + w(first) + " gap=" + gap
+                + " start=" + w(start) + " tab0=" + w(first) + " gap=" + (Math.round(num(firstRaw - (startRaw + num(start.actuallayoutwidth))) * 100) / 100)
                 + " windows=" + w(win) + " clock=" + w(clock) + " tabs=" + (tabs ? tabs.length : 0)
-                + " startx=" + startPos[0] + " tab0x=" + firstPos[0] + " barh=" + Math.round(num(bar.actualypos)));
+                + " startx=" + startPos[0] + " tab0x=" + firstPos[0]
+                + " gapExact=" + (Math.round(gapExact * 100) / 100));
         } catch (e) {
             $.Msg("[Openlock] bar metrics threw " + String(e));
         }
@@ -1384,6 +1405,8 @@
     function addTab(windowId, label, extraClass, entranceIndex) {
         var win = windowById(windowId);
         var text = label || (win && win.title) || windowId;
+        // The reference marks a minimized window with a brass "▁ " before its title.
+        if (minimized[windowId]) text = "▁ " + text;
         var tab = addControl(strip, "ShellTab", text, function () { choose(windowId); });
         if (extraClass) tab.AddClass(extraClass);
         contourChip(tab);
@@ -1792,6 +1815,10 @@
         frame.style.width = Math.max(48, Math.round(w)) + "px";
         frame.style.height = Math.max(TITLE_DP, Math.round(h)) + "px";
         perf.writes += 4;
+        // The frame is the surface, so a window that was never given a contour is a rectangle with
+        // its ink showing through as a slab. Every geometry write repaints it; draw() skips an
+        // unchanged box, so a move costs nothing and a resize cuts a new crown.
+        contourChip(frame);
     }
 
     function setFrameVisible(record, visible) {

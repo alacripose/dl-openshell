@@ -128,8 +128,8 @@ def c6_outline() -> None:
     runtime = RUNTIME.read_text(encoding="utf-8")
     # The ink is drawn at the box and the fill at one pixel in, which is what keeps both halves
     # of the stroke inside the surface rather than cut by it.
-    holds = "body(width, height, 0, 0, strokeClass)" in runtime \
-        and "body(width - 2, height - 2, 1, 1, fillClass)" in runtime
+    holds = "everyRow(kids, width, height, 0, 0, strokeClass, 0)" in runtime \
+        and "everyRow(kids, width - 2, height - 2, 1, 1, fillClass, slots)" in runtime
     look = json.loads(LOOK.read_text(encoding="utf-8"))
     holds = holds and look["constants"]["clip_pad"] < look["constants"]["frame_pad"]
     check("outline-not-clipped", "the ink is the outer edge and the fill is inset by the stroke",

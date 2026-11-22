@@ -36,7 +36,15 @@ function makePanel(id) {
         style: {},
         AddClass(name) { this.classes.push(name); },
         HasClass(name) { return this.classes.indexOf(name) !== -1; },
-        Children() { return this.children.slice(); },
+        // The engine's real accessors. Children() never existed on a Panorama panel: asking for it
+        // returned nothing, which is why a repaint used to stack a second set of slices.
+        SetHasClass(name, on) {
+            const at = this.classes.indexOf(name);
+            if (on && at === -1) this.classes.push(name);
+            if (!on && at !== -1) this.classes.splice(at, 1);
+        },
+        GetChildCount() { return this.children.length; },
+        GetChild(index) { return this.children[index] || null; },
         DeleteAsync() { this.deleted = true; },
         SetAttributeString() {},
         FindChildTraverse(wanted) {
@@ -202,12 +210,24 @@ for (const surface of [frame, chip]) {
         ok(highest.width < surface.width - 2, `${surface.width}x${surface.height} the highest row is the full width`);
         ok(highest.left > 0 && highest.left + highest.width < surface.width,
             `${surface.width}x${surface.height} the highest row reaches the box edge`);
-        const rail = railsOf(layer, "ContourInk");
-        ok(rail.length === 1, `${surface.width}x${surface.height} has ${rail.length} rails`);
-        if (rail.length === 1) {
-            ok(rail[0].width === surface.width, `${surface.width}x${surface.height} the rail is narrower than the surface`);
+        // The ink is an outline: two one pixel side lines between the crowns, never a slab. A slab
+        // is what painted a bar cell solid brass, because the fill is six per cent paper.
+        const rail = railsOf(layer, "ContourInk").sort((a, b) => a.left - b.left);
+        ok(rail.length === 2, `${surface.width}x${surface.height} has ${rail.length} ink rails, expected two side lines`);
+        if (rail.length === 2) {
+            ok(rail[0].width === 1 && rail[1].width === 1, `${surface.width}x${surface.height} an ink rail is wider than a pixel`);
             ok(rail[0].top > highest.top && rail[0].top + rail[0].height < surface.height,
                 `${surface.width}x${surface.height} the rail does not sit between the crowns`);
+            ok(rail[0].left < rail[1].left, `${surface.width}x${surface.height} the two side lines are not the two sides`);
+            ok(rail[1].left + rail[1].width >= surface.width - 2,
+                `${surface.width}x${surface.height} the right side line is not on the right edge`);
+        }
+        // The fill is one surface inside that outline, one pixel in on every side.
+        const fillRail = railsOf(layer, "ContourFill");
+        ok(fillRail.length === 1, `${surface.width}x${surface.height} has ${fillRail.length} fill surfaces`);
+        if (fillRail.length === 1) {
+            ok(fillRail[0].width >= surface.width - 9, `${surface.width}x${surface.height} the fill is narrower than the surface`);
+            ok(fillRail[0].left >= 1, `${surface.width}x${surface.height} the fill is not inset`);
         }
     }
 }
