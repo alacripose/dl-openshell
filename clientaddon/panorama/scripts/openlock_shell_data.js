@@ -12550,12 +12550,12 @@ var SHELL = {
   "steamName": "",
   "build": {
     "version": "0.7.0",
-    "commit": "232ad46",
+    "commit": "6f56e82",
     "branch": "main",
     "dirty": true,
-    "sourceDigest": "d174f2f8831d255be9839e249cef1a71a25f490e3a6897feac8a677feafaa96a",
+    "sourceDigest": "c76b98dc75545ffdc3c3af69df9a8e523b42698b511912051eca178fabe94bb7",
     "gameVersion": "6864",
-    "generatedAt": "2026-11-21 23:04",
+    "generatedAt": "2026-11-21 23:14",
     "grade": "dev",
     "deadlockRevision": "11170534",
     "baseline": {
@@ -12570,7 +12570,7 @@ var SHELL = {
     },
     "identity": "dl-openshell@e507d355+blake3:4a6e012e21f028a50829fe13a9f506a784f4fb4dd87db0fd2e61ea04f595570c",
     "identityShort": "dl-openshell@e507d355+blake3:4a6e012e",
-    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / 232ad46+ / game 6864"
+    "label": "dl-openshell@e507d355+blake3:4a6e012e / v0.7.0 / 6f56e82+ / game 6864"
   },
   "themes": {
     "default": "popit",
