@@ -70,8 +70,7 @@
     header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--ground) 96%, transparent); border-bottom: 1px solid var(--line); box-shadow: 0 2px 8px rgb(0 0 0 / .28); }
     nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 64px; }
     .brand { display: flex; align-items: center; gap: 8px; font: 600 14px/1 var(--mono); letter-spacing: 0; }
-    .brand-name { display: inline-block; color: var(--ink); transition: color 160ms cubic-bezier(.4, 0, .2, 1); }
-    .brand-name.cycling { color: var(--attention); }
+    .brand-name { display: inline-block; color: var(--ink); }
     /* One geometry: the 20 x 20 square-in-square, 1.5 px outer stroke, 8 x 8 filled centre,
        2 px radii. SVG carries the fractional stroke exactly; no bevel, no second glyph, no
        letter inside. */
@@ -90,17 +89,17 @@
     .cta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
     .button {
       display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 16px;
-      border: 1px solid var(--line-strong); border-radius: 3px; color: var(--ink); background: var(--surface);
+      border: 1px solid var(--line-strong); border-radius: 0px; color: var(--ink); --surface-fill: var(--surface);
       font: 600 14px var(--mono); letter-spacing: .08em; text-transform: uppercase;
     }
     .button:hover { border-color: var(--dim); text-decoration: none; }
-    .button.primary { background: var(--attention); border-color: var(--attention); color: var(--ground); }
-    .button.primary:hover { background: var(--attention); filter: brightness(1.08); }
+    .button.primary { --surface-fill: var(--attention); border-color: var(--attention); color: var(--ground); }
+    .button.primary:hover { --surface-fill: var(--attention); filter: brightness(1.08); }
     .version { margin-top: 16px; color: var(--dim); font: 12px/1.5 var(--mono); letter-spacing: .04em; }
 
-    .terminal { background: var(--ground); border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; box-shadow: 0 8px 24px rgb(0 0 0 / .36); }
+    .terminal { --surface-fill: var(--ground); border: 1px solid var(--line-strong); border-radius: 0px; overflow: hidden; box-shadow: 0 8px 24px rgb(0 0 0 / .36); }
     .terminal .bar { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
-    .terminal .bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+    .terminal .bar i { width: 8px; height: 8px; border-radius: 0px; background: var(--line-strong); }
     .terminal .bar i:first-child { background: var(--refused); }
     .terminal .bar i:nth-child(2) { background: var(--attention); }
     .terminal .bar i:nth-child(3) { background: var(--verified); }
@@ -185,7 +184,7 @@
     .family-note { margin: 0 0 16px; color: var(--dim); font: 12px var(--mono); letter-spacing: .04em; }
     .family-lede { max-width: 72ch; margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.65; }
     .family-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-    .family-step { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+    .family-step { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 0px; --surface-fill: var(--surface); }
     .family-step b { color: var(--attention); font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
     .family-step span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
     .family-modern { display: grid; grid-template-columns: 1fr 1fr; margin: 28px 0 0; border-top: 1px solid var(--line); }
@@ -207,7 +206,7 @@
 
     /* Addons */
     .addon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
-    .card { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+    .card { padding: 16px; border: 1px solid var(--line); border-top: 2px solid var(--line-strong); border-radius: 0px; --surface-fill: var(--surface); }
     .addon-card { display: flex; flex-direction: column; }
     .addon-card:hover { border-top-color: var(--attention); }
     .addon-card h3 { margin: 0 0 8px; font-size: 20px; letter-spacing: -.01em; }
@@ -219,7 +218,7 @@
     .addon-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; }
     .addon-link {
       display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px;
-      border: 1px solid var(--line-strong); border-radius: 3px; color: var(--ink); font: 500 12px var(--mono);
+      border: 1px solid var(--line-strong); border-radius: 0px; color: var(--ink); font: 500 12px var(--mono);
       letter-spacing: .07em; text-transform: uppercase;
     }
     .addon-link:hover { border-color: var(--attention); color: var(--attention); text-decoration: none; }
@@ -294,29 +293,29 @@
     /* Popit: the cell editor drawn as the root/child instrument the bibles specify. Web-dark
        roles only; a pair band is the same three colours the shell carries in its pair row. */
     .popit-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: clamp(24px, 4vw, 48px); align-items: start; }
-    .popit-stage { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding: 16px; background: var(--ground); border: 1px solid var(--line-strong); border-radius: 4px; }
-    .popit-root { width: min(100%, 272px); padding: 10px; background: var(--raised); border: 2px solid var(--attention); border-radius: 26px 22px 26px 22px; }
+    .popit-stage { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding: 16px; --surface-fill: var(--ground); border: 1px solid var(--line-strong); border-radius: 0px; }
+    .popit-root { width: min(100%, 272px); padding: 10px; --surface-fill: var(--raised); border: 2px solid var(--attention); border-radius: 0px; }
     .popit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); color: var(--attention); font: 600 11px var(--mono); letter-spacing: .18em; }
-    .popit-chip { padding: 3px 8px; border: 1px solid var(--attention); border-radius: 11px; color: var(--ink); font: 500 10px var(--mono); letter-spacing: .04em; }
+    .popit-chip { padding: 3px 8px; border: 1px solid var(--attention); border-radius: 0px; color: var(--ink); font: 500 10px var(--mono); letter-spacing: .04em; }
     .popit-target { margin: 8px 0; color: var(--dim); font: 11px/1.5 var(--mono); }
-    .popit-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-height: 34px; padding: 4px 8px; margin-bottom: 4px; border: 2px solid var(--line); border-radius: 14px; font: 12px var(--sans); }
+    .popit-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-height: 34px; padding: 4px 8px; margin-bottom: 4px; border: 2px solid var(--line); border-radius: 0px; font: 12px var(--sans); }
     .popit-row b { color: var(--faint); font: 500 9px var(--mono); letter-spacing: .12em; }
     .popit-row span { flex: 1; }
     .popit-row em { color: var(--faint); font: 10px var(--mono); font-style: normal; }
-    .popit-row[aria-current="true"] { border-color: var(--attention); background: color-mix(in srgb, var(--attention) 12%, transparent); }
-    .popit-child { flex: 1 1 240px; min-width: 220px; padding: 10px; background: var(--raised); border: 2px solid var(--attention); border-radius: 26px 22px 26px 22px; }
+    .popit-row[aria-current="true"] { border-color: var(--attention); --surface-fill: color-mix(in srgb, var(--attention) 12%, transparent); }
+    .popit-child { flex: 1 1 240px; min-width: 220px; padding: 10px; --surface-fill: var(--raised); border: 2px solid var(--attention); border-radius: 0px; }
     .popit-child-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px dashed var(--line); color: var(--muted); font: 600 10px var(--mono); letter-spacing: .14em; }
-    .popit-back { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink); font: 500 10px var(--mono); }
+    .popit-back { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 0px; color: var(--ink); font: 500 10px var(--mono); }
     .popit-label { display: flex; align-items: center; gap: 8px; margin: 8px 0 6px; color: var(--muted); font: 600 10px var(--mono); letter-spacing: .14em; }
     .popit-label::after { content: ""; flex: 1; border-bottom: 1px dashed var(--line); }
     .popit-pairs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-    .popit-pair { padding: 5px; border: 1px solid var(--line); border-radius: 6px; }
+    .popit-pair { padding: 5px; border: 1px solid var(--line); border-radius: 0px; }
     .popit-pair[aria-current="true"] { border-color: var(--attention); }
-    .popit-band { display: grid; grid-template-columns: repeat(3, 1fr); height: 12px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; }
+    .popit-band { display: grid; grid-template-columns: repeat(3, 1fr); height: 12px; border: 1px solid var(--line-strong); border-radius: 0px; overflow: hidden; }
     .popit-band i { display: block; height: 100%; }
     .popit-pair span { display: block; margin-top: 4px; color: var(--faint); font: 9px/1.2 var(--mono); }
     .popit-notes { display: grid; gap: 16px; }
-    .popit-note { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+    .popit-note { padding: 14px 16px; --surface-fill: var(--surface); border: 1px solid var(--line); border-radius: 0px; }
     .popit-note h3 { margin: 0 0 6px; color: var(--ink); font: 600 13px var(--mono); letter-spacing: .06em; }
     .popit-note p { margin: 0; color: var(--muted); font-size: 13px; }
     .popit-planes { width: 100%; margin-top: 8px; border-collapse: collapse; }
@@ -345,17 +344,17 @@
       color: var(--muted);
       font: 12px/1.5 var(--mono);
     }
-    .surface { position: relative; background: none; }
-    .surface::before {
+    [data-contour] { position: relative; background: none; border: 0; }
+    [data-contour]::before {
       content: "";
       position: absolute;
       inset: 0;
-      z-index: 0;
+      z-index: -1;
       clip-path: var(--clip, none);
-      background: var(--raised);
+      background: var(--surface-fill, var(--raised));
     }
-    .surface > * { position: relative; z-index: 1; }
-    .surface .contour-frame {
+    [data-contour] > * { position: relative; z-index: 1; }
+    [data-contour] > .contour-frame {
       position: absolute;
       inset: 0;
       z-index: 2;
@@ -364,12 +363,35 @@
       pointer-events: none;
       overflow: visible;
     }
-    .surface .contour-frame path { stroke: var(--line-strong); fill: none; }
+    [data-contour] > .contour-frame path { stroke: var(--line-strong); fill: none; }
     .contour-shape[data-contour-surface="chip"] { height: 34px; }
     .contour-shape[data-contour-surface="card"] { height: 132px; }
     .contour-shape[data-contour-surface="window"] { height: 260px; }
     .contour-note { margin: 14px 0 0; color: var(--dim); font: 13px/1.6 var(--sans); }
-  </style>
+
+    /* The surface grammar, written last: a contoured view paints through its clip, strokes the
+       same path a pixel inside it, and never carries a rectangle of its own. */
+    [data-contour] { position: relative; background: none; border: 0; border-radius: 0px; }
+    [data-contour]::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      clip-path: var(--clip, none);
+      background: var(--surface-fill, var(--raised));
+    }
+    [data-contour] > * { position: relative; z-index: 1; }
+    [data-contour] > .contour-frame {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    [data-contour] > .contour-frame path { stroke: var(--line-strong); fill: none; }
+</style>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -398,12 +420,12 @@
         <h1 id="hero-title">dl-openshell<br><span>Deadlock shell</span></h1>
         <p class="lede">The Deadlock shell. Panorama windows, taskbar, saved layouts, toasts, tool layers, addon packages.</p>
         <div class="cta">
-          <a class="button primary" href="https://github.com/alacripose/dl-openshell/releases/latest">Download the player build</a>
-          <a class="button" href="#security">Read the trust boundary</a>
+          <a class="button primary" href="https://github.com/alacripose/dl-openshell/releases/latest" data-contour="card">Download the player build</a>
+          <a class="button" href="#security" data-contour="card">Read the trust boundary</a>
         </div>
         <div class="version">v0.7.0 · player build · game build 6821 · MIT · no server required</div>
       </div>
-      <div class="terminal" aria-label="Install and verification example">
+      <div class="terminal" aria-label="Install and verification example" data-contour="card">
         <div class="bar"><i></i><i></i><i></i><span>install / receipt</span></div>
         <pre><span class="muted">game/bin/win64</span>
 <span class="gold">install.cmd</span>
@@ -673,29 +695,29 @@
       </div>
 
       <div class="popit-grid">
-        <div class="popit-stage" aria-label="Popit root and Palette child">
-          <div class="popit-root">
-            <div class="popit-head"><span>POPIT</span><span class="popit-chip">POPIT BLUE</span></div>
+        <div class="popit-stage" aria-label="Popit root and Palette child" data-contour="card">
+          <div class="popit-root" data-contour="card">
+            <div class="popit-head"><span>POPIT</span><span class="popit-chip" data-contour="card">POPIT BLUE</span></div>
             <p class="popit-target">target · HUD cell / abilities</p>
-            <div class="popit-row" aria-current="false"><b>01</b><span>Cursor</span><em>select cell</em></div>
-            <div class="popit-row" aria-current="true"><b>02</b><span>Palette</span><em>37 pairs</em></div>
-            <div class="popit-row" aria-current="false"><b>03</b><span>Goodies</span><em>material</em></div>
-            <div class="popit-row" aria-current="false"><b>04</b><span>Stickers</span><em>edge</em></div>
-            <div class="popit-row" aria-current="false"><b>05</b><span>Tools</span><em>corners</em></div>
-            <div class="popit-row" aria-current="false"><b>06</b><span>Color</span><em>role</em></div>
+            <div class="popit-row" aria-current="false" data-contour="card"><b>01</b><span>Cursor</span><em>select cell</em></div>
+            <div class="popit-row" aria-current="true" data-contour="card"><b>02</b><span>Palette</span><em>37 pairs</em></div>
+            <div class="popit-row" aria-current="false" data-contour="card"><b>03</b><span>Goodies</span><em>material</em></div>
+            <div class="popit-row" aria-current="false" data-contour="card"><b>04</b><span>Stickers</span><em>edge</em></div>
+            <div class="popit-row" aria-current="false" data-contour="card"><b>05</b><span>Tools</span><em>corners</em></div>
+            <div class="popit-row" aria-current="false" data-contour="card"><b>06</b><span>Color</span><em>role</em></div>
           </div>
-          <div class="popit-child">
-            <div class="popit-child-head"><span class="popit-back">‹ Back</span><span>PALETTE</span></div>
+          <div class="popit-child" data-contour="card">
+            <div class="popit-child-head" data-contour="card"><span class="popit-back" data-contour="card">‹ Back</span><span>PALETTE</span></div>
             <p class="popit-label">LITTLEBIGPLANET</p>
             <div class="popit-pairs">
-              <div class="popit-pair"><div class="popit-band"><i style="background:#e5e510"></i><i style="background:#e70f81"></i><i style="background:#5656e8"></i></div><span>Yellow &amp; Fuchsia</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#392853"></i><i style="background:#3973a8"></i><i style="background:#a87139"></i></div><span>Navy &amp; Blue</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#9a2853"></i><i style="background:#899929"></i><i style="background:#5c5699"></i></div><span>Deep Pink</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#6a39b5"></i><i style="background:#b23950"></i><i style="background:#3ab29e"></i></div><span>Violet</span></div>
-              <div class="popit-pair" aria-current="true"><div class="popit-band"><i style="background:#3f8ad7"></i><i style="background:#d641d6"></i><i style="background:#41d641"></i></div><span>Popit Blue</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#e76161"></i><i style="background:#a5e563"></i><i style="background:#a363e4"></i></div><span>Coral</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#ca0000"></i><i style="background:#67c900"></i><i style="background:#7d48c1"></i></div><span>Red &amp; Green</span></div>
-              <div class="popit-pair"><div class="popit-band"><i style="background:#f0c454"></i><i style="background:#12151a"></i><i style="background:#eceff2"></i></div><span>Classic</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#e5e510"></i><i style="background:#e70f81"></i><i style="background:#5656e8"></i></div><span>Yellow &amp; Fuchsia</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#392853"></i><i style="background:#3973a8"></i><i style="background:#a87139"></i></div><span>Navy &amp; Blue</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#9a2853"></i><i style="background:#899929"></i><i style="background:#5c5699"></i></div><span>Deep Pink</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#6a39b5"></i><i style="background:#b23950"></i><i style="background:#3ab29e"></i></div><span>Violet</span></div>
+              <div class="popit-pair" aria-current="true" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#3f8ad7"></i><i style="background:#d641d6"></i><i style="background:#41d641"></i></div><span>Popit Blue</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#e76161"></i><i style="background:#a5e563"></i><i style="background:#a363e4"></i></div><span>Coral</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#ca0000"></i><i style="background:#67c900"></i><i style="background:#7d48c1"></i></div><span>Red &amp; Green</span></div>
+              <div class="popit-pair" data-contour="card"><div class="popit-band" data-contour="card"><i style="background:#f0c454"></i><i style="background:#12151a"></i><i style="background:#eceff2"></i></div><span>Classic</span></div>
             </div>
             <p class="popit-label">OPENLOCK</p>
             <p class="popit-honest">37 pairs ship. Classic removes the pair and returns the scheme.
@@ -704,12 +726,12 @@
         </div>
 
         <div class="popit-notes">
-          <article class="popit-note">
+          <article class="popit-note" data-contour="card">
             <h3>Root stays, child reveals</h3>
             <p>Sections replace the child's body, never the root. Back closes the child and leaves
               the six rows where they were, so the instrument has one remembered shape.</p>
           </article>
-          <article class="popit-note">
+          <article class="popit-note" data-contour="card">
             <h3>Three axes, one surface</h3>
             <p>Scheme palette, form geometry and colour pair are separate choices. The pair data is
               vendored from Popit Forge and generated into the client; Classic is the opt-out. A pair
@@ -726,7 +748,7 @@
               primary is the slab, secondary the highlight, emphasis the text, which is why a blue
               pair stays blue instead of being read through LBP3's inverted role map.</p>
           </article>
-          <article class="popit-note">
+          <article class="popit-note" data-contour="card">
             <h3>What the pair may paint</h3>
             <p>The slab, title, chips, selected rows and emphasis ink. The shell ground, its ink and
               its single selection accent stay with the theme, so a light pair cannot turn the shell
@@ -760,7 +782,7 @@
         and drew its taskbar, frames and palette window on screen. Not verified: a pointer-driven
         pair switch inside the client, the Popit surface and its child reveal there, the cloud
         rail as drawn by the client, and the crown.
-        Panorama approximates the Bezier contour with per-corner radii and the form says so.</p>
+        The contour is nine slices of the measured profile, and the gate proves them.</p>
     </section>
 
     <section id="contour" aria-labelledby="contour-title">
@@ -980,10 +1002,10 @@
         verified before the rewrite; the modern identity is BLAKE3 over canonical content. The family
         target is one carrier, with canonical bytes and the signature outside the digest.</p>
       <div class="family-flow">
-        <div class="family-step"><b>Read</b><span>Legacy frames enter a read-only decoder behind the streamer boundary. The source package keeps its bytes and its identity.</span></div>
-        <div class="family-step"><b>Represent</b><span>The decoder produces an explicit compatibility record with its own schema, not whatever object the old reader returned.</span></div>
-        <div class="family-step"><b>Record</b><span><code>dle-migrate</code> writes source and target ids, the old digest, the new <code>name@rev+blake3</code> identity, fields lost by name, actor and ticket.</span></div>
-        <div class="family-step"><b>Reframe</b><span>Only the modern carrier is emitted: <code>dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71</code>, a canonical header, a content-addressed payload, and a Debian signature outside the BLAKE3 preimage.</span></div>
+        <div class="family-step" data-contour="card"><b>Read</b><span>Legacy frames enter a read-only decoder behind the streamer boundary. The source package keeps its bytes and its identity.</span></div>
+        <div class="family-step" data-contour="card"><b>Represent</b><span>The decoder produces an explicit compatibility record with its own schema, not whatever object the old reader returned.</span></div>
+        <div class="family-step" data-contour="card"><b>Record</b><span><code>dle-migrate</code> writes source and target ids, the old digest, the new <code>name@rev+blake3</code> identity, fields lost by name, actor and ticket.</span></div>
+        <div class="family-step" data-contour="card"><b>Reframe</b><span>Only the modern carrier is emitted: <code>dl-enclave.pkg/7eda1d82c5a03cc74883059912e73f71</code>, a canonical header, a content-addressed payload, and a Debian signature outside the BLAKE3 preimage.</span></div>
       </div>
       <dl class="family-modern">
         <div><dt>BLAKE3 identity</dt><dd><code>name@&lt;rev&gt;+blake3:&lt;64 hex&gt;</code> replaces SHA-256 as the modern content identity. The revision, framing, encryption and signature stay outside the preimage, so a reframe or re-sign does not move the package.</dd></div>
@@ -1250,37 +1272,6 @@
       .catch(() => { /* the inline list stands in for the catalog */ });
   </script>
 
-  <script>
-    // The first names on the public North America leaderboard, captured 2026-10-28.
-    // The brand cycles through them once on load, then settles on the product name.
-    (() => {
-      const name = document.querySelector(".brand-name");
-      if (!name) return;
-      const finalName = "dl-openshell";
-      const players = [
-        "UglySad", "eido", "fug", "LMG_Totallycool", "picklebob",
-        "ttv/Jitzim", "lordnm", "jingle", "Saiah"
-      ];
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        name.textContent = finalName;
-        return;
-      }
-      let index = 0;
-      const tick = () => {
-        if (index >= players.length) {
-          name.textContent = finalName;
-          name.classList.remove("cycling");
-          return;
-        }
-        name.textContent = players[index++];
-        window.setTimeout(tick, 150 + index * 28);
-      };
-      window.setTimeout(() => {
-        name.classList.add("cycling");
-        tick();
-      }, 280);
-    })();
-  </script>
 
   <script>
     // One authored motion: the boundary index marks the stage the reader is inside.
