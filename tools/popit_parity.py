@@ -175,8 +175,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"RESULT: popit-parity {'refused' if failed else 'held'} "
               f"({total - failed}/{total} checks, {len(result['rows'])} declared facts)")
         if failed:
-            print("named, not implemented: the in-game render of the crowned contour; "
-                  "Panorama approximates it with per-corner radii")
+            print("the crowned contour is drawn as nine slices by openlock_contour.js; "
+                  "tools/contour_gate.py proves the slices match the measured profile")
     return 1 if result["refusals"] else 0
 
 

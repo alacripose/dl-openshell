@@ -1,7 +1,7 @@
 shploingus.form/0c51154398407e2a79127583436d2808
 form	material
 	label	Material Design 1
-	rule	.WindowFrame	border-radius	2px
+	rule	.WindowFrame	border-radius	0px
 	# MD1's 2 dp corner is the shape a themed live cell follows too. Radius only: a border
 	# width would change the game's component box, not just its outline.
 	rule	.ThemedCell	border-radius	2px

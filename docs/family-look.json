@@ -1,0 +1,9 @@
+{
+  "schema": "popit-shell.family-look/1",
+  "source": "F:/Documents/popit-shell/tools/family_look.json and docs/family-look.md",
+  "contour": "docs/contour.json",
+  "corner_px": { "width": 7.67, "height": 11.0 },
+  "constants": { "clip_pad": 0.5, "frame_pad": 1.5, "stroke_width": 1, "bar_height": 48 },
+  "surfaces": [".WindowFrame", ".ShellTab", ".WindowsButton", ".Clock"],
+  "note": "The taskbar button's corner is the accepted corner for every surface. A window keeps it at any size; only the rails take the extra span."
+}

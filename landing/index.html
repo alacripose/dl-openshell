@@ -328,6 +328,32 @@
       html { scroll-behavior: auto; }
       *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
     }
+
+    /* The contour: nine slices of the measured profile, one corner on every surface. */
+    .contour-stage {
+      display: grid;
+      gap: clamp(14px, 2vw, 24px);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 22px;
+    }
+    .contour-figure {
+      margin: 0;
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font: 12px/1.5 var(--mono);
+    }
+    .contour-shape {
+      position: relative;
+      background: none;
+    }
+    .contour-shape[data-contour-surface="chip"] { height: 34px; }
+    .contour-shape[data-contour-surface="card"] { height: 132px; }
+    .contour-shape[data-contour-surface="window"] { height: 260px; }
+    .contour-layer { position: absolute; inset: 0; }
+    .contour-ink { position: absolute; background: var(--line-strong); }
+    .contour-fill { position: absolute; background: var(--raised); }
+    .contour-note { margin: 14px 0 0; color: var(--dim); font: 13px/1.6 var(--sans); }
   </style>
 </head>
 <body>
@@ -720,6 +746,29 @@
         pair switch inside the client, the Popit surface and its child reveal there, the cloud
         rail as drawn by the client, and the crown.
         Panorama approximates the Bezier contour with per-corner radii and the form says so.</p>
+    </section>
+
+    <section id="contour" aria-labelledby="contour-title">
+      <div class="section-head">
+        <h2 id="contour-title">Contour</h2>
+        <p id="contour-lede">One corner, one profile, on every surface.</p>
+      </div>
+      <div class="contour-stage">
+        <figure class="contour-figure">
+          <div class="contour-shape" data-contour-surface="chip" aria-hidden="true"></div>
+          <figcaption>taskbar chip</figcaption>
+        </figure>
+        <figure class="contour-figure">
+          <div class="contour-shape" data-contour-surface="card" aria-hidden="true"></div>
+          <figcaption>card</figcaption>
+        </figure>
+        <figure class="contour-figure">
+          <div class="contour-shape" data-contour-surface="window" aria-hidden="true"></div>
+          <figcaption>window</figcaption>
+        </figure>
+      </div>
+      <p class="contour-note" id="contour-note"></p>
+      <p class="contour-note" id="contour-caption"></p>
     </section>
 
     <section id="security" aria-labelledby="security-title">
@@ -1255,5 +1304,6 @@
       pick();
     })();
   </script>
+  <script src="contour.js" defer></script>
 </body>
 </html>

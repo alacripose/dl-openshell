@@ -21,6 +21,49 @@
     };
 
     var launcherBar = root.FindChildTraverse("LauncherBar");
+    // The top of the screen carries one thing: the build hash, so a screenshot says which build
+    // it came from. The launcher, scheme and form switches are gone; palettes live in the Popit
+    // and in the console API. Toasts stay where they were.
+    var versionChip = null;
+    function ensureVersionChip() {
+        if (versionChip) {
+            try { if (!versionChip.IsValid || versionChip.IsValid()) return versionChip; } catch (e) { return versionChip; }
+        }
+        versionChip = $.CreatePanel("Label", root, "BuildHashChip");
+        versionChip.AddClass("BuildHashChip");
+        versionChip.hittest = false;
+        var build = data.build || {};
+        var hash = build.commit || build.hash || build.label || "";
+        versionChip.text = hash ? String(hash) : (data.version || "");
+        return versionChip;
+    }
+    // The bar's chips and every window frame carry the same contour, so the shape a button is
+    // cut with is the shape a window is cut with. A chip is measured after layout, because a
+    // Panorama panel cannot report its own box before it has been placed.
+    function contourChip(panel) {
+        if (!panel || !globalThis.OpenlockContour) return;
+        $.Schedule(0, function () {
+            if (!alive(panel)) return;
+            var w = Math.round(num(panel.actuallayoutwidth));
+            var h = Math.round(num(panel.actuallayoutheight));
+            if (w < 4 || h < 4) return;
+            if (panel.__contourW === w && panel.__contourH === h) return;
+            panel.__contourW = w;
+            panel.__contourH = h;
+            globalThis.OpenlockContour.draw(panel, w, h);
+        });
+    }
+
+    function paintBarChips() {
+        var ids = ["DashboardButton", "WindowsButton", "Clock"];
+        for (var i = 0; i < ids.length; i += 1) contourChip(root.FindChildTraverse(ids[i]));
+        if (strip && strip.Children) {
+            var tabs = strip.Children();
+            for (var t = 0; t < tabs.length; t += 1) contourChip(tabs[t]);
+        }
+    }
+    $.Schedule(0.2, paintBarChips);
+
     var taskbar = root.FindChildTraverse("Taskbar");
     var strip = root.FindChildTraverse("TabStrip");
     var preloadStrip = root.FindChildTraverse("PreloadStrip");
@@ -40,6 +83,36 @@
     var launcherLabel = root.FindChildTraverse("LauncherLabel");
     var themes = data.themes || { default: "", defaultForm: "", order: [], schemes: [], forms: [], extensions: [] };
     var currentScheme = "";
+    // One theme system. The Popit's Palette page lists the shell's schemes; the pair table is
+    // only swatch data. Selecting a palette entry applies the scheme class, exactly the same
+    // selector the window frames and the Popit slab are painted by.
+    function schemeSwatch(id) {
+        var pairs = (globalThis.OpenlockPopitPairs && globalThis.OpenlockPopitPairs.pairs) || [];
+        for (var i = 0; i < pairs.length; i++) if (pairs[i].id === id) return pairs[i];
+        return null;
+    }
+    function adoptSchemeRegistry() {
+        if (!themes.schemes || !themes.schemes.length) return;
+        var pairs = [];
+        for (var i = 0; i < themes.schemes.length; i++) {
+            var sc = themes.schemes[i];
+            var sw = schemeSwatch(sc.id);
+            pairs.push({
+                id: sc.id,
+                name: sc.label || sc.id,
+                game: "shell scheme",
+                primary: (sw && sw.primary) || "#e0b56a",
+                secondary: (sw && sw.secondary) || "#c9a86a",
+                tertiary: (sw && sw.tertiary) || "#a8977c",
+                emphasis: (sw && sw.emphasis) || "#f4e6c8"
+            });
+        }
+        globalThis.OpenlockPopitPairs = {
+            format: "openlock.popit-pairs/3080abf5e17bdee04de3bc0b0b5d43ab",
+            default: themes.default || pairs[0].id,
+            pairs: pairs
+        };
+    }
     var currentForm = themes.defaultForm || "";
     var currentRenderer = "generic";
     // The idle/compact chrome is a behavior of the shell, not a grade gate. Echo the baked grade
@@ -525,7 +598,15 @@
     // touched. A player can run Popit colours on the Deadlock form, or Deadlock colours on the
     // Popit form, without either choice overwriting the other.
     function applyScheme(id, announce) {
-        var scheme = schemeById(id) || schemeById(themes.default) || themes.schemes[0];
+        // An unknown id is refused rather than silently swapped for the default: a palette entry
+        // that no longer exists must not repaint the shell as something the player did not pick.
+        // Only an empty id (boot and Classic) falls back to the default scheme.
+        var wanted = id ? schemeById(id) : null;
+        if (id && !wanted) {
+            logPerf("info", "scheme refused: " + id);
+            return "";
+        }
+        var scheme = wanted || schemeById(themes.default) || themes.schemes[0];
         if (!scheme) return "";
 
         var hosts = schemeHosts();
@@ -1133,6 +1214,7 @@
         var text = label || (win && win.title) || windowId;
         var tab = addControl(strip, "ShellTab", text, function () { choose(windowId); });
         if (extraClass) tab.AddClass(extraClass);
+        contourChip(tab);
         if (windowId === activeTab) tab.AddClass("Active");
         if (pinned[windowId]) tab.AddClass("Pinned");
         // Same short opacity/offset curve as the preload chip. The property is set before the
@@ -1227,6 +1309,10 @@
         }
         cloudBar = $.CreatePanel("Panel", root, "CloudBar");
         cloudBar.AddClass("CloudBar");
+        // Visual only. The band is drawn for the scene, not operated: no hittest, no pointer
+        // target, nothing it can steal from the game's own HUD underneath it.
+        cloudBar.hittest = false;
+        cloudBar.hittestchildren = false;
         return cloudBar;
     }
 
@@ -1487,6 +1573,8 @@
 
     function choose(id) {
         activeTab = id;
+        adoptSchemeRegistry();
+        ensureVersionChip();
         showTaskbar();
         openWindow(id);
     }
@@ -1588,6 +1676,24 @@
     // clipped by the shell bar. The layout pass returns the only derived position: the panel
     // transform and the frame both read that answer. A user-placed window keeps its frame while
     // the game reflows underneath it, so a layout save still stores the point the player chose.
+    // Arrangement is opt-in. The shell may frame and paint a game window, but it may not move,
+    // resize or reserve edges around a Deadlock panorama until the player grants that in Settings.
+    // Without consent this returns the panel's own rect untouched, so no reflow and no refusal
+    // toast is produced and the game's layout is exactly the game's.
+    var layoutConsent = false;
+
+    globalThis.OpenlockAllowLayout = function (allow) {
+        layoutConsent = !!allow;
+        if (globalThis.OpenlockLayoutPass) {
+            globalThis.OpenlockLayoutPass.setOpen(layoutConsent && !!expanded);
+        }
+        logPerf("info", "layout consent " + layoutConsent);
+        globalThis.OpenlockToast("Settings",
+            layoutConsent ? "OpenLock may arrange game panels" : "game panels are never moved", "", false);
+        return layoutConsent;
+    };
+    globalThis.OpenlockLayoutConsent = function () { return layoutConsent; };
+
     function layoutPlace(id, rect, extraTop, shellSpace) {
         if (!globalThis.OpenlockLayoutPass) {
             return {
@@ -1596,12 +1702,22 @@
             };
         }
         var pass = globalThis.OpenlockLayoutPass;
+        // Without consent the pass still tracks the rect (a drag the player makes is their own
+        // move, not the shell's), but it gets no title-strip reservation: extraTop 0 means the
+        // game's panel is never pushed down, and a panel that does not fit is left alone instead
+        // of refusing. Consent is what turns the shell's own arrangement on.
         var placed = shellSpace && pass.placeShell
             ? pass.placeShell(id, rect)
-            : pass.place(id, rect, extraTop);
-        // A refused participant keeps its own rect. Name it once through the same refusal path
-        // the rest of the shell uses, so the editor and the toast stack cannot disagree.
-        if (placed.refused) refuseFeature("Layout refused", id + ": " + placed.reason);
+            : pass.place(id, rect, layoutConsent ? extraTop : 0);
+        if (placed.refused) {
+            if (layoutConsent) {
+                // A refused participant keeps its own rect. Name it once through the same refusal
+                // path the rest of the shell uses, so the editor and the toast stack agree.
+                refuseFeature("Layout refused", id + ": " + placed.reason);
+            }
+            return { x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                dx: 0, dy: 0, refused: false, reason: "" };
+        }
         return placed;
     }
 
@@ -2343,6 +2459,17 @@
             ? { x: g.x, y: g.y, w: g.w, h: g.h }
             : layoutPlace(win.id, { x: g.x, y: g.y, w: g.w, h: g.h }, 0, true);
         setRect(f, placed.x, placed.y, placed.w, placed.h);
+        // The silhouette follows the frame's box. A frame whose size did not change is not
+        // repainted: the contour is nine slices, and redrawing it per poll would cost panels.
+        if (f.contour && globalThis.OpenlockContour) {
+            var cw = Math.round(placed.w);
+            var ch = Math.round(placed.h);
+            if (f.contourW !== cw || f.contourH !== ch) {
+                f.contourW = cw;
+                f.contourH = ch;
+                globalThis.OpenlockContour.draw(f.contour, cw, ch);
+            }
+        }
 
         var opacity = String(clamp((num(win.opacity) || 930) / 1000, 0.2, 1));
         if (f.lastOpacity !== opacity) {
@@ -4211,10 +4338,12 @@
             onPair: function (pair) {
                 popitPair = pair.id;
                 popitLayout.pair = pair.id;
-                applyShellPair(pair.id);
+                // The palette entry is a scheme: the same class that paints the windows and the
+                // Popit slab. There is no second colour system to keep in step.
+                if (globalThis.OpenlockScheme) globalThis.OpenlockScheme(pair.id);
                 popitClassic = false;
                 cue("place");
-                logPerf("info", "popit pair " + pair.id);
+                logPerf("info", "popit scheme " + pair.id);
                 globalThis.OpenlockToast("Popit palette", pair.name, "", false);
             },
             onClassic: function (on) {
@@ -4708,6 +4837,15 @@
         var pinButton = titleButton(title, "Pin", function () { togglePin(win.id); }, win.id);
         if (pinned[win.id]) pinButton.AddClass("PinOn");
         var closeButton = titleButton(title, "Close", function () { closeWindow(win.id); }, win.id);
+        // The frame's silhouette is drawn as nine slices of the family contour, on the first
+        // child so it paints behind the title bar, the meta strip and the body.
+        var contourLayer = $.CreatePanel("Panel", frame, "ContourSlices");
+        contourLayer.AddClass("ContourSlices");
+        contourLayer.hittest = false;
+        contourLayer.hittestchildren = false;
+        if (frame.MoveChildBefore) {
+            try { frame.MoveChildBefore(contourLayer, frame.GetFirstChild()); } catch (e) { /* already first */ }
+        }
         // Keep the last glyph clear of the northeast resize grip. The title's own layout does not
         // know the grip's width; this class is the reservation that does.
         if (closeButton) closeButton.AddClass("WindowClose");
@@ -4762,6 +4900,7 @@
             meta: metaLabel,
             cost: costLabel,
             body: body,
+            contour: contourLayer,
             refusal: refusal,
             grips: grips,
             minButton: minButton,
@@ -6963,6 +7102,9 @@
     var dashGrid = 8;
     var dashSnap = true;
 
+    // Everything the shell provides is this one window: the settings surface. It carries the
+    // layout permission the game panels are gated on and the palette list; there is no second
+    // shell window to open.
     function dashboardEntries() {
         var wanted = [
             { id: "windows", title: "All windows", win: WINDOWS_ID },

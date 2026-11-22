@@ -27,6 +27,29 @@
 
 /* The scheme switch sits beside the launcher: one click cycles the generated palettes and the
    toast stack says which one is in force. The colours themselves come from openlock_schemes.css. */
+/* The top of the screen keeps one chip. The launcher, its scheme switch and its form switch are
+   retired: a palette is chosen in the Popit and through the console API, and the shell must not
+   put two palettes and a form selector back over the game's own mark. */
+.LauncherBar .LauncherButton,
+.LauncherBar .SchemeButton {
+    visibility: collapse;
+}
+
+.BuildHashChip {
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    margin-left: 12px;
+    margin-top: 8px;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background-color: #0a0d10b0;
+    color: #8fa39a;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    z-index: 640;
+}
+
 .SchemeButton {
     margin-left: 5px;
     width: 22px;
@@ -255,7 +278,7 @@
     padding: 3px 9px;
     background-color: #1a140de6;
     border: 1px solid #4a3b25;
-    border-radius: 2px;
+    border-radius: 0px;
     z-index: 501;
 }
 
@@ -274,7 +297,7 @@
     font-size: 12px;
     background-color: #1a140dcc;
     border: 1px solid #4a3b25;
-    border-radius: 2px;
+    border-radius: 0px;
 }
 
 .VersionLabel {
@@ -291,7 +314,7 @@
     padding: 3px 9px;
     background-color: #1a140de6;
     border: 1px solid #4a3b25;
-    border-radius: 2px;
+    border-radius: 0px;
 }
 
 .ShellTab:hover {
@@ -422,7 +445,7 @@
 .WindowFrame {
     border: 1px solid #3d5a63;
     border-top: 2px solid #8fc4cf;
-    border-radius: 2px;
+    border-radius: 0px;
     background-color: #0d1519f2;
 }
 
@@ -620,9 +643,10 @@
     flow-children: down;
     background-color: #14100bf2;
     border: 1px solid #8a6f42;
-    /* The family's shell-window radius is 8. A form may declare a smaller corner (MD1's 2,
-       iOS 6's 6); 8 is the ceiling, not a suggestion for every window. */
-    border-radius: 8px;
+    /* The window's silhouette is the family contour, drawn as nine slices inside the frame.
+       A radius here would put a rounded rectangle back on top of the measured shape, so the
+       frame declares none and `.ContourInk` is the outline. */
+    border-radius: 0px;
     padding: 0px;
     opacity: 0.93;
 }
@@ -1871,4 +1895,43 @@ HTMLHorizontalScrollBar .ScrollThumb {
     border: 1px solid #00000055;
     font-size: 10px;
     white-space: normal;
+}
+
+/* --- the contour ---------------------------------------------------------
+   Every surface is the family's measured profile, drawn as nine slices: one pixel rows at the
+   crowns, one rail across the span between them. No part of the shape is scaled, so a taskbar
+   chip and a window read as one form at two sizes and the outline is never cut by a clip.
+   `tools/gen_contour_slices.py` writes the data; `openlock_contour.js` draws it. */
+.ContourSlices {
+    ignore-parent-flow: true;
+    horizontal-align: left;
+    vertical-align: top;
+    width: 100%;
+    height: 100%;
+}
+
+.ContourInk {
+    background-color: #c9a86a;
+}
+
+.ContourFill {
+    background-color: #14100bee;
+}
+
+/* A surface that carries the contour paints nothing of its own: a rectangle behind the slices
+   would put four square corners back around the crown. */
+.WindowFrame,
+.ShellTab,
+.WindowsButton,
+.Clock {
+    border: 0px;
+    border-radius: 0px;
+    background-color: transparent;
+}
+
+/* The title strip sits inside the crown, so it cannot paint a rectangle over it. Its rule is
+   the separator at the bottom of the strip, which follows the contour rather than the box. */
+.WindowFrame .WindowTitle {
+    background-color: transparent;
+    border-bottom: 0px;
 }

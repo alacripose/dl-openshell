@@ -14,6 +14,11 @@
         <include src="file://{resources}/scripts/openlock_delivery.js" />
         <include src="file://{resources}/scripts/openlock_layout.js" />
         <include src="file://{resources}/scripts/openlock_split.js" />
+        <!-- The contour is the framing authority: the measured page 9 profile, generated into
+             openlock_contour_data.js and drawn as nine slices by openlock_contour.js. It loads
+             before the shell so a frame can be cut the moment it is created. -->
+        <include src="file://{resources}/scripts/openlock_contour_data.js" />
+        <include src="file://{resources}/scripts/openlock_contour.js" />
         <include src="file://{resources}/scripts/openlock_shell.js" />
     </scripts>
 
